@@ -3,7 +3,7 @@ import { evaluateScoringPatterns } from '@/core/scoring/patterns'
 import { buildSettlementResult } from '@/core/scoring/settlement'
 import type { StandardWinInput, WinningEvaluationResult } from '@/core/scoring/types'
 
-export function validateStandardWin(input: StandardWinInput): WinningEvaluationResult {
+export const validateStandardWin = (input: StandardWinInput): WinningEvaluationResult => {
   const breakdown = decomposeStandardHand(input)
 
   if (breakdown === null) {

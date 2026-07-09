@@ -6,10 +6,10 @@ const PATTERN_TAI: Record<ScoringPatternResult, number> = {
   'self-draw': 1
 }
 
-export function buildSettlementResult(
+export const buildSettlementResult = (
   input: StandardWinInput,
   matchedPatterns: ScoringPatternResult[] = []
-): SettlementResult | null {
+): SettlementResult | null => {
   if (!input.winningSeat) {
     return null
   }

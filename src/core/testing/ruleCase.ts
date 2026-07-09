@@ -42,7 +42,7 @@ export type CreateRuleCaseInput = {
   expected?: RuleCaseExpected
 }
 
-export function createRuleCase(input: CreateRuleCaseInput): RuleCase {
+export const createRuleCase = (input: CreateRuleCaseInput): RuleCase => {
   return {
     id: input.id,
     title: input.title,

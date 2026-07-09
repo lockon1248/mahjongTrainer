@@ -10,7 +10,7 @@ export type TableState = {
   discards: DiscardPoolBySeat
 }
 
-export function createInitialTableState(): TableState {
+export const createInitialTableState = (): TableState => {
   return {
     dealerSeat: 'east',
     prevailingWind: 'east',
@@ -19,7 +19,7 @@ export function createInitialTableState(): TableState {
   }
 }
 
-function createEmptyDiscards(): DiscardPoolBySeat {
+const createEmptyDiscards = (): DiscardPoolBySeat => {
   return {
     east: [],
     south: [],

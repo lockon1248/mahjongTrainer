@@ -8,23 +8,23 @@ import {
   type Tile
 } from '@/core/index'
 
-function chars(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
   return ranks.map((rank) => ({ suit: 'characters', rank }))
 }
 
-function dots(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+const dots = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
   return ranks.map((rank) => ({ suit: 'dots', rank }))
 }
 
-function bamboos(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+const bamboos = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
   return ranks.map((rank) => ({ suit: 'bamboo', rank }))
 }
 
-function wind(rank: 'east' | 'south' | 'west' | 'north'): Tile {
+const wind = (rank: 'east' | 'south' | 'west' | 'north'): Tile => {
   return { suit: 'winds', rank }
 }
 
-function dragon(rank: 'red' | 'green' | 'white'): Tile {
+const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 

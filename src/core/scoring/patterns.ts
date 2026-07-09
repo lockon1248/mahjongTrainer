@@ -1,9 +1,9 @@
 import type { ScoringPatternResult, StandardHandBreakdown, StandardWinInput } from '@/core/scoring/types'
 
-export function evaluateScoringPatterns(
+export const evaluateScoringPatterns = (
   input: StandardWinInput,
   breakdown: StandardHandBreakdown | null
-): ScoringPatternResult[] {
+): ScoringPatternResult[] => {
   if (breakdown === null) {
     return []
   }

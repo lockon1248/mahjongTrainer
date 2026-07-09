@@ -19,7 +19,7 @@ export type PlayerState = {
   declaredReady: boolean
 }
 
-export function createEmptyPlayerState(seat: Seat): PlayerState {
+export const createEmptyPlayerState = (seat: Seat): PlayerState => {
   return {
     seat,
     concealedTiles: [],

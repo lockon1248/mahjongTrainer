@@ -2,7 +2,7 @@ import type { Meld } from '@/core/types/player'
 import type { Tile } from '@/core/types/tile'
 import type { BreakdownGroup, StandardHandBreakdown, StandardWinInput } from '@/core/scoring/types'
 
-export function decomposeStandardHand(input: StandardWinInput): StandardHandBreakdown | null {
+export const decomposeStandardHand = (input: StandardWinInput): StandardHandBreakdown | null => {
   const meldGroups = input.melds.map(createMeldBreakdownGroup)
   const concealedTiles = sortTiles([
     ...input.concealedTiles,
@@ -33,7 +33,7 @@ export function decomposeStandardHand(input: StandardWinInput): StandardHandBrea
   return null
 }
 
-function findMeldGroups(tiles: Tile[], groupsNeeded: number): BreakdownGroup[] | null {
+const findMeldGroups = (tiles: Tile[], groupsNeeded: number): BreakdownGroup[] | null => {
   if (groupsNeeded === 0) {
     return tiles.length === 0 ? [] : null
   }
@@ -85,7 +85,7 @@ function findMeldGroups(tiles: Tile[], groupsNeeded: number): BreakdownGroup[] |
   return null
 }
 
-function createMeldBreakdownGroup(meld: Meld): BreakdownGroup {
+const createMeldBreakdownGroup = (meld: Meld): BreakdownGroup => {
   return {
     kind: inferMeldGroupKind(meld),
     source: 'meld',
@@ -93,7 +93,7 @@ function createMeldBreakdownGroup(meld: Meld): BreakdownGroup {
   }
 }
 
-function inferMeldGroupKind(meld: Meld): BreakdownGroup['kind'] {
+const inferMeldGroupKind = (meld: Meld): BreakdownGroup['kind'] => {
   if (meld.tiles.length === 4) {
     return 'quad'
   }
@@ -105,7 +105,7 @@ function inferMeldGroupKind(meld: Meld): BreakdownGroup['kind'] {
   return 'triplet'
 }
 
-function getPairCandidates(tiles: Tile[]): Tile[][] {
+const getPairCandidates = (tiles: Tile[]): Tile[][] => {
   const pairs: Tile[][] = []
 
   for (let index = 0; index < tiles.length - 1; index += 1) {
@@ -122,7 +122,7 @@ function getPairCandidates(tiles: Tile[]): Tile[][] {
   return pairs
 }
 
-function createSequence(tile: Tile): Tile[] | null {
+const createSequence = (tile: Tile): Tile[] | null => {
   if (
     (tile.suit === 'characters' || tile.suit === 'dots' || tile.suit === 'bamboo') &&
     tile.rank <= 7
@@ -137,7 +137,7 @@ function createSequence(tile: Tile): Tile[] | null {
   return null
 }
 
-function hasTiles(sourceTiles: Tile[], targetTiles: Tile[]): boolean {
+const hasTiles = (sourceTiles: Tile[], targetTiles: Tile[]): boolean => {
   const remaining = [...sourceTiles]
 
   for (const targetTile of targetTiles) {
@@ -153,7 +153,7 @@ function hasTiles(sourceTiles: Tile[], targetTiles: Tile[]): boolean {
   return true
 }
 
-function removeTiles(sourceTiles: Tile[], targetTiles: Tile[]): Tile[] {
+const removeTiles = (sourceTiles: Tile[], targetTiles: Tile[]): Tile[] => {
   const remaining = [...sourceTiles]
 
   for (const targetTile of targetTiles) {
@@ -167,15 +167,15 @@ function removeTiles(sourceTiles: Tile[], targetTiles: Tile[]): Tile[] {
   return remaining
 }
 
-function isSameTile(left: Tile, right: Tile): boolean {
+const isSameTile = (left: Tile, right: Tile): boolean => {
   return left.suit === right.suit && left.rank === right.rank
 }
 
-function sortTiles(tiles: Tile[]): Tile[] {
+const sortTiles = (tiles: Tile[]): Tile[] => {
   return [...tiles].sort((left, right) => compareTile(left, right))
 }
 
-function compareTile(left: Tile, right: Tile): number {
+const compareTile = (left: Tile, right: Tile): number => {
   const suitOrder = ['characters', 'dots', 'bamboo', 'winds', 'dragons', 'flower'] as const
   const suitDelta = suitOrder.indexOf(left.suit) - suitOrder.indexOf(right.suit)
 

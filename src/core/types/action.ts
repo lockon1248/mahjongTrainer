@@ -28,7 +28,7 @@ export type PendingActionWindow = {
   claims: PendingActionClaim[]
 }
 
-export function createPendingActionWindow(): PendingActionWindow {
+export const createPendingActionWindow = (): PendingActionWindow => {
   return {
     triggeringSeat: null,
     triggeringTile: null,

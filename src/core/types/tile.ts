@@ -36,6 +36,6 @@ export type FlowerTile = {
 
 export type Tile = NumberTile | WindTile | DragonTile | FlowerTile
 
-export function isFlowerTile(tile: Tile): tile is FlowerTile {
+export const isFlowerTile = (tile: Tile): tile is FlowerTile => {
   return tile.suit === 'flower'
 }
