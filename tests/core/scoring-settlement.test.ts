@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest'
+import {
+  buildSettlementResult,
+  decomposeStandardHand,
+  evaluateScoringPatterns,
+  validateStandardWin,
+  type StandardWinInput,
+  type Tile
+} from '@/core/index'
+
+function chars(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+  return ranks.map((rank) => ({ suit: 'characters', rank }))
+}
+
+function dots(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+  return ranks.map((rank) => ({ suit: 'dots', rank }))
+}
+
+function bamboos(...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] {
+  return ranks.map((rank) => ({ suit: 'bamboo', rank }))
+}
+
+function wind(rank: 'east' | 'south' | 'west' | 'north'): Tile {
+  return { suit: 'winds', rank }
+}
+
+function dragon(rank: 'red' | 'green' | 'white'): Tile {
+  return { suit: 'dragons', rank }
+}
+
+describe('scoring settlement', () => {
+  it('builds a self-draw settlement result with matched scoring items and totalTai', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('red'),
+      winningSeat: 'east',
+      discarderSeat: null
+    }
+
+    const breakdown = decomposeStandardHand(input)
+    const matchedPatterns = evaluateScoringPatterns(input, breakdown)
+
+    expect(buildSettlementResult(input, matchedPatterns)).toEqual({
+      winnerSeat: 'east',
+      discarderSeat: null,
+      paymentResponsibility: {
+        type: 'self-draw',
+        payerSeats: ['south', 'west', 'north']
+      },
+      scoringItems: ['dealer-win', 'self-draw'],
+      totalTai: 2
+    })
+  })
+
+  it('builds a discard-win settlement result with a single payer', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('red'),
+      winningSeat: 'south',
+      discarderSeat: 'west'
+    }
+
+    const breakdown = decomposeStandardHand(input)
+    const matchedPatterns = evaluateScoringPatterns(input, breakdown)
+
+    expect(buildSettlementResult(input, matchedPatterns)).toEqual({
+      winnerSeat: 'south',
+      discarderSeat: 'west',
+      paymentResponsibility: {
+        type: 'discard-win',
+        payerSeats: ['west']
+      },
+      scoringItems: [],
+      totalTai: 0
+    })
+  })
+
+  it('proves SCORE-STACK-001 uses scoring core output rather than UI logic', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('red'),
+      winningSeat: 'east',
+      discarderSeat: null
+    }
+
+    const winning = validateStandardWin(input)
+
+    expect(winning.isWinning).toBe(true)
+    expect(winning.matchedPatterns).toEqual(['dealer-win', 'self-draw'])
+    expect(winning.totalTai).toBe(2)
+    expect(winning.settlement).toEqual({
+      winnerSeat: 'east',
+      discarderSeat: null,
+      paymentResponsibility: {
+        type: 'self-draw',
+        payerSeats: ['south', 'west', 'north']
+      },
+      scoringItems: ['dealer-win', 'self-draw'],
+      totalTai: 2
+    })
+  })
+})

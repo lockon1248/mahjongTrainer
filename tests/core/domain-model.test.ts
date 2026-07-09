@@ -5,7 +5,7 @@ import {
   createInitialTableState,
   createPendingActionWindow,
   isFlowerTile
-} from '../../src/core/index'
+} from '@/core/index'
 
 describe('core domain model', () => {
   it('exports the four seats in table order', () => {

@@ -1,4 +1,4 @@
-import type { Seat } from './seat'
+import type { Seat } from '@/core/types/seat'
 
 export type RoundResultType = 'win' | 'draw'
 

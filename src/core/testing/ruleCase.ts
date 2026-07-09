@@ -1,6 +1,6 @@
-import type { Meld } from '../types/player'
-import type { Seat } from '../types/seat'
-import type { Tile } from '../types/tile'
+import type { Meld } from '@/core/types/player'
+import type { Seat } from '@/core/types/seat'
+import type { Tile } from '@/core/types/tile'
 
 export type RuleCaseCategory =
   | 'standard-win'
@@ -12,10 +12,12 @@ export type RuleCaseCategory =
   | 'score-stack'
 
 export type RuleCaseExpected = {
-  canWin?: boolean
+  isWinning?: boolean
   winningSeat?: Seat
   claimResolution?: 'win' | 'kan-exposed' | 'pon' | 'chi' | 'pass'
+  matchedPatterns?: string[]
   totalTai?: number
+  settlementType?: 'self-draw' | 'discard-win'
 }
 
 export type RuleCase = {

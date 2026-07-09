@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CORE_WORKSPACE_MODE, CORE_WORKSPACE_VERSION } from '../../src/core/index'
+import { CORE_WORKSPACE_MODE, CORE_WORKSPACE_VERSION } from '@/core/index'
 
 describe('core workspace bootstrap', () => {
   it('exposes the core foundation markers', () => {

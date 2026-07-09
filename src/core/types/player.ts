@@ -1,5 +1,5 @@
-import type { Seat } from './seat'
-import type { Tile } from './tile'
+import type { Seat } from '@/core/types/seat'
+import type { Tile } from '@/core/types/tile'
 
 export type MeldType = 'chi' | 'pon' | 'kan-concealed' | 'kan-exposed' | 'kan-added'
 
