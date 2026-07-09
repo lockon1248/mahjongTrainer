@@ -34,7 +34,9 @@ export const createWinRoundResult = (input: {
   }
 }
 
-export const createDrawRoundResult = (): RoundResult => {
+export const createDrawRoundResult = (input?: {
+  unresolved?: UnresolvedDrawRule[]
+}): RoundResult => {
   return {
     type: 'draw',
     winnerSeat: null,
@@ -42,6 +44,6 @@ export const createDrawRoundResult = (): RoundResult => {
     totalTai: null,
     scoringItems: [],
     drawReason: 'wall-exhausted',
-    unresolved: ['dealer-continuation', 'ready-hand-check', 'ready-hand-payment']
+    unresolved: input?.unresolved ?? ['dealer-continuation', 'ready-hand-check', 'ready-hand-payment']
   }
 }

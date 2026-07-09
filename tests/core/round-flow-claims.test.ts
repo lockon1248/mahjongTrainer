@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createBaselineRuleConfig,
   createBaselineRound,
   discardTile,
+  mergeRuleConfig,
   resolveClaimWindow,
   type PendingActionClaim,
   type Tile
@@ -98,5 +100,36 @@ describe('round flow claim resolution', () => {
     expect(resolved.currentSeat).toBe('south')
     expect(resolved.phase).toBe('draw')
     expect(resolved.outcome).toEqual({ status: 'in-progress' })
+  })
+
+  it('reads claim priority order from rule config instead of a fixed constant', () => {
+    const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      claimPriorityOrder: ['chi', 'pon', 'kan-exposed', 'win']
+    })
+
+    if (!merged.ok)
+      throw new Error(merged.error)
+
+    const round = createBaselineRound({
+      wall: buildWall(),
+      ruleConfig: merged.config
+    })
+    const discardedTile = round.players.east.concealedTiles[0]!
+    const pendingRound = discardTile(round, {
+      seat: 'east',
+      tile: discardedTile
+    })
+    const claims: PendingActionClaim[] = [
+      { seat: 'west', actionType: 'pon', tile: discardedTile },
+      { seat: 'south', actionType: 'chi', tile: discardedTile }
+    ]
+
+    const resolved = resolveClaimWindow(pendingRound, claims)
+
+    expect(resolved.lastClaimResolution).toEqual({
+      type: 'chi',
+      seat: 'south',
+      tile: discardedTile
+    })
   })
 })

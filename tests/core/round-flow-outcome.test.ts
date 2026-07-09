@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createBaselineRuleConfig,
   createBaselineRound,
   evaluateExhaustiveDraw,
+  mergeRuleConfig,
   type Tile
 } from '@/core/index'
 
@@ -78,5 +80,41 @@ describe('round flow exhaustive draw outcome', () => {
     ])
     expect(result.outcome.result.winnerSeat).toBeNull()
     expect(result.outcome.result.discarderSeat).toBeNull()
+  })
+
+  it('uses configured post-draw policies to reduce the unresolved list without inventing business outcomes', () => {
+    const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      postDraw: {
+        dealerContinuation: {
+          status: 'configured',
+          value: false
+        }
+      }
+    })
+
+    if (!merged.ok)
+      throw new Error(merged.error)
+
+    const round = createBaselineRound({
+      wall: buildWall(),
+      ruleConfig: merged.config
+    })
+    const result = evaluateExhaustiveDraw({
+      ...round,
+      table: {
+        ...round.table,
+        wall: []
+      },
+      phase: 'draw'
+    })
+
+    if (result.outcome.status !== 'draw')
+      throw new Error('expected draw outcome')
+
+    expect(result.outcome.result.unresolved).toEqual([
+      'ready-hand-check',
+      'ready-hand-payment'
+    ])
+    expect(result.outcome.result.drawReason).toBe('wall-exhausted')
   })
 })

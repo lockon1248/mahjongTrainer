@@ -1,3 +1,4 @@
+import type { RoundFlowRuleConfig } from '@/core/config'
 import type { PendingActionWindow } from '@/core/types/action'
 import type { PlayerState } from '@/core/types/player'
 import type { RoundResult } from '@/core/types/result'
@@ -25,6 +26,7 @@ export type RoundOutcome =
 export type BaselineRoundState = {
   table: TableState
   players: PlayersBySeat
+  ruleConfig: RoundFlowRuleConfig
   currentSeat: Seat
   phase: RoundPhase
   pendingActionWindow: PendingActionWindow | null

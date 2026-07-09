@@ -1,9 +1,10 @@
+import type { MahjongRuleConfig } from '@/core/config'
 import { decomposeStandardHand } from '@/core/scoring/decomposition'
 import { evaluateScoringPatterns } from '@/core/scoring/patterns'
 import { buildSettlementResult } from '@/core/scoring/settlement'
 import type { StandardWinInput, WinningEvaluationResult } from '@/core/scoring/types'
 
-export const validateStandardWin = (input: StandardWinInput): WinningEvaluationResult => {
+export const validateStandardWin = (input: StandardWinInput, ruleConfig?: MahjongRuleConfig): WinningEvaluationResult => {
   const breakdown = decomposeStandardHand(input)
 
   if (breakdown === null) {
@@ -17,7 +18,7 @@ export const validateStandardWin = (input: StandardWinInput): WinningEvaluationR
   }
 
   const matchedPatterns = evaluateScoringPatterns(input, breakdown)
-  const settlement = buildSettlementResult(input, matchedPatterns)
+  const settlement = buildSettlementResult(input, matchedPatterns, ruleConfig)
 
   return {
     isWinning: true,

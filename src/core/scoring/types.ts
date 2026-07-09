@@ -1,3 +1,4 @@
+import type { RuleConfigState } from '@/core/config'
 import type { Meld } from '@/core/types/player'
 import type { Seat } from '@/core/types/seat'
 import type { Tile } from '@/core/types/tile'
@@ -30,7 +31,7 @@ export type StandardWinInput = {
 export type ScoringPatternResult = SupportedPatternId
 
 export type PaymentResponsibility = {
-  type: SettlementType
+  type: SettlementType | 'winner-only'
   payerSeats: Seat[]
 }
 
@@ -40,6 +41,7 @@ export type SettlementResult = {
   paymentResponsibility: PaymentResponsibility | null
   scoringItems: string[]
   totalTai: number | null
+  minimumTai?: RuleConfigState<number> | null
 }
 
 export type WinningEvaluationResult = {

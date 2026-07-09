@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const SCAFFOLD_BOUNDARY_PATH = resolve(
   process.cwd(),
-  'openspec/changes/taiwan-mahjong-core-foundation/vue-scaffold-boundary.md'
+  'openspec/changes/archive/2026-07-09-taiwan-mahjong-core-foundation/vue-scaffold-boundary.md'
 )
 
 describe('vue scaffold boundary', () => {

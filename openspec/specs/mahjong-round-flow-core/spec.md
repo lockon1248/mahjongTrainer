@@ -129,28 +129,28 @@ tests:
 ---
 ### Requirement: Claim window resolution
 
-The round flow core SHALL resolve competing claim candidates through a single pending claim window and SHALL apply the baseline claim priority order `win > kan-exposed > pon > chi`.
+The round flow core SHALL resolve competing claim candidates through a single pending claim window and SHALL derive the effective claim priority order from rule config instead of assuming a fixed global constant.
 
 #### Scenario: Prefer a winning claim over lower-priority claims
 
-- **WHEN** multiple seats declare claims against the same discard and at least one valid winning claim exists
+- **WHEN** multiple seats declare claims against the same discard and the effective rule config places winning claims above other valid claims
 - **THEN** the round flow core SHALL resolve the claim window as a winning claim instead of exposed kan, pon, or chi
 
 ##### Example: CLAIM-PRIORITY-001 win beats pon
 
 - **GIVEN** one discard that allows north to win and south to pon
-- **WHEN** both claims are submitted into the same pending claim window
+- **WHEN** both claims are submitted into the same pending claim window under a rule config whose priority order is `win > kan-exposed > pon > chi`
 - **THEN** the resolved claim MUST be north's winning claim
 
 #### Scenario: Prefer exposed kan over pon and chi when no win exists
 
-- **WHEN** the pending claim window contains no winning claim and contains both a valid exposed kan and lower-priority claims
+- **WHEN** the pending claim window contains no winning claim and the effective rule config places exposed kan above lower-priority claims
 - **THEN** the round flow core SHALL resolve the claim window as the exposed kan
 
 ##### Example: exposed kan beats chi
 
 - **GIVEN** one discard that allows west to form an exposed kan and south to chi
-- **WHEN** both claims are submitted and no valid winning claim exists
+- **WHEN** both claims are submitted and no valid winning claim exists under a rule config whose priority order is `win > kan-exposed > pon > chi`
 - **THEN** the resolved claim MUST be west's exposed kan claim
 
 #### Scenario: Advance the round when every eligible claimant passes
@@ -166,25 +166,45 @@ The round flow core SHALL resolve competing claim candidates through a single pe
 
 
 <!-- @trace
-source: taiwan-mahjong-round-flow-foundation
+source: taiwan-mahjong-rule-config-foundation
 updated: 2026-07-09
 code:
-  - src/core/types/result.ts
-  - src/core/index.ts
   - src/core/rules/index.ts
   - src/core/rules/types.ts
+  - src/core/types/result.ts
+  - src/core/scoring/validation.ts
   - src/core/rules/roundFlow.ts
+  - src/core/scoring/settlement.ts
+  - tsconfig.json
+  - src/core/config/index.ts
+  - src/core/config/types.ts
+  - src/core/scoring/patterns.ts
+  - src/core/types/action.ts
+  - package.json
+  - src/core/testing/ruleCase.ts
+  - src/core/types/player.ts
+  - src/core/index.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/core/types/tile.ts
+  - src/core/scoring/decomposition.ts
 tests:
   - tests/core/round-flow-claims.test.ts
   - tests/core/round-flow-flowers.test.ts
-  - tests/core/round-flow-setup.test.ts
   - tests/core/round-flow-outcome.test.ts
+  - tests/core/scoring-hand-decomposition.test.ts
+  - tests/core/scoring-patterns.test.ts
+  - tests/core/scoring-win-validation.test.ts
+  - tests/core/round-flow-setup.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/core/scoring-exports.test.ts
+  - tests/core/scoring-settlement.test.ts
 -->
 
 ---
 ### Requirement: Exhaustive draw outcome
 
-The round flow core SHALL produce an explicit exhaustive draw outcome when the wall can no longer support another normal draw and no player has already won.
+The round flow core SHALL produce an explicit exhaustive draw outcome when the wall can no longer support another normal draw and no player has already won, and SHALL represent unresolved post-draw branches through rule config policy instead of inventing final business outcomes.
 
 #### Scenario: End the round when the wall is exhausted
 
@@ -199,27 +219,90 @@ The round flow core SHALL produce an explicit exhaustive draw outcome when the w
 
 #### Scenario: Do not invent unresolved post-draw rules
 
-- **WHEN** the round ends as an exhaustive draw
-- **THEN** the round flow core SHALL NOT assign dealer continuation, ready-hand penalties, or listening checks unless those rules are defined by a separate rule configuration or later authoritative spec
+- **WHEN** the round ends as an exhaustive draw and the effective rule config leaves dealer continuation, ready-hand penalties, or listening checks unresolved
+- **THEN** the round flow core SHALL NOT assign those outcomes as settled business logic
 
 ##### Example: unresolved dealer continuation stays unset
 
-- **GIVEN** an exhaustive draw outcome in the baseline round flow core
+- **GIVEN** an exhaustive draw outcome under a rule config whose post-draw policies remain unresolved
 - **WHEN** the result is returned to the caller
 - **THEN** the outcome MUST identify the round as drawn and MUST leave dealer continuation or ready-hand settlement unresolved
 
 <!-- @trace
-source: taiwan-mahjong-round-flow-foundation
+source: taiwan-mahjong-rule-config-foundation
 updated: 2026-07-09
 code:
-  - src/core/types/result.ts
-  - src/core/index.ts
   - src/core/rules/index.ts
   - src/core/rules/types.ts
+  - src/core/types/result.ts
+  - src/core/scoring/validation.ts
   - src/core/rules/roundFlow.ts
+  - src/core/scoring/settlement.ts
+  - tsconfig.json
+  - src/core/config/index.ts
+  - src/core/config/types.ts
+  - src/core/scoring/patterns.ts
+  - src/core/types/action.ts
+  - package.json
+  - src/core/testing/ruleCase.ts
+  - src/core/types/player.ts
+  - src/core/index.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/core/types/tile.ts
+  - src/core/scoring/decomposition.ts
 tests:
   - tests/core/round-flow-claims.test.ts
   - tests/core/round-flow-flowers.test.ts
-  - tests/core/round-flow-setup.test.ts
   - tests/core/round-flow-outcome.test.ts
+  - tests/core/scoring-hand-decomposition.test.ts
+  - tests/core/scoring-patterns.test.ts
+  - tests/core/scoring-win-validation.test.ts
+  - tests/core/round-flow-setup.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/core/scoring-exports.test.ts
+  - tests/core/scoring-settlement.test.ts
+-->
+
+---
+### Requirement: AI-safe round state consumption
+
+The round flow core SHALL expose a stable state shape that an AI consumer can read to choose among legal actions without bypassing the rules engine.
+
+#### Scenario: AI reads legal decision context
+
+- **WHEN** an AI player needs to make a discard or claim decision
+- **THEN** the round flow core SHALL provide enough legal state context for AI evaluation, including current seat, hand state, triggering discard if any, and legal action candidates
+
+##### Example: AI consumes legal claim context
+
+- **GIVEN** a claim window state produced by round flow
+- **WHEN** the AI reads that state to choose an action
+- **THEN** the AI consumer MUST be able to inspect the triggering discard and candidate claim actions without mutating workflow internals directly
+
+<!-- @trace
+source: taiwan-mahjong-ai-decision-foundation
+updated: 2026-07-09
+code:
+  - src/core/ai/index.ts
+  - src/core/scoring/settlement.ts
+  - src/core/types/result.ts
+  - src/core/index.ts
+  - src/core/scoring/validation.ts
+  - src/core/scoring/types.ts
+  - src/core/config/index.ts
+  - src/core/rules/types.ts
+  - src/core/config/types.ts
+  - src/core/ai/decision.ts
+  - src/core/ai/types.ts
+  - src/core/ai/context.ts
+  - src/core/rules/roundFlow.ts
+tests:
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/core/scoring-exports.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/docs/scaffold-boundary.test.ts
 -->

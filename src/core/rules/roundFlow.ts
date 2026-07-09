@@ -1,3 +1,4 @@
+import { createBaselineRuleConfig, getRoundFlowRuleConfig, type ClaimPriorityAction, type MahjongRuleConfig } from '@/core/config'
 import type { PendingActionClaim, PendingActionWindow } from '@/core/types/action'
 import { createPendingActionWindow } from '@/core/types/action'
 import { createEmptyPlayerState } from '@/core/types/player'
@@ -14,17 +15,10 @@ import type {
   PlayersBySeat
 } from '@/core/rules/types'
 
-const CLAIM_PRIORITIES: Record<ClaimResolutionType, number> = {
-  win: 0,
-  'kan-exposed': 1,
-  pon: 2,
-  chi: 3,
-  pass: 4
-}
-
-export const createBaselineRound = (input: { wall: Tile[] }): BaselineRoundState => {
+export const createBaselineRound = (input: { wall: Tile[]; ruleConfig?: MahjongRuleConfig }): BaselineRoundState => {
   let remainingWall = [...input.wall]
   const players = createPlayersBySeat()
+  const effectiveRuleConfig = getRoundFlowRuleConfig(input.ruleConfig ?? createBaselineRuleConfig())
 
   for (const seat of ALL_SEATS) {
     const drawResult = drawHandToTarget({
@@ -48,6 +42,7 @@ export const createBaselineRound = (input: { wall: Tile[] }): BaselineRoundState
       wall: remainingWall
     },
     players,
+    ruleConfig: effectiveRuleConfig,
     currentSeat: 'east',
     phase: 'discard',
     pendingActionWindow: null,
@@ -133,7 +128,7 @@ export const resolveClaimWindow = (
     throw new Error('no pending claim window to resolve')
 
   const validClaims = claims.filter((claim) => isValidClaim(claim, pendingActionWindow))
-  const winningClaim = pickHighestPriorityClaim(validClaims)
+  const winningClaim = pickHighestPriorityClaim(validClaims, round.ruleConfig.claimPriorityOrder)
 
   if (winningClaim == null) {
     const nextSeat = getNextSeat(pendingActionWindow.triggeringSeat!)
@@ -226,7 +221,9 @@ export const evaluateExhaustiveDraw = (round: BaselineRoundState): BaselineRound
     pendingActionWindow: null,
     outcome: {
       status: 'draw',
-      result: createDrawRoundResult()
+      result: createDrawRoundResult({
+        unresolved: getUnresolvedPostDrawPolicies(round)
+      })
     }
   }
 }
@@ -292,19 +289,37 @@ const isValidClaim = (claim: PendingActionClaim, pendingActionWindow: PendingAct
     || claim.actionType === 'chi'
 }
 
-const pickHighestPriorityClaim = (claims: PendingActionClaim[]): PendingActionClaim | null => {
+const pickHighestPriorityClaim = (
+  claims: PendingActionClaim[],
+  claimPriorityOrder: ClaimPriorityAction[]
+): PendingActionClaim | null => {
   if (claims.length === 0)
     return null
 
   return [...claims].sort((left, right) => {
-    const leftPriority = CLAIM_PRIORITIES[left.actionType as ClaimResolutionType]
-    const rightPriority = CLAIM_PRIORITIES[right.actionType as ClaimResolutionType]
+    const leftPriority = claimPriorityOrder.indexOf(left.actionType as ClaimPriorityAction)
+    const rightPriority = claimPriorityOrder.indexOf(right.actionType as ClaimPriorityAction)
 
     if (leftPriority !== rightPriority)
       return leftPriority - rightPriority
 
     return ALL_SEATS.indexOf(left.seat) - ALL_SEATS.indexOf(right.seat)
   })[0]!
+}
+
+const getUnresolvedPostDrawPolicies = (round: BaselineRoundState): Array<'dealer-continuation' | 'ready-hand-check' | 'ready-hand-payment'> => {
+  const unresolved: Array<'dealer-continuation' | 'ready-hand-check' | 'ready-hand-payment'> = []
+
+  if (round.ruleConfig.postDraw.dealerContinuation.status === 'unresolved')
+    unresolved.push('dealer-continuation')
+
+  if (round.ruleConfig.postDraw.readyHandCheck.status === 'unresolved')
+    unresolved.push('ready-hand-check')
+
+  if (round.ruleConfig.postDraw.readyHandPayment.status === 'unresolved')
+    unresolved.push('ready-hand-payment')
+
+  return unresolved
 }
 
 const asClaimResolution = (claim: PendingActionClaim): ClaimResolution => {
