@@ -306,3 +306,68 @@ tests:
   - tests/core/rule-config-core.test.ts
   - tests/docs/scaffold-boundary.test.ts
 -->
+
+---
+### Requirement: UI-safe round state consumption
+
+The round flow core SHALL expose a stable round snapshot that UI and store layers can consume without re-implementing rule evaluation.
+
+#### Scenario: Store reads a round snapshot for rendering
+
+- **WHEN** the frontend store requests the current round snapshot for view rendering
+- **THEN** the round flow core SHALL provide a stable state shape containing table, players, current seat, phase, pending-action context, and outcome data needed by the UI shell
+
+##### Example: game view receives renderable snapshot
+
+- **GIVEN** a newly initialized round state in core
+- **WHEN** the frontend store forwards that snapshot to the game table view
+- **THEN** the UI consumer MUST be able to render current round information without recomputing legal-rule outcomes in Vue components
+
+<!-- @trace
+source: taiwan-mahjong-vue-table-shell
+updated: 2026-07-09
+code:
+  - src/views/home/HomeView.vue
+  - src/stores/gameSession.ts
+  - src/core/config/types.ts
+  - src/views/game/types.ts
+  - src/main.ts
+  - src/core/rules/roundFlow.ts
+  - src/app.ts
+  - src/env.d.ts
+  - src/styles/main.css
+  - src/views/game/GameView.vue
+  - vitest.config.ts
+  - src/core/wall.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/validation.ts
+  - tsconfig.json
+  - src/core/scoring/types.ts
+  - src/core/types/result.ts
+  - src/views/game/selectors.ts
+  - package.json
+  - src/core/config/index.ts
+  - src/core/ai/context.ts
+  - src/App.vue
+  - src/core/index.ts
+  - vite.config.ts
+  - src/core/ai/index.ts
+  - src/core/scoring/settlement.ts
+  - src/core/rules/types.ts
+  - src/core/ai/types.ts
+  - src/core/ai/decision.ts
+  - index.html
+  - src/router/index.ts
+tests:
+  - tests/ui/app-shell.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/docs/scaffold-boundary.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/core/scoring-exports.test.ts
+  - tests/smoke/vue-workspace.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/core/round-flow-outcome.test.ts
+-->
