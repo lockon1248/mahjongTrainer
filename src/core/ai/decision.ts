@@ -47,6 +47,7 @@ export const chooseAiClaimDecision = (input: AiClaimDecisionInput): AiClaimDecis
     return {
       actionType: 'win',
       tile: winningCandidate.tile,
+      consumedTiles: winningCandidate.consumedTiles,
       reasoning: {
         heuristic: 'claim',
         score: Number.POSITIVE_INFINITY,
@@ -72,6 +73,7 @@ export const chooseAiClaimDecision = (input: AiClaimDecisionInput): AiClaimDecis
   return {
     actionType: selected.candidate.actionType,
     tile: selected.candidate.tile,
+    consumedTiles: selected.candidate.consumedTiles,
     reasoning: {
       heuristic: 'claim',
       score: selected.score,

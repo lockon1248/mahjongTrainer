@@ -1,5 +1,6 @@
 import { createBaselineRuleConfig, getRoundFlowRuleConfig, type ClaimPriorityAction, type MahjongRuleConfig } from '@/core/config'
-import type { PendingActionClaim, PendingActionWindow } from '@/core/types/action'
+import { validateStandardWin } from '@/core/scoring/validation'
+import type { PendingActionClaim } from '@/core/types/action'
 import { createPendingActionWindow } from '@/core/types/action'
 import { createEmptyPlayerState } from '@/core/types/player'
 import { createDrawRoundResult, createWinRoundResult } from '@/core/types/result'
@@ -12,6 +13,8 @@ import type {
   ClaimResolutionType,
   DrawHandInput,
   DrawHandResult,
+  HumanClaimCandidate,
+  HumanClaimActionType,
   PlayersBySeat
 } from '@/core/rules/types'
 
@@ -127,7 +130,7 @@ export const resolveClaimWindow = (
   if (round.phase !== 'claim-window' || pendingActionWindow == null)
     throw new Error('no pending claim window to resolve')
 
-  const validClaims = claims.filter((claim) => isValidClaim(claim, pendingActionWindow))
+  const validClaims = claims.filter((claim) => isValidClaim(round, claim))
   const winningClaim = pickHighestPriorityClaim(validClaims, round.ruleConfig.claimPriorityOrder)
 
   if (winningClaim == null) {
@@ -208,6 +211,70 @@ export const drawForCurrentSeat = (round: BaselineRoundState): BaselineRoundStat
   }
 }
 
+export const getLegalClaimCandidates = (
+  round: BaselineRoundState,
+  seat: Seat
+): HumanClaimCandidate[] => {
+  const pendingActionWindow = round.pendingActionWindow
+  const triggeringTile = pendingActionWindow?.triggeringTile
+  const triggeringSeat = pendingActionWindow?.triggeringSeat
+
+  if (round.phase !== 'claim-window' || pendingActionWindow == null || triggeringTile == null || triggeringSeat == null)
+    return []
+
+  if (seat === triggeringSeat)
+    return []
+
+  const player = round.players[seat]
+  const candidates: HumanClaimCandidate[] = [{
+    actionType: 'pass',
+    tile: triggeringTile,
+    consumedTiles: []
+  }]
+
+  const candidatesByAction = new Map<HumanClaimActionType, HumanClaimCandidate[]>()
+
+  if (isWinningClaim(player, triggeringTile, seat, triggeringSeat)) {
+    candidatesByAction.set('win', [{
+      actionType: 'win',
+      tile: triggeringTile,
+      consumedTiles: []
+    }])
+  }
+
+  const matchingTiles = findMatchingTiles(player.concealedTiles, triggeringTile)
+
+  if (matchingTiles.length >= 3) {
+    candidatesByAction.set('kan-exposed', [{
+      actionType: 'kan-exposed',
+      tile: triggeringTile,
+      consumedTiles: matchingTiles.slice(0, 3)
+    }])
+  }
+
+  if (matchingTiles.length >= 2) {
+    candidatesByAction.set('pon', [{
+      actionType: 'pon',
+      tile: triggeringTile,
+      consumedTiles: matchingTiles.slice(0, 2)
+    }])
+  }
+
+  const chiCandidates = buildChiCandidates(player.concealedTiles, triggeringTile, seat, triggeringSeat)
+
+  if (chiCandidates.length > 0)
+    candidatesByAction.set('chi', chiCandidates)
+
+  for (const actionType of round.ruleConfig.claimPriorityOrder) {
+    const actionCandidates = candidatesByAction.get(actionType)
+
+    if (actionCandidates)
+      candidates.push(...actionCandidates)
+  }
+
+  return candidates
+}
+
 export const evaluateExhaustiveDraw = (round: BaselineRoundState): BaselineRoundState => {
   if (round.outcome.status !== 'in-progress')
     return round
@@ -273,20 +340,25 @@ const drawFromWallTail = (wall: Tile[]): Tile => {
   return tile
 }
 
-const isValidClaim = (claim: PendingActionClaim, pendingActionWindow: PendingActionWindow): boolean => {
-  if (claim.tile == null || pendingActionWindow.triggeringTile == null)
+const isValidClaim = (round: BaselineRoundState, claim: PendingActionClaim): boolean => {
+  const pendingActionWindow = round.pendingActionWindow
+
+  if (claim.tile == null || pendingActionWindow?.triggeringTile == null)
     return false
 
-  if (claim.seat === pendingActionWindow.triggeringSeat)
+  if (claim.actionType === 'pass')
     return false
 
   if (!isSameTile(claim.tile, pendingActionWindow.triggeringTile))
     return false
 
-  return claim.actionType === 'win'
-    || claim.actionType === 'kan-exposed'
-    || claim.actionType === 'pon'
-    || claim.actionType === 'chi'
+  const legalCandidates = getLegalClaimCandidates(round, claim.seat)
+
+  return legalCandidates.some((candidate) => {
+    return candidate.actionType === claim.actionType
+      && isSameTile(candidate.tile, claim.tile!)
+      && areSameTiles(candidate.consumedTiles, claim.consumedTiles ?? [])
+  })
 }
 
 const pickHighestPriorityClaim = (
@@ -338,4 +410,77 @@ const getNextSeat = (seat: Seat): Seat => {
 
 const isSameTile = (left: Tile, right: Tile): boolean => {
   return left.suit === right.suit && left.rank === right.rank
+}
+
+const isWinningClaim = (
+  player: PlayersBySeat[Seat],
+  triggeringTile: Tile,
+  seat: Seat,
+  discarderSeat: Seat
+): boolean => {
+  return validateStandardWin({
+    concealedTiles: player.concealedTiles,
+    melds: player.melds,
+    flowers: player.flowers,
+    winningTile: triggeringTile,
+    winningSeat: seat,
+    discarderSeat
+  }).isWinning
+}
+
+const findMatchingTiles = (concealedTiles: Tile[], targetTile: Tile): Tile[] => {
+  return concealedTiles.filter((tile) => isSameTile(tile, targetTile))
+}
+
+const buildChiCandidates = (
+  concealedTiles: Tile[],
+  triggeringTile: Tile,
+  seat: Seat,
+  triggeringSeat: Seat
+): HumanClaimCandidate[] => {
+  if (seat !== getNextSeat(triggeringSeat))
+    return []
+
+  if (!isNumberTile(triggeringTile))
+    return []
+
+  const rankPairs: Array<[number, number]> = [
+    [triggeringTile.rank - 2, triggeringTile.rank - 1],
+    [triggeringTile.rank - 1, triggeringTile.rank + 1],
+    [triggeringTile.rank + 1, triggeringTile.rank + 2]
+  ]
+
+  return rankPairs.flatMap(([leftRank, rightRank]) => {
+    if (!isValidSequenceRank(leftRank) || !isValidSequenceRank(rightRank))
+      return []
+
+    const leftTile = concealedTiles.find((tile) => isSameTile(tile, { suit: triggeringTile.suit, rank: leftRank }))
+    const rightTile = concealedTiles.find((tile) => isSameTile(tile, { suit: triggeringTile.suit, rank: rightRank }))
+
+    if (leftTile == null || rightTile == null)
+      return []
+
+    return [{
+      actionType: 'chi' as const,
+      tile: triggeringTile,
+      consumedTiles: [leftTile, rightTile]
+    }]
+  })
+}
+
+const isNumberTile = (tile: Tile): tile is Extract<Tile, { suit: 'characters' | 'dots' | 'bamboo' }> => {
+  return tile.suit === 'characters' || tile.suit === 'dots' || tile.suit === 'bamboo'
+}
+
+const isValidSequenceRank = (rank: number): rank is 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => {
+  return rank >= 1 && rank <= 9
+}
+
+const areSameTiles = (left: Tile[], right: Tile[]): boolean => {
+  if (left.length !== right.length)
+    return false
+
+  return left.every((tile, index) => {
+    return right[index] != null && isSameTile(tile, right[index]!)
+  })
 }

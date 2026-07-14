@@ -19,6 +19,7 @@ export type PendingActionClaim = {
   seat: Seat
   actionType: ActionType
   tile: Tile | null
+  consumedTiles?: Tile[]
 }
 
 export type PendingActionWindow = {

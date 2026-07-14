@@ -62,6 +62,7 @@ export type AiDiscardDecision = {
 export type AiClaimDecision = {
   actionType: AiClaimCandidate['actionType']
   tile: Tile | null
+  consumedTiles?: Tile[]
   reasoning: AiDecisionReasoning
 }
 

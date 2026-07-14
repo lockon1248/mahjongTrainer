@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { Tile } from '@/core'
+import type { HumanClaimCandidate, Tile } from '@/core'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
@@ -26,6 +26,13 @@ const handleHumanDiscard = (tile: Tile) => {
   if (gameSessionStore.error == null)
     gameSessionStore.advanceTurn()
 }
+
+const handleHumanClaim = (candidate: HumanClaimCandidate) => {
+  gameSessionStore.submitHumanClaim(candidate.actionType, candidate.consumedTiles)
+
+  if (gameSessionStore.error == null)
+    gameSessionStore.advanceTurn()
+}
 </script>
 
 <template>
@@ -43,7 +50,9 @@ const handleHumanDiscard = (tile: Tile) => {
       v-else-if="snapshot != null"
       :snapshot="snapshot"
       :human-seat="gameSessionStore.humanSeat"
+      :claim-candidates="gameSessionStore.availableHumanClaims"
       @discard="handleHumanDiscard"
+      @claim="handleHumanClaim"
     />
   </section>
 </template>

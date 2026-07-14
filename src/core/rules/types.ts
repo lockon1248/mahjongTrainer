@@ -12,6 +12,14 @@ export type RoundPhase = 'draw' | 'discard' | 'claim-window' | 'ended'
 
 export type ClaimResolutionType = 'win' | 'kan-exposed' | 'pon' | 'chi' | 'pass'
 
+export type HumanClaimActionType = 'pass' | 'chi' | 'pon' | 'kan-exposed' | 'win'
+
+export type HumanClaimCandidate = {
+  actionType: HumanClaimActionType
+  tile: Tile
+  consumedTiles: Tile[]
+}
+
 export type ClaimResolution = {
   type: ClaimResolutionType
   seat: Seat | null

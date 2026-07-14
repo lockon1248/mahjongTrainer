@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Seat, Tile } from '@/core'
+import type { HumanClaimCandidate, Seat, Tile } from '@/core'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 
 const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
   humanSeat: Seat
+  claimCandidates: HumanClaimCandidate[]
 }>()
 
 const emit = defineEmits<{
   discard: [tile: Tile]
+  claim: [candidate: HumanClaimCandidate]
 }>()
 
 const isHumanTurn = computed(() => {
@@ -22,8 +24,21 @@ const lastClaimLabel = computed(() => {
   return props.snapshot.lastClaimResolution?.type ?? 'none'
 })
 
+const visibleClaimCandidates = computed(() => {
+  return props.claimCandidates.filter((candidate) => {
+    return candidate.actionType === 'pass' || props.claimCandidates.some(item => item.actionType !== 'pass')
+  })
+})
+
 const formatTile = (tile: Tile): string => {
   return `${tile.suit}-${tile.rank}`
+}
+
+const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
+  if (candidate.consumedTiles.length === 0)
+    return candidate.actionType
+
+  return `${candidate.actionType}:${candidate.consumedTiles.map(formatTile).join('+')}`
 }
 </script>
 
@@ -116,6 +131,22 @@ const formatTile = (tile: Tile): string => {
           </button>
         </div>
       </article>
+    </div>
+    <div
+      v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1"
+      class="claim-action-bar"
+      data-testid="human-claim-actions"
+    >
+      <button
+        v-for="(candidate, candidateIndex) in visibleClaimCandidates"
+        :key="`${candidate.actionType}-${candidateIndex}`"
+        class="claim-action-button"
+        data-testid="human-claim-action"
+        type="button"
+        @click="emit('claim', candidate)"
+      >
+        {{ formatClaimLabel(candidate) }}
+      </button>
     </div>
   </section>
 </template>
@@ -218,5 +249,21 @@ const formatTile = (tile: Tile): string => {
 .concealed-tile-button:disabled {
   opacity: 0.56;
   cursor: default;
+}
+
+.claim-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.claim-action-button {
+  border: 1px solid rgba(59, 88, 68, 0.18);
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  background: rgba(248, 243, 232, 0.88);
+  color: #214538;
+  font: inherit;
+  cursor: pointer;
 }
 </style>

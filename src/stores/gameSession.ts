@@ -9,8 +9,11 @@ import {
   createBaselineWall,
   discardTile,
   drawForCurrentSeat,
+  getLegalClaimCandidates,
   resolveClaimWindow,
   type BaselineRoundState,
+  type HumanClaimActionType,
+  type HumanClaimCandidate,
   type PendingActionClaim,
   ALL_SEATS,
   type Seat,
@@ -26,6 +29,12 @@ export const useGameSessionStore = defineStore('game-session', () => {
 
   const isInitialized = computed(() => round.value != null)
   const humanSeat = HUMAN_SEAT
+  const availableHumanClaims = computed<HumanClaimCandidate[]>(() => {
+    if (round.value == null)
+      return []
+
+    return getLegalClaimCandidates(round.value, humanSeat)
+  })
 
   const startLocalRound = () => {
     try {
@@ -62,17 +71,41 @@ export const useGameSessionStore = defineStore('game-session', () => {
     runRoundTransition(() => resolveClaimWindow(currentRound, claims))
   }
 
+  const submitHumanClaim = (actionType: HumanClaimActionType, consumedTiles: Tile[] = []) => {
+    const currentRound = requireRound()
+    const selectedCandidate = availableHumanClaims.value.find((candidate) => {
+      return candidate.actionType === actionType && areSameTiles(candidate.consumedTiles, consumedTiles)
+    })
+
+    if (selectedCandidate == null) {
+      error.value = 'human claim is not currently legal'
+      return
+    }
+
+    const aiClaims = collectAiClaims(currentRound)
+    const humanClaim: PendingActionClaim | null = selectedCandidate.actionType === 'pass'
+      ? null
+      : {
+          seat: humanSeat,
+          actionType: selectedCandidate.actionType,
+          tile: selectedCandidate.tile,
+          consumedTiles: selectedCandidate.consumedTiles
+        }
+
+    runRoundTransition(() => resolveClaimWindow(currentRound, humanClaim == null ? aiClaims : [humanClaim, ...aiClaims]))
+  }
+
   const advanceTurn = () => {
     const initialRound = requireRound()
 
-    if (isWaitingForHumanDiscard(initialRound) || initialRound.phase === 'ended')
+    if (isWaitingForHumanDiscard(initialRound) || isWaitingForHumanClaim(initialRound) || initialRound.phase === 'ended')
       return
 
     runRoundTransition(() => {
       let nextRound = initialRound
 
       for (let step = 0; step < TURN_ADVANCEMENT_LIMIT; step += 1) {
-        if (nextRound.phase === 'ended' || isWaitingForHumanDiscard(nextRound))
+        if (nextRound.phase === 'ended' || isWaitingForHumanDiscard(nextRound) || isWaitingForHumanClaim(nextRound))
           return nextRound
 
         if (nextRound.phase === 'draw') {
@@ -124,14 +157,11 @@ export const useGameSessionStore = defineStore('game-session', () => {
   }
 
   const collectAiClaims = (currentRound: BaselineRoundState): PendingActionClaim[] => {
-    const triggeringTile = currentRound.pendingActionWindow?.triggeringTile ?? null
-
     return ALL_SEATS.filter(seat => seat !== humanSeat && seat !== currentRound.pendingActionWindow?.triggeringSeat).map((seat) => {
+      const legalClaims = getLegalClaimCandidates(currentRound, seat)
       const aiContext = createAiDecisionContext(currentRound, {
         seat,
-        legalClaims: triggeringTile == null
-          ? []
-          : [{ actionType: 'pass', tile: triggeringTile }]
+        legalClaims
       })
       const decision = chooseAiClaimDecision({
         seat: aiContext.seat,
@@ -146,7 +176,8 @@ export const useGameSessionStore = defineStore('game-session', () => {
       return {
         seat,
         actionType: decision.actionType,
-        tile: decision.tile
+        tile: decision.tile,
+        consumedTiles: decision.consumedTiles ?? []
       }
     })
   }
@@ -157,15 +188,35 @@ export const useGameSessionStore = defineStore('game-session', () => {
       && currentRound.outcome.status === 'in-progress'
   }
 
+  const isWaitingForHumanClaim = (currentRound: BaselineRoundState): boolean => {
+    if (currentRound.phase !== 'claim-window' || currentRound.outcome.status !== 'in-progress')
+      return false
+
+    return getLegalClaimCandidates(currentRound, humanSeat).some(candidate => candidate.actionType !== 'pass')
+  }
+
+  const areSameTiles = (left: Tile[], right: Tile[]): boolean => {
+    if (left.length !== right.length)
+      return false
+
+    return left.every((tile, index) => {
+      const rightTile = right[index]
+
+      return rightTile != null && tile.suit === rightTile.suit && tile.rank === rightTile.rank
+    })
+  }
+
   return {
     round,
     error,
     isInitialized,
     humanSeat,
+    availableHumanClaims,
     startLocalRound,
     drawCurrentSeat,
     discard,
     resolveClaims,
+    submitHumanClaim,
     advanceTurn
   }
 })

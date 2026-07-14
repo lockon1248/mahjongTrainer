@@ -34,9 +34,9 @@
 
 ## 4. 進行中：真人 claim-window 宣告
 
-- [ ] 4.1 完成 `taiwan-mahjong-human-claim-window`：讓真人在 `claim-window` 可選 `pass`、`chi`、`pon`、`kan-exposed`、`win`。
-- [ ] 4.2 驗證真人有合法宣告時，牌局不會自動略過該座位。
-- [ ] 4.3 完成後才可將主 spec `階段 3` 的 `宣告流程` 標記為主線完成。
+- [x] 4.1 完成 `taiwan-mahjong-human-claim-window`：讓真人在 `claim-window` 可選 `pass`、`chi`、`pon`、`kan-exposed`、`win`。
+- [x] 4.2 驗證真人有合法宣告時，牌局不會自動略過該座位。
+- [x] 4.3 完成後才可將主 spec `階段 3` 的 `宣告流程` 標記為主線完成。
 
 ## 5. 未開始：真人自回合動作完整化
 
