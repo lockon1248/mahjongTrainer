@@ -77,10 +77,10 @@
 
 ### 目前進行中
 
-9. 目前沒有 active child change
-   - current active child change：`none`
-   - next planned child change：待新的主 spec child change 建立後回填
-   - 主線 task 完成條件：新 child change 建立後再回填
+9. UI 規則驅動真實性稽核
+   - current active child change：`taiwan-mahjong-ui-rule-driven-truth-audit`
+   - next planned child change：待本次 UI 稽核拆出具體修正 child changes 後回填
+   - 主線 task 完成條件：本 change 完成盤點、分類、後續 change 拆分與 archive
 
 ### 尚未開始
 

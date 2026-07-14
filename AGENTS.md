@@ -258,6 +258,47 @@ Required behavior:
 
 1. `current active child change`、`next planned child change`、`planned`、`in-progress` 這類欄位屬於狀態資訊，不得寫成可勾選 task
 2. 不得因為 child change 已建立 proposal / design / tasks，就把對應主線 task 打勾
+## 15B. Mainline Board Lifecycle Rule
+
+本 repo 必須永遠有一份 active 主線 board，但 active 主線 board 不得處於
+「task 已全部完成卻仍不封存」的矛盾狀態。
+
+Required behavior:
+
+1. 若目前主線 board 的建立、回填、交接 task 已完成，則它不得繼續以
+   completed-but-still-active 狀態存在
+2. 必須改用 successor handoff：
+   - 建立新的 active 主線 board change
+   - 將最新主線狀態移轉到新 board
+   - 讓新 board 接手 current mainline board 身分
+   - 封存前一份主線 board
+3. active 主線 board 必須保留一個未完成的維護或交接 task，直到下一份
+   successor board 接手為止
+4. 不得再出現「主線 board 任務全勾完，但因為它是 current board 所以不封存」
+   的例外狀態
+## 16. UI Truthfulness Rule
+
+本 repo 的 UI 不能出現「假 UI」。
+
+假 UI 定義為：
+
+1. 顯示給玩家看的狀態欄位，其值只來自預設值、placeholder flag、未驅動欄位或 dormant state
+2. 畫面文案看起來像正式產品資訊，但後面沒有真實規則、演算法或 store 判定支撐
+
+Required behavior:
+
+1. 任何狀態型 UI 欄位在上線前，都必須能指出其唯一來源：
+   - `core/rules`
+   - `core/scoring`
+   - `store` 的明確業務判定
+   - 已定義的 UI-only state machine
+2. 若找不到上述來源，不得把該欄位以正式產品文案顯示在畫面上
+3. 不得把內部欄位名或旗標直接包裝成產品狀態
+4. 對 UI 做 review 或驗證時，除了檢查有沒有顯示，還必須檢查：
+   - 顯示值是否語意正確
+   - 顯示值是否真的被對應規則驅動
+   - 沒有實作的規則是否被 UI 假裝已存在
+5. 對任何狀態型 UI 的修正，至少要補一個能保護語意正確性的 UI test 或 E2E
 3. 主線 task 只能在其對應 child change 已完成實作、完成驗證、正式 archive 後打勾
 4. 若下一個 child change 尚未定義，只能維持為狀態欄位或待規劃資訊，不得把「建立下一個 child change」當成主線進度完成
 5. 若 assistant 發現自己把狀態欄位寫成 task，必須先修正 mainline change，再繼續後續 implementation workflow

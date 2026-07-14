@@ -335,7 +335,6 @@ const formatScoringItem = (item: string): string => {
               {{ getPlayerStatus(player) }}
             </span>
           </div>
-          <span class="player-score">{{ player.score }}</span>
         </div>
         <dl class="player-stats">
           <div class="player-stat">
@@ -353,10 +352,6 @@ const formatScoringItem = (item: string): string => {
           <div class="player-stat">
             <dt>捨牌</dt>
             <dd>{{ player.discardCount }}</dd>
-          </div>
-          <div class="player-stat">
-            <dt>聽牌</dt>
-            <dd>{{ player.declaredReady ? '是' : '否' }}</dd>
           </div>
         </dl>
         <div
@@ -578,8 +573,7 @@ const formatScoringItem = (item: string): string => {
   gap: 0.45rem;
 }
 
-.player-seat,
-.player-score {
+.player-seat {
   margin: 0;
 }
 

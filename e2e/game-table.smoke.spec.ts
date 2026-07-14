@@ -28,6 +28,7 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page).toHaveURL(/\/game$/)
     await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
     await expect(page.getByTestId('summary-dealer')).toContainText('東家')
+    await expect(page.getByTestId('game-table-view')).not.toContainText('聽牌')
   })
 
   test('真人可以從 fresh round 出牌並看到中央牌池更新', async ({ page }) => {

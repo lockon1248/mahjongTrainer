@@ -131,4 +131,85 @@ describe('game table view', () => {
 
     expect(tileLabels).toEqual(['三萬', '二筒', '七條', '東風', '紅中', '蘭'])
   })
+
+  it('does not expose undriven ready-state or placeholder score fields as product UI', () => {
+    const snapshot: GameTableSnapshotViewModel = {
+      humanSeat: 'east',
+      currentSeat: 'east',
+      phase: 'discard',
+      outcome: 'in-progress',
+      dealerSeat: 'east',
+      prevailingWind: 'east',
+      wallCount: 40,
+      totalDiscards: 0,
+      lastClaimResolution: null,
+      resultSummary: null,
+      players: [
+        {
+          seat: 'east',
+          relativePosition: 'bottom',
+          concealedCount: 6,
+          concealedTiles: [chars(3)[0]!, dots(2)[0]!, bamboos(7)[0]!],
+          flowerCount: 1,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'south',
+          relativePosition: 'right',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'west',
+          relativePosition: 'top',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'north',
+          relativePosition: 'left',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        }
+      ]
+    }
+
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.text()).not.toContain('聽牌')
+    expect(wrapper.find('.player-score').exists()).toBe(false)
+  })
 })
