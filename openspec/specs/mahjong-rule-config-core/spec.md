@@ -1,78 +1,25 @@
-# mahjong-rule-config-core Specification
+# mahjong-rule-config-core 規格
 
-## Purpose
+## 目的
 
-TBD - created by archiving change 'taiwan-mahjong-rule-config-foundation'. Update Purpose after archive.
+待補：此檔由變更 `taiwan-mahjong-rule-config-foundation` 歸檔後建立，需補上正式目的說明。
 
-## Requirements
+## 需求
 
-### Requirement: Baseline rule config default
+### 需求：基礎 rule config 預設值
 
-The core SHALL expose a baseline rule config that centralizes the default Taiwan 16-tile rules already confirmed by the authoritative baseline documents.
+core SHALL 暴露一份基礎 rule config，集中管理權威 baseline 文件中已確認的台灣 16 張麻將預設規則。
 
-#### Scenario: Build the baseline default config
+#### 情境：建立 baseline 預設 config
 
-- **WHEN** the caller requests the default rule config without overrides
-- **THEN** the core SHALL return a complete baseline config object instead of requiring scoring or round flow modules to fill their own fallback values
+- **WHEN** 呼叫端在沒有任何 override 的情況下請求預設 rule config
+- **THEN** core SHALL 回傳一個完整的 baseline config 物件，而不是要求 scoring 或 round flow 模組自行補 fallback 值
 
-##### Example: baseline defaults exist in one place
+##### 範例：baseline 預設值集中於單一位置
 
-- **GIVEN** a new caller that has not provided any custom table rule overrides
-- **WHEN** it asks for the baseline rule config
-- **THEN** the returned config MUST include claim priority order, flower replacement mode, self-draw payment mode, discard-win payment mode, and unresolved policies for rules that are not yet authoritative
-
-
-<!-- @trace
-source: taiwan-mahjong-rule-config-foundation
-updated: 2026-07-09
-code:
-  - src/core/rules/index.ts
-  - src/core/rules/types.ts
-  - src/core/types/result.ts
-  - src/core/scoring/validation.ts
-  - src/core/rules/roundFlow.ts
-  - src/core/scoring/settlement.ts
-  - tsconfig.json
-  - src/core/config/index.ts
-  - src/core/config/types.ts
-  - src/core/scoring/patterns.ts
-  - src/core/types/action.ts
-  - package.json
-  - src/core/testing/ruleCase.ts
-  - src/core/types/player.ts
-  - src/core/index.ts
-  - src/core/scoring/types.ts
-  - src/core/types/table.ts
-  - src/core/types/tile.ts
-  - src/core/scoring/decomposition.ts
-tests:
-  - tests/core/round-flow-claims.test.ts
-  - tests/core/round-flow-flowers.test.ts
-  - tests/core/round-flow-outcome.test.ts
-  - tests/core/scoring-hand-decomposition.test.ts
-  - tests/core/scoring-patterns.test.ts
-  - tests/core/scoring-win-validation.test.ts
-  - tests/core/round-flow-setup.test.ts
-  - tests/core/rule-config-core.test.ts
-  - tests/core/scoring-exports.test.ts
-  - tests/core/scoring-settlement.test.ts
--->
-
----
-### Requirement: Explicit unresolved rule markers
-
-The rule config core SHALL distinguish unresolved table rules from explicitly configured enabled or disabled rules.
-
-#### Scenario: Preserve unresolved status for not-yet-authoritative rules
-
-- **WHEN** a rule is not settled by the baseline documents and the caller does not provide an explicit override
-- **THEN** the rule config SHALL expose that rule as unresolved rather than silently treating it as false
-
-##### Example: unresolved dealer continuation policy
-
-- **GIVEN** dealer continuation after exhaustive draw is not authoritative in the baseline docs
-- **WHEN** the baseline config is created
-- **THEN** the dealer continuation policy MUST remain unresolved instead of being interpreted as enabled or disabled
+- **GIVEN** 一個尚未提供任何自訂桌規 override 的新呼叫端
+- **WHEN** 它請求 baseline rule config
+- **THEN** 回傳的 config MUST 包含宣告優先序、補花模式、自摸支付模式、放槍支付模式，以及尚未成為權威規則時對應的未定案 policy
 
 
 <!-- @trace
@@ -112,31 +59,20 @@ tests:
 -->
 
 ---
-### Requirement: Rule config override merge
+### 需求：明確標記未定案規則
 
-The rule config core SHALL support applying explicit overrides on top of the baseline default config.
+rule config core SHALL 能區分「未定案桌規」與「已明確設定為啟用或停用的規則」。
 
-#### Scenario: Override a settled baseline rule
+#### 情境：保留尚未定案規則的未定案狀態
 
-- **WHEN** the caller provides a partial override for a supported rule config key
-- **THEN** the rule config core SHALL return a merged config where the override replaces the baseline value and unaffected keys remain intact
+- **WHEN** 某項規則尚未由 baseline 文件定案，且呼叫端也未提供明確 override
+- **THEN** rule config SHALL 將該規則暴露為 unresolved，而不是靜默地將其視為 false
 
-##### Example: override claim priority order
+##### 範例：未定案的連莊 policy
 
-- **GIVEN** a baseline config whose claim priority order is `win > kan-exposed > pon > chi`
-- **WHEN** the caller overrides the order with another valid priority list
-- **THEN** the merged config MUST reflect the new priority list while preserving unrelated baseline defaults
-
-#### Scenario: Reject unknown override keys
-
-- **WHEN** the caller provides an override key that is not part of the supported rule config schema
-- **THEN** the rule config core SHALL reject that override instead of silently ignoring it
-
-##### Example: unknown rule key is invalid
-
-- **GIVEN** an override payload containing a non-schema field
-- **WHEN** the merge helper validates the override
-- **THEN** it MUST fail the merge attempt with an explicit invalid-config outcome
+- **GIVEN** baseline 文件中尚未將流局後莊家是否連莊定為權威規則
+- **WHEN** 建立 baseline config
+- **THEN** 連莊 policy MUST 保持 unresolved，而不是被解讀為啟用或停用
 
 
 <!-- @trace
@@ -176,31 +112,95 @@ tests:
 -->
 
 ---
-### Requirement: Config slices for core modules
+### 需求：合併 rule config override
 
-The rule config core SHALL provide stable config slices that can be consumed by round flow and scoring modules without relying on global mutable state.
+rule config core SHALL 支援將明確的 overrides 套用在 baseline 預設 config 之上。
 
-#### Scenario: Read a round flow config slice
+#### 情境：覆寫已定案的 baseline 規則
 
-- **WHEN** round flow logic needs claim priority or flower replacement behavior
-- **THEN** the rule config core SHALL provide a round-flow-relevant config slice derived from the same root config object
+- **WHEN** 呼叫端對支援的 rule config key 提供部分 override
+- **THEN** rule config core SHALL 回傳一份合併後的 config，其中 override 取代 baseline 值，而未受影響的 key 保持原樣
 
-##### Example: round flow reads config slice
+##### 範例：覆寫宣告優先序
 
-- **GIVEN** a root rule config with explicit round flow overrides
-- **WHEN** the round flow core requests its config slice
-- **THEN** the returned slice MUST contain the effective claim priority order, flower replacement mode, and exhaustive-draw policy fields needed by round flow
+- **GIVEN** 一份宣告優先序為 `win > kan-exposed > pon > chi` 的 baseline config
+- **WHEN** 呼叫端以另一組合法優先序覆寫該設定
+- **THEN** 合併後的 config MUST 反映新的優先序，同時保留其他無關的 baseline 預設值
 
-#### Scenario: Read a scoring config slice
+#### 情境：拒絕未知的 override key
 
-- **WHEN** scoring logic needs payment responsibility or minimum tai gating behavior
-- **THEN** the rule config core SHALL provide a scoring-relevant config slice derived from the same root config object
+- **WHEN** 呼叫端提供一個不屬於支援 rule config schema 的 override key
+- **THEN** rule config core SHALL 拒絕該 override，而不是靜默忽略它
 
-##### Example: scoring reads config slice
+##### 範例：未知規則 key 視為無效
 
-- **GIVEN** a root rule config with a configured minimum tai threshold and payment policy
-- **WHEN** the scoring core requests its config slice
-- **THEN** the returned slice MUST expose those effective scoring settings without requiring a second config source
+- **GIVEN** 一份 override payload 包含 schema 之外的欄位
+- **WHEN** merge helper 驗證該 override
+- **THEN** 它 MUST 以明確的 invalid-config outcome 使合併失敗
+
+
+<!-- @trace
+source: taiwan-mahjong-rule-config-foundation
+updated: 2026-07-09
+code:
+  - src/core/rules/index.ts
+  - src/core/rules/types.ts
+  - src/core/types/result.ts
+  - src/core/scoring/validation.ts
+  - src/core/rules/roundFlow.ts
+  - src/core/scoring/settlement.ts
+  - tsconfig.json
+  - src/core/config/index.ts
+  - src/core/config/types.ts
+  - src/core/scoring/patterns.ts
+  - src/core/types/action.ts
+  - package.json
+  - src/core/testing/ruleCase.ts
+  - src/core/types/player.ts
+  - src/core/index.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/core/types/tile.ts
+  - src/core/scoring/decomposition.ts
+tests:
+  - tests/core/round-flow-claims.test.ts
+  - tests/core/round-flow-flowers.test.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/scoring-hand-decomposition.test.ts
+  - tests/core/scoring-patterns.test.ts
+  - tests/core/scoring-win-validation.test.ts
+  - tests/core/round-flow-setup.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/core/scoring-exports.test.ts
+  - tests/core/scoring-settlement.test.ts
+-->
+
+---
+### 需求：提供給 core 模組的 config 切片
+
+rule config core SHALL 提供穩定的 config 切片，讓 round flow 與 scoring 模組可直接消費，而不需依賴全域可變狀態。
+
+#### 情境：讀取 round flow 的 config 切片
+
+- **WHEN** round flow 邏輯需要宣告優先序或補花行為設定
+- **THEN** rule config core SHALL 提供一份從同一個 root config 物件衍生出的 round-flow 相關 config 切片
+
+##### 範例：round flow 讀取 config 切片
+
+- **GIVEN** 一個含有明確 round flow override 的 root rule config
+- **WHEN** round flow core 請求自己的 config 切片
+- **THEN** 回傳的切片 MUST 包含 round flow 所需的有效宣告優先序、補花模式與流局 policy 欄位
+
+#### 情境：讀取 scoring 的 config 切片
+
+- **WHEN** scoring 邏輯需要支付責任或最低台數門檻設定
+- **THEN** rule config core SHALL 提供一份從同一個 root config 物件衍生出的 scoring 相關 config 切片
+
+##### 範例：scoring 讀取 config 切片
+
+- **GIVEN** 一個 root rule config 已設定最低台數門檻與支付 policy
+- **WHEN** scoring core 請求自己的 config 切片
+- **THEN** 回傳的切片 MUST 直接暴露這些有效 scoring 設定，而不需第二份 config 來源
 
 <!-- @trace
 source: taiwan-mahjong-rule-config-foundation

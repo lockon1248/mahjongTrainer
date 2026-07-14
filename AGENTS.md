@@ -201,3 +201,58 @@ Before creating or editing any planning or specification file, the assistant mus
 3. whether the content must be in English or Chinese for the user's use
 
 If this is not verified first, the assistant must not create the file.
+
+## 13. Mainline Change Rule
+
+For this repo, the product-level spec is not enough by itself. The assistant must also maintain a **mainline change** that acts as the user-visible progress board for the main spec.
+
+Required behavior:
+
+1. when a new main product spec is established, create its matching mainline change immediately
+2. the mainline change must list:
+   - already completed mainline items
+   - the single current in-progress mainline item
+   - ordered not-yet-started mainline items
+   - the current active child change
+   - the next planned child change
+   - the completion condition for each mainline stage
+3. the mainline change must not be left as a future-only todo list
+4. if the user asks "現在做到哪裡"、"下一步是什麼"、"主線是什麼"，answer from the mainline change first
+
+## 14. Child Change Mapping Rule
+
+Every implementation change in this repo must map back to one explicit mainline task.
+
+Required behavior:
+
+1. do not open only leaf-level or capability changes without identifying which mainline task they belong to first
+2. when creating a child change, state which mainline task it is implementing
+3. if one planned child change becomes too large, split it and update the mainline change mapping immediately
+4. do not force the user to infer overall progress by reading archived changes one by one
+
+## 15. Archive Sync Rule
+
+Archiving a child change is not enough. Mainline progress must be updated in the same work cycle.
+
+Required behavior:
+
+1. after a child change is completed and archived, immediately update the mainline change
+2. mark the completed mainline task as done
+3. set the next active or planned child change explicitly
+4. if archive is done but mainline progress is not updated, the work is not considered properly closed
+
+## 16. Spec Drift Prevention Rule
+
+When the requested work is product implementation progress, the assistant must not drift into low-value spec maintenance.
+
+Drift examples include:
+
+- polishing `Purpose` / wording that does not unblock the next implementation step
+- rewriting spec text without changing progress visibility
+- creating side documents when the repo already has the needed `openspec` artifacts
+
+Required behavior:
+
+1. if the next implementation step is clear, prefer advancing the relevant mainline or child change
+2. if progress visibility is broken, fix the mainline change before creating more side artifacts
+3. if work no longer clearly advances a mainline task, stop and return to the mainline change

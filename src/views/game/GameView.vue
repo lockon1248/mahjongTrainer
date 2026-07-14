@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import type { Tile } from '@/core'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
@@ -16,8 +17,15 @@ const snapshot = computed(() => {
   if (round.value == null)
     return null
 
-  return createGameTableSnapshot(round.value)
+  return createGameTableSnapshot(round.value, gameSessionStore.humanSeat)
 })
+
+const handleHumanDiscard = (tile: Tile) => {
+  gameSessionStore.discard(tile)
+
+  if (gameSessionStore.error == null)
+    gameSessionStore.advanceTurn()
+}
 </script>
 
 <template>
@@ -34,6 +42,8 @@ const snapshot = computed(() => {
     <GameTableView
       v-else-if="snapshot != null"
       :snapshot="snapshot"
+      :human-seat="gameSessionStore.humanSeat"
+      @discard="handleHumanDiscard"
     />
   </section>
 </template>

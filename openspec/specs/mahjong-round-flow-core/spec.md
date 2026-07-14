@@ -1,69 +1,25 @@
-# mahjong-round-flow-core Specification
+# mahjong-round-flow-core 規格
 
-## Purpose
+## 目的
 
-TBD - created by archiving change 'taiwan-mahjong-round-flow-foundation'. Update Purpose after archive.
+待補：此檔由變更 `taiwan-mahjong-round-flow-foundation` 歸檔後建立，需補上正式目的說明。
 
-## Requirements
+## 需求
 
-### Requirement: Baseline round setup
+### 需求：基礎牌局初始化
 
-The round flow core SHALL create a baseline Taiwan 16-tile round state with four players, east as the starting dealer, dealer receiving 17 starting tiles, and each non-dealer receiving 16 starting tiles before the first discard.
+round flow core SHALL 建立一個台灣 16 張麻將的基礎牌局狀態：四位玩家、由 east 起莊、莊家起手 17 張、其餘三家起手 16 張，並在第一次出牌前完成配置。
 
-#### Scenario: Deal baseline starting hands
+#### 情境：發出基礎起手牌
 
-- **WHEN** the caller initializes a new baseline round with a complete wall
-- **THEN** the round flow core SHALL assign 17 starting tiles to east, 16 starting tiles to south, west, and north, and set east as the next seat to discard first
+- **WHEN** 呼叫端以完整牌牆初始化一局新的基礎牌局
+- **THEN** round flow core SHALL 分配 17 張起手牌給 east，並各分配 16 張起手牌給 south、west、north，且將 east 設為第一個出牌座位
 
-##### Example: dealer starts with one extra tile
+##### 範例：莊家多一張起手牌
 
-- **GIVEN** a baseline round setup request with four seats and a complete wall
-- **WHEN** the round setup completes before any flower replacement is applied
-- **THEN** east MUST hold 17 in-hand tiles, south MUST hold 16, west MUST hold 16, north MUST hold 16, and the turn owner MUST be east
-
-
-<!-- @trace
-source: taiwan-mahjong-round-flow-foundation
-updated: 2026-07-09
-code:
-  - src/core/types/result.ts
-  - src/core/index.ts
-  - src/core/rules/index.ts
-  - src/core/rules/types.ts
-  - src/core/rules/roundFlow.ts
-tests:
-  - tests/core/round-flow-claims.test.ts
-  - tests/core/round-flow-flowers.test.ts
-  - tests/core/round-flow-setup.test.ts
-  - tests/core/round-flow-outcome.test.ts
--->
-
----
-### Requirement: Flower replacement pipeline
-
-The round flow core SHALL treat flower replacement as a deterministic draw pipeline during both initial dealing and later draw actions: any drawn flower tile MUST be revealed immediately and replaced from the tail of the wall until a non-flower tile is obtained.
-
-#### Scenario: Replace a flower during round setup
-
-- **WHEN** a player receives a flower tile during initial dealing or initial hand normalization
-- **THEN** the round flow core SHALL move that flower to the player's revealed flower area and continue drawing replacement tiles from the tail until the player's in-hand tile count matches the baseline requirement for that seat
-
-##### Example: FLOWER-REPLACE-001
-
-- **GIVEN** a non-dealer who needs 16 in-hand tiles and whose next drawn tile is a flower
-- **WHEN** the round setup applies flower replacement
-- **THEN** the flower MUST be revealed, one replacement tile MUST be drawn from the tail, and the player MUST still end with 16 in-hand tiles
-
-#### Scenario: Chain flower replacements until a non-flower appears
-
-- **WHEN** a replacement tile drawn from the tail is also a flower tile
-- **THEN** the round flow core SHALL repeat reveal-and-replace steps until a non-flower tile is obtained
-
-##### Example: FLOWER-CHAIN-001
-
-- **GIVEN** a player reveals a flower and the first two tail replacement tiles are also flowers
-- **WHEN** the round flow core processes flower replacement
-- **THEN** all drawn flowers MUST be revealed in order and replacement MUST continue until the player receives a non-flower tile for the hand
+- **GIVEN** 一個包含四個座位與完整牌牆的基礎牌局初始化請求
+- **WHEN** 牌局初始化完成，且尚未進行任何補花
+- **THEN** east MUST 持有 17 張手牌，south MUST 持有 16 張，west MUST 持有 16 張，north MUST 持有 16 張，且目前輪到的座位 MUST 為 east
 
 
 <!-- @trace
@@ -83,31 +39,31 @@ tests:
 -->
 
 ---
-### Requirement: Turn progression for draw and discard
+### 需求：補花處理流程
 
-The round flow core SHALL advance the round through explicit draw and discard transitions, preserving the baseline rule that a normal turn consists of drawing one tile and discarding one tile unless the round ends first.
+round flow core SHALL 將補花視為一條可決定的摸牌流程，不論在初始發牌或後續摸牌時皆然：只要摸到花牌，MUST 立即亮出，並從牌尾持續補牌，直到拿到非花牌為止。
 
-#### Scenario: Advance a normal turn after a discard
+#### 情境：初始化時補花
 
-- **WHEN** the active seat discards a tile and no winning or claim resolution interrupts the turn
-- **THEN** the round flow core SHALL advance the turn to the next seat for the next normal draw transition
+- **WHEN** 玩家在初始發牌或起手牌整理期間拿到一張花牌
+- **THEN** round flow core SHALL 將該花牌移到玩家的明示花牌區，並持續從牌尾補牌，直到玩家手牌數量符合該座位的基礎要求
 
-##### Example: next seat draws after pass
+##### 範例：FLOWER-REPLACE-001
 
-- **GIVEN** east discards a tile and every eligible claimant passes
-- **WHEN** the round flow core finalizes the discard resolution
-- **THEN** south MUST become the next seat allowed to perform a normal draw
+- **GIVEN** 一位非莊家需要 16 張手牌，且其下一張摸到的牌是花牌
+- **WHEN** 牌局初始化套用補花流程
+- **THEN** 該花牌 MUST 被亮出、牌尾 MUST 補上一張替代牌，且玩家最終手牌數 MUST 仍為 16 張
 
-#### Scenario: Stop normal turn progression after a winning result
+#### 情境：連續補花直到出現非花牌
 
-- **WHEN** a draw or discard transition produces a valid winning result
-- **THEN** the round flow core SHALL end the round as a win outcome and SHALL NOT continue with another normal draw-discard cycle
+- **WHEN** 從牌尾補到的替代牌仍然是花牌
+- **THEN** round flow core SHALL 重複亮牌與補牌步驟，直到拿到非花牌為止
 
-##### Example: winning tile ends the round
+##### 範例：FLOWER-CHAIN-001
 
-- **GIVEN** south completes a valid winning hand on a claimed discard
-- **WHEN** the winning claim is accepted
-- **THEN** the round state MUST become a win result instead of advancing to west's normal draw
+- **GIVEN** 一位玩家亮出一張花牌，且前兩張牌尾替代牌也都是花牌
+- **WHEN** round flow core 執行補花流程
+- **THEN** 所有補到的花牌 MUST 依序亮出，且補牌 MUST 持續直到玩家拿到一張可進手的非花牌
 
 
 <!-- @trace
@@ -127,42 +83,86 @@ tests:
 -->
 
 ---
-### Requirement: Claim window resolution
+### 需求：摸牌與出牌的回合推進
 
-The round flow core SHALL resolve competing claim candidates through a single pending claim window and SHALL derive the effective claim priority order from rule config instead of assuming a fixed global constant.
+round flow core SHALL 以明確的摸牌與出牌轉換來推進牌局，並維持基礎規則：一般回合由摸一張牌、打一張牌構成，除非牌局先行結束。
 
-#### Scenario: Prefer a winning claim over lower-priority claims
+#### 情境：出牌後推進一般回合
 
-- **WHEN** multiple seats declare claims against the same discard and the effective rule config places winning claims above other valid claims
-- **THEN** the round flow core SHALL resolve the claim window as a winning claim instead of exposed kan, pon, or chi
+- **WHEN** 當前座位打出一張牌，且沒有胡牌或宣告裁決中斷回合
+- **THEN** round flow core SHALL 將回合推進到下一個座位，準備進入下一次一般摸牌
 
-##### Example: CLAIM-PRIORITY-001 win beats pon
+##### 範例：pass 後由下一家摸牌
 
-- **GIVEN** one discard that allows north to win and south to pon
-- **WHEN** both claims are submitted into the same pending claim window under a rule config whose priority order is `win > kan-exposed > pon > chi`
-- **THEN** the resolved claim MUST be north's winning claim
+- **GIVEN** east 打出一張牌，且所有有資格宣告的座位皆選擇 pass
+- **WHEN** round flow core 完成此次出牌的裁決
+- **THEN** south MUST 成為下一個可進行一般摸牌的座位
 
-#### Scenario: Prefer exposed kan over pon and chi when no win exists
+#### 情境：胡牌結果出現後停止一般推進
 
-- **WHEN** the pending claim window contains no winning claim and the effective rule config places exposed kan above lower-priority claims
-- **THEN** the round flow core SHALL resolve the claim window as the exposed kan
+- **WHEN** 摸牌或出牌轉換產生有效胡牌結果
+- **THEN** round flow core SHALL 以 win outcome 結束牌局，且 SHALL NOT 再繼續下一輪一般摸打循環
 
-##### Example: exposed kan beats chi
+##### 範例：胡牌牌張直接結束牌局
 
-- **GIVEN** one discard that allows west to form an exposed kan and south to chi
-- **WHEN** both claims are submitted and no valid winning claim exists under a rule config whose priority order is `win > kan-exposed > pon > chi`
-- **THEN** the resolved claim MUST be west's exposed kan claim
+- **GIVEN** south 透過吃入他家打出的牌完成合法胡牌
+- **WHEN** 該胡牌宣告被接受
+- **THEN** 牌局狀態 MUST 變成 win result，而不是再推進到 west 的一般摸牌
 
-#### Scenario: Advance the round when every eligible claimant passes
 
-- **WHEN** the pending claim window closes without any accepted claim
-- **THEN** the round flow core SHALL resolve the discard as pass and continue the round with the next seat's normal draw transition
+<!-- @trace
+source: taiwan-mahjong-round-flow-foundation
+updated: 2026-07-09
+code:
+  - src/core/types/result.ts
+  - src/core/index.ts
+  - src/core/rules/index.ts
+  - src/core/rules/types.ts
+  - src/core/rules/roundFlow.ts
+tests:
+  - tests/core/round-flow-claims.test.ts
+  - tests/core/round-flow-flowers.test.ts
+  - tests/core/round-flow-setup.test.ts
+  - tests/core/round-flow-outcome.test.ts
+-->
 
-##### Example: all claims pass
+---
+### 需求：宣告視窗裁決
 
-- **GIVEN** a discard with no accepted chi, pon, kan, or win claim
-- **WHEN** the claim window closes
-- **THEN** the resolution MUST be pass and the next seat in order MUST receive the next normal draw opportunity
+round flow core SHALL 透過單一 pending claim window 來裁決互相競爭的宣告候選，且 SHALL 從 rule config 推導有效的宣告優先序，而不是假設一個固定常數。
+
+#### 情境：胡牌宣告優先於較低優先級宣告
+
+- **WHEN** 多個座位對同一張捨牌提出宣告，且有效 rule config 將胡牌宣告排在其他合法宣告之前
+- **THEN** round flow core SHALL 將該 claim window 裁決為胡牌宣告，而不是明槓、碰或吃
+
+##### 範例：CLAIM-PRIORITY-001 胡牌優先於碰牌
+
+- **GIVEN** 一張捨牌同時讓 north 可以胡牌，south 可以碰牌
+- **WHEN** 兩個宣告都在優先序為 `win > kan-exposed > pon > chi` 的同一 pending claim window 中送出
+- **THEN** 裁決結果 MUST 為 north 的胡牌宣告
+
+#### 情境：沒有胡牌時明槓優先於碰與吃
+
+- **WHEN** pending claim window 中沒有胡牌宣告，且有效 rule config 將明槓排在較低優先級宣告之前
+- **THEN** round flow core SHALL 將該 claim window 裁決為明槓
+
+##### 範例：明槓優先於吃牌
+
+- **GIVEN** 一張捨牌讓 west 可以形成明槓，south 可以吃牌
+- **WHEN** 兩個宣告都被送出，且在優先序為 `win > kan-exposed > pon > chi` 的 rule config 下不存在任何有效胡牌宣告
+- **THEN** 裁決結果 MUST 為 west 的明槓宣告
+
+#### 情境：所有可宣告者皆 pass 時推進牌局
+
+- **WHEN** pending claim window 關閉，且沒有任何被接受的宣告
+- **THEN** round flow core SHALL 將此次出牌裁決為 pass，並以下一家的一般摸牌轉換繼續推進牌局
+
+##### 範例：所有宣告皆 pass
+
+- **GIVEN** 一張捨牌沒有任何被接受的吃、碰、槓或胡宣告
+- **WHEN** claim window 關閉
+- **THEN** 裁決結果 MUST 為 pass，且下一個依序座位 MUST 取得下一次一般摸牌機會
 
 
 <!-- @trace
@@ -202,31 +202,31 @@ tests:
 -->
 
 ---
-### Requirement: Exhaustive draw outcome
+### 需求：流局結果
 
-The round flow core SHALL produce an explicit exhaustive draw outcome when the wall can no longer support another normal draw and no player has already won, and SHALL represent unresolved post-draw branches through rule config policy instead of inventing final business outcomes.
+當牌牆已無法再支援下一次一般摸牌且尚無玩家胡牌時，round flow core SHALL 產生明確的流局結果，並 SHALL 透過 rule config policy 表示未定案的流局後分支，而不是自行發明最終商業結果。
 
-#### Scenario: End the round when the wall is exhausted
+#### 情境：牌牆耗盡時結束牌局
 
-- **WHEN** the round reaches a state where no further normal draw can be performed and no winning result has been accepted
-- **THEN** the round flow core SHALL return an exhaustive draw outcome
+- **WHEN** 牌局進入無法再進行一般摸牌且尚未接受任何胡牌結果的狀態
+- **THEN** round flow core SHALL 回傳一個明確的流局結果
 
-##### Example: DRAW-DEALER-001
+##### 範例：DRAW-DEALER-001
 
-- **GIVEN** a round state with no remaining legal normal draw from the wall and no accepted winning claim
-- **WHEN** the round flow core evaluates whether play can continue
-- **THEN** the result MUST be an exhaustive draw outcome
+- **GIVEN** 一個牌局狀態中，牌牆已無合法的一般摸牌，且沒有任何已接受的胡牌宣告
+- **WHEN** round flow core 評估牌局是否還能繼續
+- **THEN** 結果 MUST 為流局 outcome
 
-#### Scenario: Do not invent unresolved post-draw rules
+#### 情境：不得自行補出未定案的流局後規則
 
-- **WHEN** the round ends as an exhaustive draw and the effective rule config leaves dealer continuation, ready-hand penalties, or listening checks unresolved
-- **THEN** the round flow core SHALL NOT assign those outcomes as settled business logic
+- **WHEN** 牌局以流局結束，且有效 rule config 對連莊、聽牌懲罰或查聽檢查仍標記為未定案
+- **THEN** round flow core SHALL NOT 將這些結果視為已確定的商業邏輯
 
-##### Example: unresolved dealer continuation stays unset
+##### 範例：未定案的連莊規則保持未設定
 
-- **GIVEN** an exhaustive draw outcome under a rule config whose post-draw policies remain unresolved
-- **WHEN** the result is returned to the caller
-- **THEN** the outcome MUST identify the round as drawn and MUST leave dealer continuation or ready-hand settlement unresolved
+- **GIVEN** 一個流局 outcome 所依據的 rule config 中，流局後 policy 仍為未定案
+- **WHEN** 該結果回傳給呼叫端
+- **THEN** outcome MUST 明確表示本局為流局，且 MUST 保持連莊或聽牌結算為未定案狀態
 
 <!-- @trace
 source: taiwan-mahjong-rule-config-foundation
@@ -265,20 +265,20 @@ tests:
 -->
 
 ---
-### Requirement: AI-safe round state consumption
+### 需求：供 AI 安全讀取的牌局狀態
 
-The round flow core SHALL expose a stable state shape that an AI consumer can read to choose among legal actions without bypassing the rules engine.
+round flow core SHALL 暴露一個穩定的狀態形狀，使 AI 使用者能在不繞過規則引擎的前提下，讀取並選擇合法動作。
 
-#### Scenario: AI reads legal decision context
+#### 情境：AI 讀取合法決策上下文
 
-- **WHEN** an AI player needs to make a discard or claim decision
-- **THEN** the round flow core SHALL provide enough legal state context for AI evaluation, including current seat, hand state, triggering discard if any, and legal action candidates
+- **WHEN** AI 玩家需要做出出牌或宣告決策
+- **THEN** round flow core SHALL 提供足夠的合法狀態上下文供 AI 評估，包括目前座位、手牌狀態、若有則包含觸發捨牌，以及合法動作候選
 
-##### Example: AI consumes legal claim context
+##### 範例：AI 讀取合法宣告上下文
 
-- **GIVEN** a claim window state produced by round flow
-- **WHEN** the AI reads that state to choose an action
-- **THEN** the AI consumer MUST be able to inspect the triggering discard and candidate claim actions without mutating workflow internals directly
+- **GIVEN** 一個由 round flow 產生的 claim window 狀態
+- **WHEN** AI 讀取該狀態以選擇動作
+- **THEN** AI 使用端 MUST 能檢視觸發的捨牌與候選宣告動作，而不需要直接修改流程內部狀態
 
 <!-- @trace
 source: taiwan-mahjong-ai-decision-foundation
@@ -308,20 +308,20 @@ tests:
 -->
 
 ---
-### Requirement: UI-safe round state consumption
+### 需求：供 UI 安全讀取的牌局狀態
 
-The round flow core SHALL expose a stable round snapshot that UI and store layers can consume without re-implementing rule evaluation.
+round flow core SHALL 暴露一個穩定的牌局快照，讓 UI 與 store 層能直接消費，而不需重新實作規則判定。
 
-#### Scenario: Store reads a round snapshot for rendering
+#### 情境：store 讀取牌局快照以供渲染
 
-- **WHEN** the frontend store requests the current round snapshot for view rendering
-- **THEN** the round flow core SHALL provide a stable state shape containing table, players, current seat, phase, pending-action context, and outcome data needed by the UI shell
+- **WHEN** 前端 store 請求目前牌局快照以供 view 渲染
+- **THEN** round flow core SHALL 提供一個穩定的狀態形狀，包含 UI 殼層所需的 table、players、current seat、phase、pending-action context 與 outcome 資料
 
-##### Example: game view receives renderable snapshot
+##### 範例：game view 收到可渲染的快照
 
-- **GIVEN** a newly initialized round state in core
-- **WHEN** the frontend store forwards that snapshot to the game table view
-- **THEN** the UI consumer MUST be able to render current round information without recomputing legal-rule outcomes in Vue components
+- **GIVEN** core 中一個新初始化完成的牌局狀態
+- **WHEN** 前端 store 將該快照轉交給 game table view
+- **THEN** UI 使用端 MUST 能渲染目前牌局資訊，而不需在 Vue component 中重新計算合法規則結果
 
 <!-- @trace
 source: taiwan-mahjong-vue-table-shell

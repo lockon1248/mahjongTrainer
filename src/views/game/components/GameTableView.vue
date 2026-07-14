@@ -1,37 +1,66 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { Seat, Tile } from '@/core'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 
-defineProps<{
+const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
+  humanSeat: Seat
 }>()
+
+const emit = defineEmits<{
+  discard: [tile: Tile]
+}>()
+
+const isHumanTurn = computed(() => {
+  return props.snapshot.currentSeat === props.humanSeat
+    && props.snapshot.phase === 'discard'
+    && props.snapshot.outcome === 'in-progress'
+})
+
+const lastClaimLabel = computed(() => {
+  return props.snapshot.lastClaimResolution?.type ?? 'none'
+})
+
+const formatTile = (tile: Tile): string => {
+  return `${tile.suit}-${tile.rank}`
+}
 </script>
 
 <template>
   <section class="game-table-view" data-testid="game-table-view">
     <header class="table-summary" data-testid="table-summary">
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-dealer">
         <span class="summary-label">dealer</span>
         <strong>{{ snapshot.dealerSeat }}</strong>
       </div>
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-wind">
         <span class="summary-label">wind</span>
         <strong>{{ snapshot.prevailingWind }}</strong>
       </div>
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-current-seat">
         <span class="summary-label">turn</span>
         <strong>{{ snapshot.currentSeat }}</strong>
       </div>
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-phase">
         <span class="summary-label">phase</span>
         <strong>{{ snapshot.phase }}</strong>
       </div>
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-last-claim">
+        <span class="summary-label">claim</span>
+        <strong>{{ lastClaimLabel }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="summary-outcome">
         <span class="summary-label">outcome</span>
         <strong>{{ snapshot.outcome }}</strong>
       </div>
-      <div class="summary-chip">
+      <div class="summary-chip" data-testid="summary-wall">
         <span class="summary-label">wall</span>
         <strong>{{ snapshot.wallCount }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="summary-total-discards">
+        <span class="summary-label">discards</span>
+        <strong>{{ snapshot.totalDiscards }}</strong>
       </div>
     </header>
 
@@ -61,10 +90,31 @@ defineProps<{
             <dd>{{ player.meldCount }}</dd>
           </div>
           <div class="player-stat">
+            <dt>discards</dt>
+            <dd>{{ player.discardCount }}</dd>
+          </div>
+          <div class="player-stat">
             <dt>ready</dt>
             <dd>{{ player.declaredReady ? 'yes' : 'no' }}</dd>
           </div>
         </dl>
+        <div
+          v-if="player.seat === humanSeat"
+          class="player-concealed-tiles"
+          data-testid="human-concealed-tiles"
+        >
+          <button
+            v-for="(tile, tileIndex) in player.concealedTiles"
+            :key="`${player.seat}-${tile.suit}-${tile.rank}-${tileIndex}`"
+            class="concealed-tile-button"
+            data-testid="human-discard-tile"
+            type="button"
+            :disabled="!isHumanTurn"
+            @click="emit('discard', tile)"
+          >
+            {{ formatTile(tile) }}
+          </button>
+        </div>
       </article>
     </div>
   </section>
@@ -146,5 +196,27 @@ defineProps<{
 .player-stat dd {
   margin: 0.2rem 0 0;
   font-size: 1.1rem;
+}
+
+.player-concealed-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.concealed-tile-button {
+  border: 1px solid rgba(248, 242, 231, 0.18);
+  border-radius: 0.8rem;
+  padding: 0.45rem 0.65rem;
+  background: rgba(248, 242, 231, 0.1);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.concealed-tile-button:disabled {
+  opacity: 0.56;
+  cursor: default;
 }
 </style>
