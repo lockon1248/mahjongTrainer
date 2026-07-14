@@ -213,6 +213,16 @@ const formatDrawReason = (reason: string | null): string => {
   }[reason] ?? '未分類流局'
 }
 
+const formatScoringItem = (item: string): string => {
+  return {
+    'dealer-win': '莊家胡',
+    'self-draw': '自摸',
+    'heaven-win': '天胡',
+    'big-three-dragons': '大三元',
+    'little-three-dragons': '小三元'
+  }[item] ?? item
+}
+
 </script>
 
 <template>
@@ -276,6 +286,16 @@ const formatDrawReason = (reason: string | null): string => {
       <div class="summary-chip" data-testid="result-total-tai">
         <span class="summary-label">總台數</span>
         <strong>{{ snapshot.resultSummary.totalTai ?? '無' }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-scoring-items">
+        <span class="summary-label">台型明細</span>
+        <strong>
+          {{
+            snapshot.resultSummary.scoringItems.length === 0
+              ? '無'
+              : snapshot.resultSummary.scoringItems.map(formatScoringItem).join('、')
+          }}
+        </strong>
       </div>
       <div class="summary-chip" data-testid="result-draw-reason">
         <span class="summary-label">流局原因</span>

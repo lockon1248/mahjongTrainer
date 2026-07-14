@@ -4,7 +4,10 @@ import type { ScoringPatternResult, SettlementResult, StandardWinInput } from '@
 
 const PATTERN_TAI: Record<ScoringPatternResult, number> = {
   'dealer-win': 1,
-  'self-draw': 1
+  'self-draw': 1,
+  'heaven-win': 24,
+  'big-three-dragons': 8,
+  'little-three-dragons': 4
 }
 
 export const buildSettlementResult = (
@@ -20,11 +23,18 @@ export const buildSettlementResult = (
   const isSelfDraw = input.discarderSeat == null
   const totalTai = matchedPatterns.reduce((total, patternId) => total + PATTERN_TAI[patternId], 0)
 
+  if (
+    scoringRuleConfig.settlement.minimumTai.status === 'configured'
+    && totalTai < scoringRuleConfig.settlement.minimumTai.value
+  ) {
+    return null
+  }
+
   return {
     winnerSeat: input.winningSeat,
     discarderSeat: input.discarderSeat ?? null,
     paymentResponsibility: isSelfDraw
-      ? scoringRuleConfig.selfDrawPaymentMode === 'winner-only'
+      ? scoringRuleConfig.settlement.selfDrawPaymentMode === 'winner-only'
         ? {
             type: 'winner-only',
             payerSeats: [input.winningSeat]
@@ -36,9 +46,9 @@ export const buildSettlementResult = (
       : {
           type: 'discard-win',
           payerSeats: input.discarderSeat ? [input.discarderSeat] : []
-        },
+    },
     scoringItems: matchedPatterns,
     totalTai,
-    minimumTai: scoringRuleConfig.minimumTai
+    minimumTai: scoringRuleConfig.settlement.minimumTai
   }
 }

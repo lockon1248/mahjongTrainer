@@ -5,6 +5,7 @@ import type { HumanClaimCandidate, HumanSelfTurnCandidate, Tile } from '@/core'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
+import { attachGameE2EBridge } from '@/views/game/e2eBridge'
 
 const gameSessionStore = useGameSessionStore()
 const { error, isInitialized, round } = storeToRefs(gameSessionStore)
@@ -12,6 +13,8 @@ const { error, isInitialized, round } = storeToRefs(gameSessionStore)
 if (!isInitialized.value && error.value == null) {
   gameSessionStore.startLocalRound()
 }
+
+attachGameE2EBridge(gameSessionStore)
 
 const snapshot = computed(() => {
   if (round.value == null)

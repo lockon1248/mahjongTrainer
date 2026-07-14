@@ -15,7 +15,8 @@ describe('rule config core', () => {
         selfDrawPaymentMode: 'all-other-players',
         discardWinPaymentMode: 'discarder-only',
         minimumTai: {
-          status: 'unresolved'
+          status: 'configured',
+          value: 0
         }
       },
       postDraw: {
@@ -31,7 +32,16 @@ describe('rule config core', () => {
       },
       specialHands: {
         heavenWin: {
-          status: 'unresolved'
+          status: 'configured',
+          value: true
+        },
+        bigThreeDragons: {
+          status: 'configured',
+          value: true
+        },
+        littleThreeDragons: {
+          status: 'configured',
+          value: true
         },
         earthWin: {
           status: 'unresolved'
@@ -79,15 +89,11 @@ describe('rule config core', () => {
           }
         },
         specialHands: {
-          heavenWin: {
-            status: 'unresolved'
-          },
-          earthWin: {
-            status: 'unresolved'
-          },
-          qiangGang: {
-            status: 'unresolved'
-          }
+          heavenWin: { status: 'configured', value: true },
+          bigThreeDragons: { status: 'configured', value: true },
+          littleThreeDragons: { status: 'configured', value: true },
+          earthWin: { status: 'unresolved' },
+          qiangGang: { status: 'unresolved' }
         }
       }
     })
@@ -142,11 +148,33 @@ describe('rule config core', () => {
     })
 
     expect(getScoringRuleConfig(merged.config)).toEqual({
-      selfDrawPaymentMode: 'all-other-players',
-      discardWinPaymentMode: 'discarder-only',
-      minimumTai: {
-        status: 'configured',
-        value: 3
+      settlement: {
+        selfDrawPaymentMode: 'all-other-players',
+        discardWinPaymentMode: 'discarder-only',
+        minimumTai: {
+          status: 'configured',
+          value: 3
+        }
+      },
+      specialHands: {
+        heavenWin: {
+          status: 'configured',
+          value: true
+        },
+        bigThreeDragons: {
+          status: 'configured',
+          value: true
+        },
+        littleThreeDragons: {
+          status: 'configured',
+          value: true
+        },
+        earthWin: {
+          status: 'unresolved'
+        },
+        qiangGang: {
+          status: 'unresolved'
+        }
       }
     })
   })

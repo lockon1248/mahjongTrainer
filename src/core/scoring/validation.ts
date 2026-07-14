@@ -17,14 +17,17 @@ export const validateStandardWin = (input: StandardWinInput, ruleConfig?: Mahjon
     }
   }
 
-  const matchedPatterns = evaluateScoringPatterns(input, breakdown)
+  const matchedPatterns = evaluateScoringPatterns(input, breakdown, ruleConfig)
   const settlement = buildSettlementResult(input, matchedPatterns, ruleConfig)
+  const totalTai = matchedPatterns.reduce((total, patternId) => {
+    return total + (patternId === 'dealer-win' || patternId === 'self-draw' ? 1 : 0)
+  }, 0)
 
   return {
-    isWinning: true,
+    isWinning: settlement != null,
     breakdown,
     matchedPatterns,
-    totalTai: settlement?.totalTai ?? 0,
+    totalTai,
     settlement
   }
 }

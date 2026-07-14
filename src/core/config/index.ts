@@ -9,7 +9,7 @@ import type {
 const TOP_LEVEL_KEYS = new Set(['claimPriorityOrder', 'flowerReplacementMode', 'settlement', 'postDraw', 'specialHands'])
 const SETTLEMENT_KEYS = new Set(['selfDrawPaymentMode', 'discardWinPaymentMode', 'minimumTai'])
 const POST_DRAW_KEYS = new Set(['dealerContinuation', 'readyHandCheck', 'readyHandPayment'])
-const SPECIAL_HAND_KEYS = new Set(['heavenWin', 'earthWin', 'qiangGang'])
+const SPECIAL_HAND_KEYS = new Set(['heavenWin', 'bigThreeDragons', 'littleThreeDragons', 'earthWin', 'qiangGang'])
 
 export * from '@/core/config/types'
 
@@ -21,7 +21,8 @@ export const createBaselineRuleConfig = (): MahjongRuleConfig => {
       selfDrawPaymentMode: 'all-other-players',
       discardWinPaymentMode: 'discarder-only',
       minimumTai: {
-        status: 'unresolved'
+        status: 'configured',
+        value: 0
       }
     },
     postDraw: {
@@ -37,7 +38,16 @@ export const createBaselineRuleConfig = (): MahjongRuleConfig => {
     },
     specialHands: {
       heavenWin: {
-        status: 'unresolved'
+        status: 'configured',
+        value: true
+      },
+      bigThreeDragons: {
+        status: 'configured',
+        value: true
+      },
+      littleThreeDragons: {
+        status: 'configured',
+        value: true
       },
       earthWin: {
         status: 'unresolved'
@@ -107,7 +117,10 @@ export const getRoundFlowRuleConfig = (config: MahjongRuleConfig): RoundFlowRule
 }
 
 export const getScoringRuleConfig = (config: MahjongRuleConfig): ScoringRuleConfig => {
-  return config.settlement
+  return {
+    settlement: config.settlement,
+    specialHands: config.specialHands
+  }
 }
 
 const findUnknownKey = (

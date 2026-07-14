@@ -27,6 +27,8 @@ export type MahjongRuleConfig = {
   }
   specialHands: {
     heavenWin: RuleConfigState<boolean>
+    bigThreeDragons: RuleConfigState<boolean>
+    littleThreeDragons: RuleConfigState<boolean>
     earthWin: RuleConfigState<boolean>
     qiangGang: RuleConfigState<boolean>
   }
@@ -51,4 +53,4 @@ export type RuleConfigMergeResult =
     }
 
 export type RoundFlowRuleConfig = Pick<MahjongRuleConfig, 'claimPriorityOrder' | 'flowerReplacementMode' | 'postDraw'>
-export type ScoringRuleConfig = MahjongRuleConfig['settlement']
+export type ScoringRuleConfig = Pick<MahjongRuleConfig, 'settlement' | 'specialHands'>

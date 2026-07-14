@@ -95,8 +95,8 @@ const createClaimWindowRound = (
 describe('round flow claim resolution', () => {
   it('prefers a win claim over lower priority claims', () => {
     const discardedTile = dragon('red')
-    const pendingRound = createClaimWindowRound(discardedTile, 'east', {
-      north: [
+    const pendingRound = createClaimWindowRound(discardedTile, 'south', {
+      east: [
         ...chars(1, 2, 3),
         ...dots(1, 2, 3, 9, 9, 9),
         ...bamboos(1, 2, 3),
@@ -117,19 +117,32 @@ describe('round flow claim resolution', () => {
       ]
     })
     const claims: PendingActionClaim[] = [
-      { seat: 'north', actionType: 'win', tile: discardedTile },
-      { seat: 'south', actionType: 'pon', tile: discardedTile, consumedTiles: [dragon('red'), dragon('red')] }
+      { seat: 'east', actionType: 'win', tile: discardedTile },
+      { seat: 'west', actionType: 'pon', tile: discardedTile, consumedTiles: [dragon('red'), dragon('red')] }
     ]
 
     const resolved = resolveClaimWindow(pendingRound, claims)
 
     expect(resolved.lastClaimResolution).toEqual({
       type: 'win',
-      seat: 'north',
+      seat: 'east',
       tile: discardedTile
     })
     expect(resolved.outcome.status).toBe('win')
     expect(resolved.phase).toBe('ended')
+
+    if (resolved.outcome.status !== 'win')
+      throw new Error('expected win outcome')
+
+    expect(resolved.outcome.result).toEqual({
+      type: 'win',
+      winnerSeat: 'east',
+      discarderSeat: 'south',
+      totalTai: 1,
+      scoringItems: ['dealer-win'],
+      drawReason: null,
+      unresolved: []
+    })
   })
 
   it('prefers exposed kan over chi when no win exists', () => {

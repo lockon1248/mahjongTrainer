@@ -115,6 +115,37 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('西家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('3')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家胡')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('自摸')
+  })
+
+  it('renders discard-win scoring items for a discard win result', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...inProgressSnapshot,
+          phase: 'ended',
+          outcome: 'win',
+          resultSummary: {
+            type: 'win',
+            ended: true,
+            winnerSeat: 'east',
+            discarderSeat: 'south',
+            totalTai: 1,
+            drawReason: null,
+            scoringItems: ['dealer-win']
+          }
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('東家')
+    expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('南家')
+    expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('1')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家胡')
   })
 
   it('renders the draw reason for a draw result', () => {

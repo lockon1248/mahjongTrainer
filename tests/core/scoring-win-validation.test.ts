@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateStandardWin, type StandardWinInput, type Tile } from '@/core/index'
+import { createBaselineRuleConfig, mergeRuleConfig, validateStandardWin, type StandardWinInput, type Tile } from '@/core/index'
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
   return ranks.map((rank) => ({ suit: 'characters', rank }))
@@ -101,6 +101,86 @@ describe('scoring win validation', () => {
       matchedPatterns: [],
       totalTai: null,
       settlement: null
+    })
+  })
+
+  it('treats a standard hand as not yet valid when total tai is below configured minimumTai', () => {
+    const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      settlement: {
+        minimumTai: {
+          status: 'configured',
+          value: 1
+        }
+      }
+    })
+
+    if (!merged.ok)
+      throw new Error(merged.error)
+
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('red'),
+      winningSeat: 'south',
+      discarderSeat: 'west'
+    }
+
+    const result = validateStandardWin(input, merged.config)
+
+    expect(result.isWinning).toBe(false)
+    expect(result.breakdown?.meldGroups).toHaveLength(5)
+    expect(result.matchedPatterns).toEqual([])
+    expect(result.totalTai).toBe(0)
+    expect(result.settlement).toBeNull()
+  })
+
+  it('keeps a standard hand valid when total tai reaches configured minimumTai', () => {
+    const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      settlement: {
+        minimumTai: {
+          status: 'configured',
+          value: 2
+        }
+      }
+    })
+
+    if (!merged.ok)
+      throw new Error(merged.error)
+
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('red'),
+      winningSeat: 'east',
+      discarderSeat: null
+    }
+
+    const result = validateStandardWin(input, merged.config)
+
+    expect(result.isWinning).toBe(true)
+    expect(result.matchedPatterns).toEqual(['dealer-win', 'self-draw'])
+    expect(result.totalTai).toBe(2)
+    expect(result.settlement?.minimumTai).toEqual({
+      status: 'configured',
+      value: 2
     })
   })
 })

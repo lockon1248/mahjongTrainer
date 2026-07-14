@@ -6,7 +6,7 @@ import type { Tile } from '@/core/types/tile'
 export type BreakdownGroupKind = 'sequence' | 'triplet' | 'quad' | 'pair'
 export type BreakdownGroupSource = 'concealed' | 'meld'
 export type SettlementType = 'self-draw' | 'discard-win'
-export type SupportedPatternId = 'dealer-win' | 'self-draw'
+export type SupportedPatternId = 'dealer-win' | 'self-draw' | 'heaven-win' | 'big-three-dragons' | 'little-three-dragons'
 
 export type BreakdownGroup = {
   kind: BreakdownGroupKind
@@ -26,6 +26,9 @@ export type StandardWinInput = {
   winningTile: Tile | null
   winningSeat?: Seat | null
   discarderSeat?: Seat | null
+  winContext?: {
+    isHeavenWin?: boolean
+  }
 }
 
 export type ScoringPatternResult = SupportedPatternId

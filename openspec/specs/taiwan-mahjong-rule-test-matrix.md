@@ -18,6 +18,9 @@
 - 宣告優先序
 - 流局
 - 台型組合
+- 榮和結果接線
+- 最低台數門檻
+- 特殊胡型
 
 ## 案例矩陣
 
@@ -30,6 +33,12 @@
 | CLAIM-PRIORITY-001 | 宣告優先序 | 驗證多人同時宣告時依 `胡 > 槓 > 碰 > 吃` 處理 | rules baseline：宣告優先序 | 若未來優先序可配置，應改由 rule config 驗證 |
 | DRAW-DEALER-001 | 流局 | 驗證牌摸完無人胡牌時流局，且莊家相關後續流程仍留待設定 | rules baseline：基本桌規、待確認／爭議規則 | 不在此案例中假設流局連莊或查聽 |
 | SCORE-STACK-001 | 台型組合 | 驗證結算流程可承接多個台型／支付責任來源，而非把結果寫死 | rules baseline：結算規則、可配置規則 | 具體台數與台型清單待後續 spec 補齊 |
+| SCORE-DISCARD-WIN-001 | 榮和結果接線 | 驗證榮和結果不會跳過 scoring evaluation 與 settlement，並能回傳 `scoringItems` 與 `totalTai` | scoring core：和牌結果必須經過權威算台流程 | 至少覆蓋一條 discard-win |
+| SCORE-MINIMUM-TAI-001 | 最低台數門檻 | 驗證牌型成立但 `totalTai` 未達 `minimumTai` 時，不得當成可結算和牌 | scoring core：最低胡牌台數門檻必須可被驗證 | 需覆蓋明確門檻值 config |
+| SCORE-MINIMUM-TAI-002 | 最低台數門檻 | 驗證牌型成立且 `totalTai` 達到 `minimumTai` 時，可正常回傳 settlement | scoring core：最低胡牌台數門檻必須可被驗證 | 與上一案成對 |
+| PATTERN-HEAVEN-WIN-001 | 特殊胡型 | 驗證莊家起手即和時，可依啟用中的規則命中 `天胡` 台型 | scoring core：scoring 規則必須來自權威台型目錄 | 台數值需由權威規格定值後落地 |
+| PATTERN-BIG-THREE-DRAGONS-001 | 特殊胡型 | 驗證三組三元刻子成立時，可命中 `大三元` | scoring core：scoring 規則必須來自權威台型目錄 | 台數值需由權威規格定值後落地 |
+| PATTERN-LITTLE-THREE-DRAGONS-001 | 特殊胡型 | 驗證兩組三元刻子加一組三元將眼時，可命中 `小三元` | scoring core：scoring 規則必須來自權威台型目錄 | 台數值需由權威規格定值後落地 |
 
 ## 類別到案例對照
 
@@ -42,9 +51,13 @@
 | 宣告優先序 | `CLAIM-PRIORITY-001` |
 | 流局 | `DRAW-DEALER-001` |
 | 台型組合 | `SCORE-STACK-001` |
+| 榮和結果接線 | `SCORE-DISCARD-WIN-001` |
+| 最低台數門檻 | `SCORE-MINIMUM-TAI-001`, `SCORE-MINIMUM-TAI-002` |
+| 特殊胡型 | `PATTERN-HEAVEN-WIN-001`, `PATTERN-BIG-THREE-DRAGONS-001`, `PATTERN-LITTLE-THREE-DRAGONS-001` |
 
 ## 後續落地要求
 
 - `tests/core` 建立規則案例時，至少要先覆蓋本文件中的最低必要案例。
+- browser E2E 至少要覆蓋一條 `SCORE-DISCARD-WIN-*` 類案例，確保真實畫面能顯示台型與總台數。
 - 若新增特殊胡、封頂、過水、查聽等規則，必須先補 baseline 或後續權威 spec，再擴充本矩陣。
 - 若規則改成可配置，案例仍保留原 ID，但必須改寫成明確對應特定 config 的案例。

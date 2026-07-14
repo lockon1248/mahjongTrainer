@@ -250,6 +250,36 @@ Required behavior:
    - only then start the next child change or next mainline task
 8. if the assistant notices a completed but unarchived child change, it must repair that workflow state first before opening new implementation work
 
+## 15A. Mainline Task Discipline Rule
+
+For this repo, mainline tasks and progress status fields must not be mixed.
+
+Required behavior:
+
+1. `current active child change`、`next planned child change`、`planned`、`in-progress` 這類欄位屬於狀態資訊，不得寫成可勾選 task
+2. 不得因為 child change 已建立 proposal / design / tasks，就把對應主線 task 打勾
+3. 主線 task 只能在其對應 child change 已完成實作、完成驗證、正式 archive 後打勾
+4. 若下一個 child change 尚未定義，只能維持為狀態欄位或待規劃資訊，不得把「建立下一個 child change」當成主線進度完成
+5. 若 assistant 發現自己把狀態欄位寫成 task，必須先修正 mainline change，再繼續後續 implementation workflow
+
+## 15B. Per-Change Verification Rule
+
+每一個 change 在視為完成前，都必須跑過與該 change 行為範圍相對應的驗證，不得只靠 artifact 完成、主線更新或 archive 流程視為已完成。
+
+Required behavior:
+
+1. 若 change 改動 `core` / domain behavior，必須執行對應單元測試
+2. 若 change 改動 store / selector / state transition，必須執行對應 store 或邏輯測試
+3. 若 change 改動 UI rendering / interaction，必須執行對應 component / UI 測試
+4. 若 change 涉及多步玩家流程、可玩性、畫面之間連續性，必須執行 E2E 測試或等效的真實流程驗證
+5. 若 change 同時跨多層，必須對每一層跑相對應驗證，不得只跑最便宜的一條測試命令
+6. `typecheck`、`lint`、`build` 本身不構成行為變更的充分驗證
+7. 在 archive 一個 completed change 之前，assistant 必須明確確認這個 change 跑過哪些單元測試、UI 測試或 E2E 驗證；若未跑，不能把該 change 描述為已完整驗證
+8. 若 assistant 發現某個已完成的 change 缺少對應測試或 E2E 驗證，必須先補驗證缺口或明確回報缺口，再進行封存與下一步主線工作
+9. 若 change 影響可玩性、多步玩家流程、跨畫面連續性或真實瀏覽器互動，預設驗證標準必須是 browser E2E
+10. 只有在 browser E2E 被基建缺口或環境限制明確阻擋時，才可暫時退回等效整合測試，且必須記錄阻擋原因
+11. assistant 不得因為非瀏覽器測試比較便宜、比較快、比較容易過，就主動選擇較弱驗證路徑取代可合理落地的 browser E2E
+
 ## 16. Spec Drift Prevention Rule
 
 When the requested work is product implementation progress, the assistant must not drift into low-value spec maintenance.

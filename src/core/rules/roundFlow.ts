@@ -193,6 +193,18 @@ export const resolveClaimWindow = (
   }
 
   if (winningClaim.actionType === 'win') {
+    const scoring = validateStandardWin({
+      concealedTiles: round.players[winningClaim.seat].concealedTiles,
+      melds: round.players[winningClaim.seat].melds,
+      flowers: round.players[winningClaim.seat].flowers,
+      winningTile: pendingActionWindow.triggeringTile,
+      winningSeat: winningClaim.seat,
+      discarderSeat: pendingActionWindow.triggeringSeat
+    })
+
+    if (!scoring.isWinning || scoring.settlement == null)
+      throw new Error('winning claim must resolve through a valid scoring result')
+
     return {
       ...round,
       currentSeat: winningClaim.seat,
@@ -203,7 +215,9 @@ export const resolveClaimWindow = (
         status: 'win',
         result: createWinRoundResult({
           winnerSeat: winningClaim.seat,
-          discarderSeat: pendingActionWindow.triggeringSeat
+          discarderSeat: pendingActionWindow.triggeringSeat,
+          totalTai: scoring.settlement.totalTai,
+          scoringItems: scoring.settlement.scoringItems
         })
       }
     }
@@ -418,6 +432,22 @@ export const applyHumanSelfTurnAction = (
     throw new Error('human self-turn action is not currently legal')
 
   if (legalCandidate.actionType === 'win-self-draw') {
+    const player = round.players[action.seat]
+    const scoring = validateStandardWin({
+      concealedTiles: player.concealedTiles,
+      melds: player.melds,
+      flowers: player.flowers,
+      winningTile: null,
+      winningSeat: action.seat,
+      discarderSeat: null,
+      winContext: {
+        isHeavenWin: isHeavenWinRound(round, action.seat)
+      }
+    })
+
+    if (!scoring.isWinning || scoring.settlement == null)
+      throw new Error('self draw win must resolve through a valid scoring result')
+
     return {
       ...round,
       currentSeat: action.seat,
@@ -428,7 +458,9 @@ export const applyHumanSelfTurnAction = (
         status: 'win',
         result: createWinRoundResult({
           winnerSeat: action.seat,
-          discarderSeat: null
+          discarderSeat: null,
+          totalTai: scoring.settlement.totalTai,
+          scoringItems: scoring.settlement.scoringItems
         })
       }
     }
@@ -757,6 +789,14 @@ const isWinningClaim = (
     winningSeat: seat,
     discarderSeat
   }).isWinning
+}
+
+const isHeavenWinRound = (round: BaselineRoundState, seat: Seat): boolean => {
+  return seat === round.table.dealerSeat
+    && round.currentSeat === round.table.dealerSeat
+    && round.phase === 'discard'
+    && Object.values(round.table.discards).every(discards => discards.length === 0)
+    && Object.values(round.players).every(player => player.melds.length === 0)
 }
 
 const findMatchingTiles = (concealedTiles: Tile[], targetTile: Tile): Tile[] => {

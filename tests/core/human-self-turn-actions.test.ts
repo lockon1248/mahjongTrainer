@@ -137,8 +137,15 @@ describe('human self-turn actions', () => {
     expect(resolved.outcome.status).toBe('win')
     if (resolved.outcome.status !== 'win')
       throw new Error('expected a winning outcome')
-    expect(resolved.outcome.result.winnerSeat).toBe('east')
-    expect(resolved.outcome.result.discarderSeat).toBeNull()
+    expect(resolved.outcome.result).toEqual({
+      type: 'win',
+      winnerSeat: 'east',
+      discarderSeat: null,
+      totalTai: 26,
+      scoringItems: ['dealer-win', 'self-draw', 'heaven-win'],
+      drawReason: null,
+      unresolved: []
+    })
   })
 
   it('applies concealed kan and draws a replacement tile from the wall tail', () => {

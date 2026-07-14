@@ -72,6 +72,86 @@ describe('scoring patterns', () => {
     const patterns = evaluateScoringPatterns(input, breakdown)
 
     expect(patterns).not.toContain('seven-rob-one')
-    expect(patterns).not.toContain('heaven-win')
+    expect(patterns).not.toContain('earth-win')
+  })
+
+  it('detects heaven win when dealer starts with a complete hand before first discard', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: null,
+      winningSeat: 'east',
+      discarderSeat: null,
+      winContext: {
+        isHeavenWin: true
+      }
+    }
+
+    const breakdown = decomposeStandardHand(input)
+
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['dealer-win', 'self-draw', 'heaven-win'])
+  })
+
+  it('detects big three dragons from three dragon triplets', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(9, 9),
+        ...dots(4, 5, 6),
+        dragon('red'),
+        dragon('red'),
+        dragon('red'),
+        dragon('green'),
+        dragon('green'),
+        dragon('green'),
+        dragon('white'),
+        dragon('white')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('white'),
+      winningSeat: 'south',
+      discarderSeat: 'west'
+    }
+
+    const breakdown = decomposeStandardHand(input)
+
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['big-three-dragons'])
+  })
+
+  it('detects little three dragons from two dragon triplets and one dragon pair', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(4, 5, 6),
+        ...bamboos(7, 8, 9),
+        dragon('red'),
+        dragon('red'),
+        dragon('red'),
+        dragon('green'),
+        dragon('green'),
+        dragon('green'),
+        dragon('white')
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: dragon('white'),
+      winningSeat: 'south',
+      discarderSeat: 'west'
+    }
+
+    const breakdown = decomposeStandardHand(input)
+
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['little-three-dragons'])
   })
 })
