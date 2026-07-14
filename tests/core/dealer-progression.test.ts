@@ -74,7 +74,7 @@ describe('dealer progression', () => {
     expect(nextRound.outcome.status).toBe('in-progress')
   })
 
-  it('rejects creating the next round from a draw outcome with unresolved dealer continuation', () => {
+  it('keeps the same dealer and creates the next round after a draw outcome', () => {
     const round = createBaselineRound({ wall: buildWall() })
     const drawnRound: BaselineRoundState = {
       ...round,
@@ -85,10 +85,13 @@ describe('dealer progression', () => {
       }
     }
 
-    expect(() => createNextRoundFromCompletedRound(drawnRound, {
+    const nextRound = createNextRoundFromCompletedRound(drawnRound, {
       wall: buildWall()
-    })).toThrowError(
-      'cannot create next round from unresolved draw outcome'
-    )
+    })
+
+    expect(nextRound.table.dealerSeat).toBe('east')
+    expect(nextRound.currentSeat).toBe('east')
+    expect(nextRound.phase).toBe('discard')
+    expect(nextRound.outcome.status).toBe('in-progress')
   })
 })

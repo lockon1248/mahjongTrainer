@@ -70,17 +70,21 @@
    - `taiwan-mahjong-table-layout-verification-pass`
 6. 算台與特殊規則主線
    - `taiwan-mahjong-scoring-rules-and-tests`
+7. 流局後續局 bugfix
+   - `taiwan-mahjong-draw-next-round-progression`
+8. 流局後續局 E2E 回歸
+   - `taiwan-mahjong-draw-next-round-e2e-regression`
 
 ### 目前進行中
 
-7. 目前沒有 active child change
+9. 目前沒有 active child change
    - current active child change：`none`
    - next planned child change：待新的主 spec child change 建立後回填
    - 主線 task 完成條件：新 child change 建立後再回填
 
 ### 尚未開始
 
-8. 下一個 child change 實作與驗證
+10. 下一個 child change 實作與驗證
   - 待 proposal / design / tasks 建立後回填
 
 ## Completion Conditions
@@ -97,7 +101,11 @@
    - 預設介面為中文，玩家固定下方、中央牌池可見、副露與捨牌同步
 6. 算台與特殊規則主線
    - `0 台起胡`、`天胡 24`、`大三元 8`、`小三元 4` 已落地於 scoring、UI 與 browser E2E
-7. 下一個 child change 實作與驗證
+7. 流局後續局 bugfix
+   - flow 結果與下一局續局邏輯已修正
+8. 流局後續局 E2E 回歸
+   - 流局結果畫面到下一局的瀏覽器回歸已固定
+10. 下一個 child change 實作與驗證
    - 待該 change 完成並 archive 後再回填
 
 ## Update Rules

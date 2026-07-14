@@ -92,7 +92,7 @@ describe('ai decision core', () => {
       reasoning: {
         heuristic: 'discard',
         score: 0,
-        ignoredUnresolvedRules: ['heavenWin', 'earthWin', 'qiangGang']
+        ignoredUnresolvedRules: ['earthWin', 'qiangGang']
       }
     })
   })
@@ -123,10 +123,11 @@ describe('ai decision core', () => {
     expect(decision).toEqual({
       actionType: 'win',
       tile: chars(3)[0]!,
+      consumedTiles: undefined,
       reasoning: {
         heuristic: 'claim',
         score: Number.POSITIVE_INFINITY,
-        ignoredUnresolvedRules: ['heavenWin', 'earthWin', 'qiangGang']
+        ignoredUnresolvedRules: ['earthWin', 'qiangGang']
       }
     })
   })
@@ -250,7 +251,7 @@ describe('ai decision core', () => {
 
     expect(unresolvedDecision.tile).toEqual(configuredDecision.tile)
     expect(unresolvedDecision.reasoning.score).toBe(configuredDecision.reasoning.score)
-    expect(unresolvedDecision.reasoning.ignoredUnresolvedRules).toEqual(['heavenWin', 'earthWin', 'qiangGang'])
+    expect(unresolvedDecision.reasoning.ignoredUnresolvedRules).toEqual(['earthWin', 'qiangGang'])
     expect(configuredDecision.reasoning.ignoredUnresolvedRules).toEqual([])
   })
 })

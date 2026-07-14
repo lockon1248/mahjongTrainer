@@ -8,12 +8,14 @@ test.describe('牌桌 smoke e2e', () => {
           seedPonClaimScenario: () => void
           seedDiscardWinScenario: () => void
           seedBigThreeDragonsClaimScenario: () => void
+          seedDrawNextRoundScenario: () => void
         }
       }).__MAHJONG_E2E__
 
       return typeof bridge?.seedPonClaimScenario === 'function'
         && typeof bridge?.seedDiscardWinScenario === 'function'
         && typeof bridge?.seedBigThreeDragonsClaimScenario === 'function'
+        && typeof bridge?.seedDrawNextRoundScenario === 'function'
     })
   }
 
@@ -91,5 +93,27 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('result-total-tai')).toContainText('9')
     await expect(page.getByTestId('result-scoring-items')).toContainText('大三元')
     await expect(page.getByTestId('result-scoring-items')).toContainText('莊家胡')
+  })
+
+  test('流局結果畫面按下一局後會回到新局且不顯示錯誤', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & { __MAHJONG_E2E__: { seedDrawNextRoundScenario: () => void } }).__MAHJONG_E2E__.seedDrawNextRoundScenario()
+    })
+
+    await expect(page.getByTestId('round-result-summary')).toBeVisible()
+    await expect(page.getByTestId('result-type')).toContainText('流局')
+    await expect(page.getByTestId('next-round-action')).toBeVisible()
+
+    await page.getByTestId('next-round-action').click()
+
+    await expect(page.getByTestId('game-error')).toHaveCount(0)
+    await expect(page.getByTestId('round-result-summary')).toHaveCount(0)
+    await expect(page.getByTestId('next-round-actions')).toHaveCount(0)
+    await expect(page.getByTestId('summary-outcome')).toContainText('對局中')
+    await expect(page.getByTestId('summary-dealer')).toContainText('東家')
+    await expect(page.getByTestId('human-discard-tile')).toHaveCount(17)
   })
 })

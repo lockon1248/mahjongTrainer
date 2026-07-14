@@ -408,7 +408,7 @@ describe('game session store', () => {
   })
 
 
-  it('does not guess next-round progression after a draw outcome with unresolved dealer continuation', () => {
+  it('starts the next round after a draw outcome and keeps the dealer seat', () => {
     const store = useGameSessionStore()
     const completedRound = createBaselineRound({ wall: buildWall() })
     store.round = {
@@ -419,11 +419,14 @@ describe('game session store', () => {
         result: createDrawRoundResult()
       }
     }
-    const previousRound = store.round
 
     store.startNextRound()
 
-    expect(store.error).toBe('cannot create next round from unresolved draw outcome')
-    expect(store.round).toBe(previousRound)
+    expect(store.error).toBeNull()
+    expect(store.round).not.toBe(completedRound)
+    expect(store.round?.outcome.status).toBe('in-progress')
+    expect(store.round?.table.dealerSeat).toBe('east')
+    expect(store.round?.currentSeat).toBe('east')
+    expect(store.round?.phase).toBe('discard')
   })
 })

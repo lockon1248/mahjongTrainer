@@ -1117,3 +1117,35 @@ tests:
   - tests/core/scoring-win-validation.test.ts
   - tests/ui/round-result-sync.test.ts
 -->
+
+---
+### Requirement: 流局結果畫面必須支援下一局瀏覽器續局流程
+
+牌桌瀏覽器流程 SHALL 允許玩家在流局結果畫面按下「下一局」後，直接進入新的進行中牌局。
+
+#### Scenario: 玩家在流局結果畫面按下一局
+
+- **WHEN** 畫面顯示流局結果，且玩家點擊「下一局」
+- **THEN** 前端 MUST 建立新局並回到進行中狀態，而不是停留在錯誤或上一局結果畫面
+
+##### Example: 流局後下一局成功開始
+
+- **GIVEN** 一個已流局結束的牌桌畫面
+- **WHEN** 玩家點擊「下一局」
+- **THEN** 畫面 MUST 回到新局進行中狀態，且 MUST NOT 顯示錯誤訊息
+
+<!-- @trace
+source: taiwan-mahjong-draw-next-round-e2e-regression
+updated: 2026-07-14
+code:
+  - vite.config.ts
+  - src/core/rules/roundFlow.ts
+  - src/views/game/e2eBridge.ts
+  - src/env.d.ts
+  - test-results/.last-run.json
+tests:
+  - tests/core/ai-decision-core.test.ts
+  - tests/ui/game-session.store.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/dealer-progression.test.ts
+-->

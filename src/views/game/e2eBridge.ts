@@ -1,5 +1,6 @@
 import {
   createBaselineRound,
+  createDrawRoundResult,
   createPendingActionWindow,
   type BaselineRoundState,
   type Seat,
@@ -13,6 +14,7 @@ type GameE2EBridge = {
   seedPonClaimScenario: () => void
   seedDiscardWinScenario: () => void
   seedBigThreeDragonsClaimScenario: () => void
+  seedDrawNextRoundScenario: () => void
 }
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
@@ -163,6 +165,18 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
           dragon('white')
         ]
       })
+      store.error = null
+    },
+    seedDrawNextRoundScenario() {
+      const round = createBaselineRound({ wall: buildWall() })
+      store.round = {
+        ...round,
+        phase: 'ended',
+        outcome: {
+          status: 'draw',
+          result: createDrawRoundResult()
+        }
+      }
       store.error = null
     }
   }

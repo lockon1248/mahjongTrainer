@@ -74,12 +74,11 @@ export const createNextRoundFromCompletedRound = (
   if (round.phase !== 'ended' || round.outcome.status === 'in-progress')
     throw new Error('cannot create next round from an in-progress round')
 
-  if (round.outcome.status === 'draw')
-    throw new Error('cannot create next round from unresolved draw outcome')
-
-  const nextDealerSeat = round.outcome.result.winnerSeat === round.table.dealerSeat
+  const nextDealerSeat = round.outcome.status === 'draw'
     ? round.table.dealerSeat
-    : getNextSeat(round.outcome.result.winnerSeat!)
+    : round.outcome.result.winnerSeat === round.table.dealerSeat
+      ? round.table.dealerSeat
+      : getNextSeat(round.outcome.result.winnerSeat!)
 
   return createBaselineRound({
     wall: input.wall,
