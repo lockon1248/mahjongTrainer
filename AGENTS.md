@@ -240,6 +240,15 @@ Required behavior:
 2. mark the completed mainline task as done
 3. set the next active or planned child change explicitly
 4. if archive is done but mainline progress is not updated, the work is not considered properly closed
+5. if a child change has reached `all_done`, the assistant must archive it before starting the next child change
+6. the assistant must not treat `all_done but unarchived` as closed work
+7. unless the user explicitly says otherwise, the required closing order is:
+   - finish implementation and verification
+   - confirm the child change is `all_done`
+   - archive the child change
+   - update the mainline change
+   - only then start the next child change or next mainline task
+8. if the assistant notices a completed but unarchived child change, it must repair that workflow state first before opening new implementation work
 
 ## 16. Spec Drift Prevention Rule
 

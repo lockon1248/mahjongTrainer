@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   createBaselineRuleConfig,
   createBaselineRound,
-  discardTile,
+  createPendingActionWindow,
   mergeRuleConfig,
   resolveClaimWindow,
+  type BaselineRoundState,
   type PendingActionClaim,
+  type Seat,
   type Tile
 } from '@/core/index'
 
@@ -19,6 +21,14 @@ const dots = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
 
 const bamboos = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
   return ranks.map((rank) => ({ suit: 'bamboo', rank }))
+}
+
+const wind = (rank: 'east' | 'south' | 'west' | 'north'): Tile => {
+  return { suit: 'winds', rank }
+}
+
+const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
+  return { suit: 'dragons', rank }
 }
 
 const buildWall = (): Tile[] => {
@@ -38,23 +48,70 @@ const buildWall = (): Tile[] => {
   return Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
 }
 
-const createClaimingRound = () => {
+const createClaimWindowRound = (
+  triggeringTile: Tile,
+  triggeringSeat: Seat,
+  seatTiles: Partial<Record<Seat, Tile[]>>
+): BaselineRoundState => {
   const round = createBaselineRound({ wall: buildWall() })
-  const discardedTile = round.players.east.concealedTiles[0]!
 
-  return discardTile(round, {
-    seat: 'east',
-    tile: discardedTile
-  })
+  return {
+    ...round,
+    currentSeat: triggeringSeat,
+    phase: 'claim-window',
+    pendingActionWindow: {
+      ...createPendingActionWindow(),
+      triggeringSeat,
+      triggeringTile
+    },
+    players: {
+      east: {
+        ...round.players.east,
+        concealedTiles: seatTiles.east ?? round.players.east.concealedTiles
+      },
+      south: {
+        ...round.players.south,
+        concealedTiles: seatTiles.south ?? round.players.south.concealedTiles
+      },
+      west: {
+        ...round.players.west,
+        concealedTiles: seatTiles.west ?? round.players.west.concealedTiles
+      },
+      north: {
+        ...round.players.north,
+        concealedTiles: seatTiles.north ?? round.players.north.concealedTiles
+      }
+    }
+  }
 }
 
 describe('round flow claim resolution', () => {
   it('prefers a win claim over lower priority claims', () => {
-    const pendingRound = createClaimingRound()
-    const discardedTile = pendingRound.pendingActionWindow!.triggeringTile!
+    const discardedTile = dragon('red')
+    const pendingRound = createClaimWindowRound(discardedTile, 'east', {
+      north: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      south: [
+        ...chars(1, 2, 3),
+        ...dots(4, 5, 6, 7, 8, 9),
+        ...bamboos(4, 5, 6),
+        wind('south'),
+        wind('south'),
+        dragon('red'),
+        dragon('green'),
+        dragon('white')
+      ]
+    })
     const claims: PendingActionClaim[] = [
       { seat: 'north', actionType: 'win', tile: discardedTile },
-      { seat: 'south', actionType: 'pon', tile: discardedTile }
+      { seat: 'south', actionType: 'pon', tile: discardedTile, consumedTiles: [dragon('red'), dragon('red')] }
     ]
 
     const resolved = resolveClaimWindow(pendingRound, claims)
@@ -69,11 +126,34 @@ describe('round flow claim resolution', () => {
   })
 
   it('prefers exposed kan over chi when no win exists', () => {
-    const pendingRound = createClaimingRound()
-    const discardedTile = pendingRound.pendingActionWindow!.triggeringTile!
+    const discardedTile = chars(3)[0]!
+    const pendingRound = createClaimWindowRound(discardedTile, 'east', {
+      west: [
+        ...chars(3, 3, 3),
+        ...dots(1, 2, 3),
+        ...bamboos(1, 2, 3),
+        wind('west'),
+        wind('west'),
+        dragon('red'),
+        dragon('green'),
+        dragon('white'),
+        chars(9)[0]!
+      ],
+      south: [
+        ...chars(1, 2, 4, 5),
+        ...dots(4, 5, 6),
+        ...bamboos(4, 5, 6),
+        wind('south'),
+        wind('south'),
+        dragon('red'),
+        dragon('green'),
+        dragon('white'),
+        chars(7)[0]!
+      ]
+    })
     const claims: PendingActionClaim[] = [
-      { seat: 'west', actionType: 'kan-exposed', tile: discardedTile },
-      { seat: 'south', actionType: 'chi', tile: discardedTile }
+      { seat: 'west', actionType: 'kan-exposed', tile: discardedTile, consumedTiles: chars(3, 3, 3) },
+      { seat: 'south', actionType: 'chi', tile: discardedTile, consumedTiles: chars(1, 2) }
     ]
 
     const resolved = resolveClaimWindow(pendingRound, claims)
@@ -88,7 +168,7 @@ describe('round flow claim resolution', () => {
   })
 
   it('advances to the next seat draw phase when every claimant passes', () => {
-    const pendingRound = createClaimingRound()
+    const pendingRound = createClaimWindowRound(chars(3)[0]!, 'east', {})
 
     const resolved = resolveClaimWindow(pendingRound, [])
 
@@ -114,14 +194,37 @@ describe('round flow claim resolution', () => {
       wall: buildWall(),
       ruleConfig: merged.config
     })
-    const discardedTile = round.players.east.concealedTiles[0]!
-    const pendingRound = discardTile(round, {
-      seat: 'east',
-      tile: discardedTile
-    })
+    const discardedTile = chars(3)[0]!
+    const pendingRound = {
+      ...createClaimWindowRound(discardedTile, 'east', {
+        west: [
+          ...chars(3, 3),
+          ...dots(4, 5, 6),
+          ...bamboos(4, 5, 6),
+          wind('west'),
+          wind('west'),
+          dragon('red'),
+          dragon('green'),
+          dragon('white'),
+          chars(9)[0]!
+        ],
+        south: [
+          ...chars(1, 2, 4, 5),
+          ...dots(4, 5, 6),
+          ...bamboos(4, 5, 6),
+          wind('south'),
+          wind('south'),
+          dragon('red'),
+          dragon('green'),
+          dragon('white'),
+          chars(7)[0]!
+        ]
+      }),
+      ruleConfig: round.ruleConfig
+    }
     const claims: PendingActionClaim[] = [
-      { seat: 'west', actionType: 'pon', tile: discardedTile },
-      { seat: 'south', actionType: 'chi', tile: discardedTile }
+      { seat: 'west', actionType: 'pon', tile: discardedTile, consumedTiles: chars(3, 3) },
+      { seat: 'south', actionType: 'chi', tile: discardedTile, consumedTiles: chars(1, 2) }
     ]
 
     const resolved = resolveClaimWindow(pendingRound, claims)

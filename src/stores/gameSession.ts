@@ -3,17 +3,23 @@ import { defineStore } from 'pinia'
 import {
   chooseAiClaimDecision,
   chooseAiDiscardDecision,
+  chooseAiSelfTurnDecision,
   createAiDecisionContext,
   createBaselineRound,
   createBaselineRuleConfig,
   createBaselineWall,
+  createNextRoundFromCompletedRound,
   discardTile,
   drawForCurrentSeat,
   getLegalClaimCandidates,
+  getLegalSelfTurnCandidates,
   resolveClaimWindow,
+  applyHumanSelfTurnAction,
   type BaselineRoundState,
   type HumanClaimActionType,
   type HumanClaimCandidate,
+  type HumanSelfTurnActionType,
+  type HumanSelfTurnCandidate,
   type PendingActionClaim,
   ALL_SEATS,
   type Seat,
@@ -35,6 +41,12 @@ export const useGameSessionStore = defineStore('game-session', () => {
 
     return getLegalClaimCandidates(round.value, humanSeat)
   })
+  const availableHumanSelfTurnActions = computed<HumanSelfTurnCandidate[]>(() => {
+    if (round.value == null)
+      return []
+
+    return getLegalSelfTurnCandidates(round.value, humanSeat)
+  })
 
   const startLocalRound = () => {
     try {
@@ -47,6 +59,14 @@ export const useGameSessionStore = defineStore('game-session', () => {
       round.value = null
       error.value = caughtError instanceof Error ? caughtError.message : 'unknown-error'
     }
+  }
+
+  const startNextRound = () => {
+    const currentRound = requireRound()
+
+    runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
+      wall: createBaselineWall()
+    }))
   }
 
   const drawCurrentSeat = () => {
@@ -95,6 +115,31 @@ export const useGameSessionStore = defineStore('game-session', () => {
     runRoundTransition(() => resolveClaimWindow(currentRound, humanClaim == null ? aiClaims : [humanClaim, ...aiClaims]))
   }
 
+  const submitHumanSelfTurnAction = (
+    actionType: HumanSelfTurnActionType,
+    consumedTiles: Tile[] = [],
+    meldTile: Tile | null = null
+  ) => {
+    const currentRound = requireRound()
+    const selectedCandidate = availableHumanSelfTurnActions.value.find((candidate) => {
+      return candidate.actionType === actionType
+        && areSameTiles(candidate.consumedTiles, consumedTiles)
+        && areSameOptionalTile(candidate.meldTile, meldTile)
+    })
+
+    if (selectedCandidate == null) {
+      error.value = 'human self-turn action is not currently legal'
+      return
+    }
+
+    runRoundTransition(() => applyHumanSelfTurnAction(currentRound, {
+      seat: humanSeat,
+      actionType: selectedCandidate.actionType,
+      consumedTiles: selectedCandidate.consumedTiles,
+      meldTile: selectedCandidate.meldTile
+    }))
+  }
+
   const advanceTurn = () => {
     const initialRound = requireRound()
 
@@ -114,6 +159,27 @@ export const useGameSessionStore = defineStore('game-session', () => {
         }
 
         if (nextRound.phase === 'discard') {
+          const legalSelfTurnActions = getLegalSelfTurnCandidates(nextRound, nextRound.currentSeat)
+
+          if (legalSelfTurnActions.length > 0) {
+            const aiSelfTurnDecision = chooseAiSelfTurnDecision({
+              seat: nextRound.currentSeat,
+              concealedTiles: nextRound.players[nextRound.currentSeat].concealedTiles,
+              melds: nextRound.players[nextRound.currentSeat].melds,
+              flowers: nextRound.players[nextRound.currentSeat].flowers,
+              candidates: legalSelfTurnActions,
+              ruleConfig: createBaselineRuleConfig()
+            })
+
+            nextRound = applyHumanSelfTurnAction(nextRound, {
+              seat: nextRound.currentSeat,
+              actionType: aiSelfTurnDecision.actionType,
+              consumedTiles: aiSelfTurnDecision.consumedTiles,
+              meldTile: aiSelfTurnDecision.meldTile
+            })
+            continue
+          }
+
           const aiContext = createAiDecisionContext(nextRound, {
             seat: nextRound.currentSeat
           })
@@ -206,17 +272,27 @@ export const useGameSessionStore = defineStore('game-session', () => {
     })
   }
 
+  const areSameOptionalTile = (left: Tile | null, right: Tile | null): boolean => {
+    if (left == null || right == null)
+      return left === right
+
+    return left.suit === right.suit && left.rank === right.rank
+  }
+
   return {
     round,
     error,
     isInitialized,
     humanSeat,
     availableHumanClaims,
+    availableHumanSelfTurnActions,
     startLocalRound,
+    startNextRound,
     drawCurrentSeat,
     discard,
     resolveClaims,
     submitHumanClaim,
+    submitHumanSelfTurnAction,
     advanceTurn
   }
 })

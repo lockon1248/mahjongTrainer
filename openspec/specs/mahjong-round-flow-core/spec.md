@@ -371,3 +371,240 @@ tests:
   - tests/core/ai-decision-core.test.ts
   - tests/core/round-flow-outcome.test.ts
 -->
+
+## Requirements
+
+### Requirement: Human self-turn action candidates
+
+round flow core 必須提供一個穩定的自回合合法動作候選邊界，讓 store 與 UI 能讀取目前座位在自己回合可執行的 `win-self-draw`、`kan-concealed`、`kan-added`，而不需在前端重算規則。
+
+#### Scenario: Store reads legal self-turn actions
+
+- **WHEN** store 在真人自己的回合請求目前座位的合法自回合候選
+- **THEN** round flow core 必須回傳該座位目前可執行的自回合動作集合，且不得混入不合法動作
+
+##### Example: self-draw win is exposed as a legal action
+
+- **GIVEN** 一個目前座位已完成合法自摸胡的回合狀態
+- **WHEN** store 讀取該座位的自回合候選
+- **THEN** 回傳集合必須包含 `win-self-draw`
+
+#### Scenario: Kan-related candidates preserve concrete action data
+
+- **WHEN** 某個自回合動作需要消耗手牌或升級既有 meld
+- **THEN** round flow core 必須在候選資料中保留具體 tile 或 meld 識別資訊，讓 UI 與 store 可直接送出意圖而不重算
+
+##### Example: concealed kan candidate keeps its four-tile identity
+
+- **GIVEN** 一個目前座位握有合法暗槓的回合狀態
+- **WHEN** store 讀取該座位的自回合候選
+- **THEN** 回傳的 `kan-concealed` 候選必須包含對應的牌張資訊
+
+
+<!-- @trace
+source: taiwan-mahjong-human-self-turn-actions
+updated: 2026-07-14
+code:
+  - src/core/ai/decision.ts
+  - src/core/types/action.ts
+  - AGENTS.md
+  - src/core/rules/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/GameView.vue
+  - src/core/rules/roundFlow.ts
+  - src/core/ai/types.ts
+  - src/views/game/components/GameTableView.vue
+tests:
+  - tests/core/human-claim-candidates.test.ts
+  - tests/core/human-self-turn-actions.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Human self-turn action resolution
+
+當真人送出合法自回合動作時，round flow core 必須正確套用該動作並推進後續狀態，包括結束牌局或進入槓後補牌流程。
+
+#### Scenario: Self-draw win ends the round
+
+- **WHEN** 真人送出合法 `win-self-draw`
+- **THEN** round flow core 必須將牌局轉為 win outcome，而不得繼續停留在一般出牌流程
+
+##### Example: self-draw win changes outcome to win
+
+- **GIVEN** 一個目前座位已達成合法自摸胡的回合狀態
+- **WHEN** 套用 `win-self-draw`
+- **THEN** 牌局 outcome MUST 變成 `win`
+
+#### Scenario: Kan action continues with replacement draw
+
+- **WHEN** 真人送出合法 `kan-concealed` 或 `kan-added`
+- **THEN** round flow core 必須套用該槓動作，並將牌局推進到後續補牌所需的合法狀態
+
+##### Example: concealed kan enters replacement draw flow
+
+- **GIVEN** 一個目前座位可以合法暗槓的回合狀態
+- **WHEN** 套用 `kan-concealed`
+- **THEN** 牌局狀態 MUST 反映該槓已成立，且 MUST 進入後續補牌所需的推進路徑
+
+<!-- @trace
+source: taiwan-mahjong-human-self-turn-actions
+updated: 2026-07-14
+code:
+  - src/core/ai/decision.ts
+  - src/core/types/action.ts
+  - AGENTS.md
+  - src/core/rules/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/GameView.vue
+  - src/core/rules/roundFlow.ts
+  - src/core/ai/types.ts
+  - src/views/game/components/GameTableView.vue
+tests:
+  - tests/core/human-claim-candidates.test.ts
+  - tests/core/human-self-turn-actions.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: UI-safe human claim candidates
+
+round flow core 必須提供一個穩定的合法宣告候選邊界，讓 UI 與 store 能在 `claim-window` 中讀取指定座位可執行的宣告，而不需在前端重新判定規則。
+
+#### Scenario: Store reads legal human claim candidates
+
+- **WHEN** store 在 `claim-window` 中請求某個座位的合法宣告候選
+- **THEN** round flow core 必須回傳該座位目前可執行的宣告集合，包括 `pass` 與所有合法的 `chi`、`pon`、`kan-exposed`、`win`
+
+##### Example: candidate list includes pass and pon
+
+- **GIVEN** 一個 `claim-window` 狀態，其中人類座位可對當前捨牌執行 `pon`
+- **WHEN** store 讀取該座位的合法宣告候選
+- **THEN** 回傳集合必須包含 `pass` 與 `pon`
+
+#### Scenario: Candidate helper respects seat and rule boundaries
+
+- **WHEN** 某個宣告因座位順序或既有 baseline 規則而不合法
+- **THEN** round flow core 必須排除該宣告，而不得將其錯誤暴露為可選候選
+
+##### Example: non-next seat cannot chi
+
+- **GIVEN** 一個 `claim-window` 中，指定座位不是出牌者的下家
+- **WHEN** store 讀取該座位的合法宣告候選
+- **THEN** 回傳集合不得包含 `chi`
+
+<!-- @trace
+source: taiwan-mahjong-human-claim-window
+updated: 2026-07-14
+code:
+  - AGENTS.md
+  - src/core/ai/decision.ts
+  - src/core/rules/types.ts
+  - src/views/game/selectors.ts
+  - src/core/types/action.ts
+  - src/core/rules/roundFlow.ts
+  - src/core/ai/types.ts
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/GameView.vue
+tests:
+  - tests/core/human-claim-candidates.test.ts
+  - tests/core/human-self-turn-actions.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+-->
+
+---
+### Requirement: Next-round dealer progression after win
+
+round flow core 必須提供一個穩定的下一局初始化邊界，讓已結束的胡牌結果可依 baseline 已定案莊家規則建立下一局，而不需由 store 自行計算莊家流轉。
+
+#### Scenario: Dealer win keeps the dealership
+
+- **WHEN** 上一局以胡牌結束，且胡牌者就是上一局莊家
+- **THEN** round flow core 必須建立一個下一局 baseline round，並維持相同莊家
+
+##### Example: dealer win continues as dealer
+
+- **GIVEN** 一個莊家 `east` 胡牌的終局狀態
+- **WHEN** 呼叫端要求建立下一局
+- **THEN** 新局的 `dealerSeat` MUST 為 `east`
+
+#### Scenario: Non-dealer win passes dealership to the next seat
+
+- **WHEN** 上一局以胡牌結束，且胡牌者不是上一局莊家
+- **THEN** round flow core 必須依 baseline 讓胡牌者下家成為下一局莊家
+
+##### Example: south win makes west the next dealer
+
+- **GIVEN** 一個原莊家為 `east`、胡牌者為 `south` 的終局狀態
+- **WHEN** 呼叫端要求建立下一局
+- **THEN** 新局的 `dealerSeat` MUST 為 `west`
+
+
+<!-- @trace
+source: taiwan-mahjong-draw-outcome-and-dealer-flow
+updated: 2026-07-14
+code:
+  - AGENTS.md
+  - src/core/types/table.ts
+  - src/stores/gameSession.ts
+  - src/core/rules/types.ts
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/GameView.vue
+  - src/core/rules/roundFlow.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Draw outcome stays unresolved for undecided post-draw rules
+
+當上一局是流局，且 baseline 尚未定案流局後是否連莊或查聽時，round flow core 不得靜默推導下一局。
+
+#### Scenario: Draw does not silently create the next round
+
+- **WHEN** 呼叫端以流局終局狀態要求建立下一局
+- **THEN** round flow core 必須回報此路徑仍待定，而不得自行建立下一局
+
+##### Example: draw keeps dealer progression unresolved
+
+- **GIVEN** 一個 `draw` outcome，且其 unresolved 仍包含 `dealer-continuation`
+- **WHEN** 呼叫端要求建立下一局
+- **THEN** round flow core MUST 明確表示此路徑目前不可決定
+
+<!-- @trace
+source: taiwan-mahjong-draw-outcome-and-dealer-flow
+updated: 2026-07-14
+code:
+  - AGENTS.md
+  - src/core/types/table.ts
+  - src/stores/gameSession.ts
+  - src/core/rules/types.ts
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/GameView.vue
+  - src/core/rules/roundFlow.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/human-self-turn-actions.test.ts
+-->

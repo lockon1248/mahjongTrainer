@@ -2,7 +2,7 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { createBaselineRound, createBaselineWall, evaluateExhaustiveDraw } from '@/core'
+import { createBaselineRound, createBaselineWall, createWinRoundResult, evaluateExhaustiveDraw } from '@/core'
 import { useGameSessionStore } from '@/stores/gameSession'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import GameView from '@/views/game/GameView.vue'
@@ -31,6 +31,86 @@ describe('interactive turn loop', () => {
 
     expect(discardSpy).toHaveBeenCalledWith(selectedTile)
     expect(advanceSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('forwards a human self-turn action click into the store without auto-advancing the turn loop', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useGameSessionStore()
+    const baseRound = createBaselineRound({ wall: createBaselineWall() })
+    store.round = {
+      ...baseRound,
+      currentSeat: 'east',
+      phase: 'discard',
+      players: {
+        ...baseRound.players,
+        east: {
+          ...baseRound.players.east,
+          concealedTiles: [
+            { suit: 'characters', rank: 1 },
+            { suit: 'characters', rank: 2 },
+            { suit: 'characters', rank: 3 },
+            { suit: 'characters', rank: 7 },
+            { suit: 'characters', rank: 7 },
+            { suit: 'characters', rank: 7 },
+            { suit: 'characters', rank: 7 },
+            { suit: 'dots', rank: 1 },
+            { suit: 'dots', rank: 2 },
+            { suit: 'dots', rank: 3 },
+            { suit: 'bamboo', rank: 1 },
+            { suit: 'bamboo', rank: 2 },
+            { suit: 'bamboo', rank: 3 },
+            { suit: 'winds', rank: 'east' },
+            { suit: 'winds', rank: 'east' },
+            { suit: 'dragons', rank: 'red' },
+            { suit: 'dragons', rank: 'white' }
+          ]
+        }
+      }
+    }
+    const submitSpy = vi.spyOn(store, 'submitHumanSelfTurnAction')
+    const advanceSpy = vi.spyOn(store, 'advanceTurn')
+
+    const wrapper = mount(GameView, {
+      global: {
+        plugins: [pinia]
+      }
+    })
+
+    await wrapper.get('[data-testid="human-self-turn-action"]').trigger('click')
+
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(advanceSpy).not.toHaveBeenCalled()
+  })
+
+  it('forwards a next-round click into the store without rewriting round state in the component', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useGameSessionStore()
+    const baseRound = createBaselineRound({ wall: createBaselineWall() })
+    store.round = {
+      ...baseRound,
+      phase: 'ended',
+      currentSeat: 'south',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west'
+        })
+      }
+    }
+    const nextRoundSpy = vi.spyOn(store, 'startNextRound')
+
+    const wrapper = mount(GameView, {
+      global: {
+        plugins: [pinia]
+      }
+    })
+
+    await wrapper.get('[data-testid="next-round-action"]').trigger('click')
+
+    expect(nextRoundSpy).toHaveBeenCalledTimes(1)
   })
 
   it('renders turn progress after the round advances through AI seats', async () => {
@@ -66,7 +146,8 @@ describe('interactive turn loop', () => {
       props: {
         snapshot,
         humanSeat: 'east',
-        claimCandidates: []
+        claimCandidates: [],
+        selfTurnCandidates: []
       }
     })
 

@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   createBaselineRound,
+  createDrawRoundResult,
   createPendingActionWindow,
+  createWinRoundResult,
   getLegalClaimCandidates,
+  getLegalSelfTurnCandidates,
   type BaselineRoundState,
   type Seat,
   type Tile
@@ -32,7 +35,7 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
-const buildWall = (): Tile[] => {
+const buildWall = (...tailTiles: Tile[]): Tile[] => {
   const pool: Tile[] = [
     ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
     ...dots(1, 2, 3, 4, 5, 6, 7, 8, 9),
@@ -46,7 +49,9 @@ const buildWall = (): Tile[] => {
     dragon('white')
   ]
 
-  return Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
+  const base = Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
+
+  return [...base, ...tailTiles]
 }
 
 const createClaimWindowRound = (
@@ -81,6 +86,28 @@ const createClaimWindowRound = (
       north: {
         ...round.players.north,
         concealedTiles: seatTiles.north ?? round.players.north.concealedTiles
+      }
+    }
+  }
+}
+
+const createSelfTurnRound = (input: {
+  concealedTiles: Tile[]
+  wall?: Tile[]
+  melds?: BaselineRoundState['players']['east']['melds']
+}): BaselineRoundState => {
+  const round = createBaselineRound({ wall: input.wall ?? buildWall() })
+
+  return {
+    ...round,
+    currentSeat: 'east',
+    phase: 'discard',
+    players: {
+      ...round.players,
+      east: {
+        ...round.players.east,
+        concealedTiles: input.concealedTiles,
+        melds: input.melds ?? []
       }
     }
   }
@@ -272,5 +299,118 @@ describe('game session store', () => {
     expect(store.round?.phase).toBe('discard')
     expect(store.round?.currentSeat).toBe('east')
     expect(store.round?.lastClaimResolution?.type).toBe('chi')
+  })
+
+  it('exposes no human self-turn actions when the current discard turn has no legal self-turn candidate', () => {
+    const store = useGameSessionStore()
+    store.startLocalRound()
+
+    expect(store.round?.phase).toBe('discard')
+    expect(store.availableHumanSelfTurnActions).toEqual([])
+  })
+
+  it('submits a human self-draw win and ends the round', () => {
+    const store = useGameSessionStore()
+    store.round = createSelfTurnRound({
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3, 9, 9, 9),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red'),
+        dragon('red')
+      ]
+    })
+
+    expect(store.availableHumanSelfTurnActions.some(candidate => candidate.actionType === 'win-self-draw')).toBe(true)
+
+    store.submitHumanSelfTurnAction('win-self-draw')
+
+    expect(store.error).toBeNull()
+    expect(store.round?.phase).toBe('ended')
+    expect(store.round?.outcome.status).toBe('win')
+  })
+
+  it('submits a human concealed kan and keeps the round on the human discard turn after replacement draw', () => {
+    const store = useGameSessionStore()
+    store.round = createSelfTurnRound({
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(7, 7, 7, 7),
+        ...dots(1, 2, 3),
+        ...bamboos(1, 2, 3),
+        wind('east'),
+        wind('east'),
+        dragon('red'),
+        dragon('white')
+      ],
+      wall: buildWall(dragon('green'))
+    })
+    const concealedKanCandidate = getLegalSelfTurnCandidates(store.round, 'east').find(candidate => candidate.actionType === 'kan-concealed')
+
+    if (concealedKanCandidate == null)
+      throw new Error('expected kan-concealed candidate for human seat')
+
+    store.submitHumanSelfTurnAction(
+      concealedKanCandidate.actionType,
+      concealedKanCandidate.consumedTiles,
+      concealedKanCandidate.meldTile
+    )
+
+    expect(store.error).toBeNull()
+    expect(store.round?.phase).toBe('discard')
+    expect(store.round?.currentSeat).toBe('east')
+    expect(store.round?.players.east.melds[0]?.type).toBe('kan-concealed')
+    expect(store.round?.players.east.concealedTiles).toContainEqual(dragon('green'))
+  })
+
+  it('starts the next round after a winning outcome and applies confirmed dealer progression', () => {
+    const store = useGameSessionStore()
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      currentSeat: 'south',
+      phase: 'ended',
+      table: {
+        ...completedRound.table,
+        dealerSeat: 'east'
+      },
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west'
+        })
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.error).toBeNull()
+    expect(store.round?.phase).toBe('discard')
+    expect(store.round?.outcome.status).toBe('in-progress')
+    expect(store.round?.table.dealerSeat).toBe('west')
+    expect(store.round?.currentSeat).toBe('west')
+  })
+
+  it('does not guess next-round progression after a draw outcome with unresolved dealer continuation', () => {
+    const store = useGameSessionStore()
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'draw',
+        result: createDrawRoundResult()
+      }
+    }
+    const previousRound = store.round
+
+    store.startNextRound()
+
+    expect(store.error).toBe('cannot create next round from unresolved draw outcome')
+    expect(store.round).toBe(previousRound)
   })
 })

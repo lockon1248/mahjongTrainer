@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   chooseAiClaimDecision,
   chooseAiDiscardDecision,
+  chooseAiSelfTurnDecision,
   createAiDecisionContext,
   createBaselineRound,
   createBaselineRuleConfig,
@@ -182,6 +183,32 @@ describe('ai decision core', () => {
     })
 
     expect(decision.actionType).toBe('pass')
+  })
+
+  it('prioritizes self-draw win over lower-priority AI self-turn actions', () => {
+    const decision = chooseAiSelfTurnDecision({
+      seat: 'south',
+      concealedTiles: [...chars(1, 2, 3), ...dots(1, 2, 3)],
+      melds: [],
+      flowers: [],
+      candidates: [
+        {
+          actionType: 'kan-concealed',
+          tile: chars(9)[0]!,
+          consumedTiles: chars(9, 9, 9, 9),
+          meldTile: null
+        },
+        {
+          actionType: 'win-self-draw',
+          tile: null,
+          consumedTiles: [],
+          meldTile: null
+        }
+      ],
+      ruleConfig: createBaselineRuleConfig()
+    })
+
+    expect(decision.actionType).toBe('win-self-draw')
   })
 
   it('keeps unresolved-rule handling conservative by ignoring unresolved bonuses', () => {

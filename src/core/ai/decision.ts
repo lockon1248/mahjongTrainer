@@ -5,7 +5,9 @@ import type {
   AiClaimDecisionInput,
   AiDecisionReasoning,
   AiDiscardDecision,
-  AiDiscardDecisionInput
+  AiDiscardDecisionInput,
+  AiSelfTurnDecision,
+  AiSelfTurnDecisionInput
 } from '@/core/ai/types'
 import type { Tile } from '@/core/types/tile'
 
@@ -77,6 +79,46 @@ export const chooseAiClaimDecision = (input: AiClaimDecisionInput): AiClaimDecis
     reasoning: {
       heuristic: 'claim',
       score: selected.score,
+      ignoredUnresolvedRules
+    }
+  }
+}
+
+export const chooseAiSelfTurnDecision = (input: AiSelfTurnDecisionInput): AiSelfTurnDecision => {
+  if (input.candidates.length === 0)
+    throw new Error('AI self-turn decision requires at least one legal candidate')
+
+  const ignoredUnresolvedRules = getIgnoredUnresolvedRules(input.ruleConfig)
+  const winningCandidate = input.candidates.find(candidate => candidate.actionType === 'win-self-draw')
+
+  if (winningCandidate) {
+    return {
+      actionType: winningCandidate.actionType,
+      tile: winningCandidate.tile,
+      consumedTiles: winningCandidate.consumedTiles,
+      meldTile: winningCandidate.meldTile,
+      reasoning: {
+        heuristic: 'claim',
+        score: Number.POSITIVE_INFINITY,
+        ignoredUnresolvedRules
+      }
+    }
+  }
+
+  const selected = input.candidates.find(candidate => candidate.actionType === 'kan-added')
+    ?? input.candidates.find(candidate => candidate.actionType === 'kan-concealed')
+
+  if (selected == null)
+    throw new Error('AI self-turn decision could not score legal candidates')
+
+  return {
+    actionType: selected.actionType,
+    tile: selected.tile,
+    consumedTiles: selected.consumedTiles,
+    meldTile: selected.meldTile,
+    reasoning: {
+      heuristic: 'claim',
+      score: 1,
       ignoredUnresolvedRules
     }
   }

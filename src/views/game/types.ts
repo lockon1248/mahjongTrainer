@@ -16,10 +16,21 @@ export type GameTableSnapshotViewModel = {
   currentSeat: Seat
   phase: RoundPhase
   outcome: RoundOutcome['status']
+  resultSummary?: GameTableResultSummaryViewModel | null
   dealerSeat: Seat
   prevailingWind: Seat
   wallCount: number
   totalDiscards: number
   lastClaimResolution: ClaimResolution | null
   players: GameTablePlayerViewModel[]
+}
+
+export type GameTableResultSummaryViewModel = {
+  type: 'win' | 'draw'
+  ended: boolean
+  winnerSeat: Seat | null
+  discarderSeat: Seat | null
+  totalTai: number | null
+  drawReason: string | null
+  scoringItems: string[]
 }

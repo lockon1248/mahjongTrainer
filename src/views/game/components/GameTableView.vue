@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { HumanClaimCandidate, Seat, Tile } from '@/core'
+import type { HumanClaimCandidate, HumanSelfTurnCandidate, Seat, Tile } from '@/core'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 
 const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
   humanSeat: Seat
   claimCandidates: HumanClaimCandidate[]
+  selfTurnCandidates: HumanSelfTurnCandidate[]
 }>()
 
 const emit = defineEmits<{
   discard: [tile: Tile]
   claim: [candidate: HumanClaimCandidate]
+  'self-turn-action': [candidate: HumanSelfTurnCandidate]
+  'next-round': []
 }>()
 
 const isHumanTurn = computed(() => {
@@ -35,6 +38,13 @@ const formatTile = (tile: Tile): string => {
 }
 
 const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
+  if (candidate.consumedTiles.length === 0)
+    return candidate.actionType
+
+  return `${candidate.actionType}:${candidate.consumedTiles.map(formatTile).join('+')}`
+}
+
+const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
   if (candidate.consumedTiles.length === 0)
     return candidate.actionType
 
@@ -78,6 +88,37 @@ const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
         <strong>{{ snapshot.totalDiscards }}</strong>
       </div>
     </header>
+
+    <section
+      v-if="snapshot.resultSummary != null"
+      class="table-summary"
+      data-testid="round-result-summary"
+    >
+      <div class="summary-chip" data-testid="result-type">
+        <span class="summary-label">result</span>
+        <strong>{{ snapshot.resultSummary.type }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-ended">
+        <span class="summary-label">ended</span>
+        <strong>{{ snapshot.resultSummary.ended ? 'yes' : 'no' }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-winner">
+        <span class="summary-label">winner</span>
+        <strong>{{ snapshot.resultSummary.winnerSeat ?? 'none' }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-discarder">
+        <span class="summary-label">discarder</span>
+        <strong>{{ snapshot.resultSummary.discarderSeat ?? 'none' }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-total-tai">
+        <span class="summary-label">tai</span>
+        <strong>{{ snapshot.resultSummary.totalTai ?? 'none' }}</strong>
+      </div>
+      <div class="summary-chip" data-testid="result-draw-reason">
+        <span class="summary-label">draw</span>
+        <strong>{{ snapshot.resultSummary.drawReason ?? 'none' }}</strong>
+      </div>
+    </section>
 
     <div class="table-grid">
       <article
@@ -146,6 +187,36 @@ const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
         @click="emit('claim', candidate)"
       >
         {{ formatClaimLabel(candidate) }}
+      </button>
+    </div>
+    <div
+      v-if="isHumanTurn && selfTurnCandidates.length > 0"
+      class="claim-action-bar"
+      data-testid="human-self-turn-actions"
+    >
+      <button
+        v-for="(candidate, candidateIndex) in selfTurnCandidates"
+        :key="`${candidate.actionType}-${candidateIndex}`"
+        class="claim-action-button"
+        data-testid="human-self-turn-action"
+        type="button"
+        @click="emit('self-turn-action', candidate)"
+      >
+        {{ formatSelfTurnLabel(candidate) }}
+      </button>
+    </div>
+    <div
+      v-if="snapshot.outcome !== 'in-progress'"
+      class="claim-action-bar"
+      data-testid="next-round-actions"
+    >
+      <button
+        class="claim-action-button"
+        data-testid="next-round-action"
+        type="button"
+        @click="emit('next-round')"
+      >
+        下一局
       </button>
     </div>
   </section>

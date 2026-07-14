@@ -84,7 +84,8 @@ describe('human claim window', () => {
       props: {
         snapshot: baseSnapshot,
         humanSeat: 'east',
-        claimCandidates
+        claimCandidates,
+        selfTurnCandidates: []
       }
     })
 
@@ -98,7 +99,8 @@ describe('human claim window', () => {
       props: {
         snapshot: baseSnapshot,
         humanSeat: 'east',
-        claimCandidates
+        claimCandidates,
+        selfTurnCandidates: []
       }
     })
 
@@ -112,7 +114,8 @@ describe('human claim window', () => {
       props: {
         snapshot: baseSnapshot,
         humanSeat: 'east',
-        claimCandidates
+        claimCandidates,
+        selfTurnCandidates: []
       }
     })
 
@@ -127,7 +130,8 @@ describe('human claim window', () => {
           tile: { suit: 'characters', rank: 3 }
         }
       },
-      claimCandidates: []
+      claimCandidates: [],
+      selfTurnCandidates: []
     })
 
     expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('east')

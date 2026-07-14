@@ -10,6 +10,17 @@ export const createGameTableSnapshot = (
     currentSeat: round.currentSeat,
     phase: round.phase,
     outcome: round.outcome.status,
+    resultSummary: round.outcome.status === 'in-progress'
+      ? null
+      : {
+          type: round.outcome.result.type,
+          ended: true,
+          winnerSeat: round.outcome.result.winnerSeat,
+          discarderSeat: round.outcome.result.discarderSeat,
+          totalTai: round.outcome.result.totalTai,
+          drawReason: round.outcome.result.drawReason ?? null,
+          scoringItems: [...round.outcome.result.scoringItems]
+        },
     dealerSeat: round.table.dealerSeat,
     prevailingWind: round.table.prevailingWind,
     wallCount: round.table.wall.length,

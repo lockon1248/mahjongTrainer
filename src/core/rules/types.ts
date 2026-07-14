@@ -20,6 +20,22 @@ export type HumanClaimCandidate = {
   consumedTiles: Tile[]
 }
 
+export type HumanSelfTurnActionType = 'win-self-draw' | 'kan-concealed' | 'kan-added'
+
+export type HumanSelfTurnCandidate = {
+  actionType: HumanSelfTurnActionType
+  tile: Tile | null
+  consumedTiles: Tile[]
+  meldTile: Tile | null
+}
+
+export type HumanSelfTurnAction = {
+  seat: Seat
+  actionType: HumanSelfTurnActionType
+  consumedTiles?: Tile[]
+  meldTile?: Tile | null
+}
+
 export type ClaimResolution = {
   type: ClaimResolutionType
   seat: Seat | null

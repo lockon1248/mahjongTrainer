@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { HumanClaimCandidate, Tile } from '@/core'
+import type { HumanClaimCandidate, HumanSelfTurnCandidate, Tile } from '@/core'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
@@ -33,6 +33,14 @@ const handleHumanClaim = (candidate: HumanClaimCandidate) => {
   if (gameSessionStore.error == null)
     gameSessionStore.advanceTurn()
 }
+
+const handleHumanSelfTurnAction = (candidate: HumanSelfTurnCandidate) => {
+  gameSessionStore.submitHumanSelfTurnAction(candidate.actionType, candidate.consumedTiles, candidate.meldTile)
+}
+
+const handleNextRound = () => {
+  gameSessionStore.startNextRound()
+}
 </script>
 
 <template>
@@ -51,8 +59,11 @@ const handleHumanClaim = (candidate: HumanClaimCandidate) => {
       :snapshot="snapshot"
       :human-seat="gameSessionStore.humanSeat"
       :claim-candidates="gameSessionStore.availableHumanClaims"
+      :self-turn-candidates="gameSessionStore.availableHumanSelfTurnActions"
       @discard="handleHumanDiscard"
       @claim="handleHumanClaim"
+      @self-turn-action="handleHumanSelfTurnAction"
+      @next-round="handleNextRound"
     />
   </section>
 </template>

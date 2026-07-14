@@ -10,10 +10,13 @@ export type TableState = {
   discards: DiscardPoolBySeat
 }
 
-export const createInitialTableState = (): TableState => {
+export const createInitialTableState = (input?: {
+  dealerSeat?: Seat
+  prevailingWind?: Seat
+}): TableState => {
   return {
-    dealerSeat: 'east',
-    prevailingWind: 'east',
+    dealerSeat: input?.dealerSeat ?? 'east',
+    prevailingWind: input?.prevailingWind ?? 'east',
     wall: [],
     discards: createEmptyDiscards()
   }

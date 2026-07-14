@@ -1,5 +1,6 @@
 import type { MahjongRuleConfig } from '@/core/config'
 import type { BaselineRoundState } from '@/core/rules/types'
+import type { HumanSelfTurnCandidate } from '@/core/rules/types'
 import type { PendingActionClaim } from '@/core/types/action'
 import type { Meld } from '@/core/types/player'
 import type { Seat } from '@/core/types/seat'
@@ -63,6 +64,23 @@ export type AiClaimDecision = {
   actionType: AiClaimCandidate['actionType']
   tile: Tile | null
   consumedTiles?: Tile[]
+  reasoning: AiDecisionReasoning
+}
+
+export type AiSelfTurnDecisionInput = {
+  seat: Seat
+  concealedTiles: Tile[]
+  melds: Meld[]
+  flowers: Tile[]
+  candidates: HumanSelfTurnCandidate[]
+  ruleConfig: MahjongRuleConfig
+}
+
+export type AiSelfTurnDecision = {
+  actionType: HumanSelfTurnCandidate['actionType']
+  tile: Tile | null
+  consumedTiles: Tile[]
+  meldTile: Tile | null
   reasoning: AiDecisionReasoning
 }
 

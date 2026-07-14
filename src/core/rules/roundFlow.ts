@@ -15,20 +15,30 @@ import type {
   DrawHandResult,
   HumanClaimCandidate,
   HumanClaimActionType,
+  HumanSelfTurnAction,
+  HumanSelfTurnActionType,
+  HumanSelfTurnCandidate,
   PlayersBySeat
 } from '@/core/rules/types'
 
-export const createBaselineRound = (input: { wall: Tile[]; ruleConfig?: MahjongRuleConfig }): BaselineRoundState => {
+export const createBaselineRound = (input: {
+  wall: Tile[]
+  ruleConfig?: MahjongRuleConfig
+  dealerSeat?: Seat
+  prevailingWind?: Seat
+}): BaselineRoundState => {
   let remainingWall = [...input.wall]
   const players = createPlayersBySeat()
   const effectiveRuleConfig = getRoundFlowRuleConfig(input.ruleConfig ?? createBaselineRuleConfig())
+  const dealerSeat = input.dealerSeat ?? 'east'
+  const prevailingWind = input.prevailingWind ?? 'east'
 
   for (const seat of ALL_SEATS) {
     const drawResult = drawHandToTarget({
       concealedTiles: [],
       flowers: [],
       wall: remainingWall,
-      targetTileCount: seat === 'east' ? 17 : 16
+      targetTileCount: seat === dealerSeat ? 17 : 16
     })
 
     players[seat] = {
@@ -41,17 +51,47 @@ export const createBaselineRound = (input: { wall: Tile[]; ruleConfig?: MahjongR
 
   return {
     table: {
-      ...createInitialTableState(),
+      ...createInitialTableState({
+        dealerSeat,
+        prevailingWind
+      }),
       wall: remainingWall
     },
     players,
     ruleConfig: effectiveRuleConfig,
-    currentSeat: 'east',
+    currentSeat: dealerSeat,
     phase: 'discard',
     pendingActionWindow: null,
     outcome: { status: 'in-progress' },
     lastClaimResolution: null
   }
+}
+
+export const createNextRoundFromCompletedRound = (
+  round: BaselineRoundState,
+  input: { wall: Tile[] }
+): BaselineRoundState => {
+  if (round.phase !== 'ended' || round.outcome.status === 'in-progress')
+    throw new Error('cannot create next round from an in-progress round')
+
+  if (round.outcome.status === 'draw')
+    throw new Error('cannot create next round from unresolved draw outcome')
+
+  const nextDealerSeat = round.outcome.result.winnerSeat === round.table.dealerSeat
+    ? round.table.dealerSeat
+    : getNextSeat(round.outcome.result.winnerSeat!)
+
+  return createBaselineRound({
+    wall: input.wall,
+    ruleConfig: {
+      ...createBaselineRuleConfig(),
+      claimPriorityOrder: round.ruleConfig.claimPriorityOrder,
+      flowerReplacementMode: round.ruleConfig.flowerReplacementMode,
+      postDraw: round.ruleConfig.postDraw
+    },
+    dealerSeat: nextDealerSeat,
+    prevailingWind: round.table.prevailingWind
+  })
 }
 
 export const drawHandToTarget = (input: DrawHandInput): DrawHandResult => {
@@ -275,6 +315,177 @@ export const getLegalClaimCandidates = (
   return candidates
 }
 
+export const getLegalSelfTurnCandidates = (
+  round: BaselineRoundState,
+  seat: Seat
+): HumanSelfTurnCandidate[] => {
+  if (round.phase !== 'discard' || round.currentSeat !== seat || round.outcome.status !== 'in-progress')
+    return []
+
+  const player = round.players[seat]
+  const candidates: HumanSelfTurnCandidate[] = []
+
+  if (validateStandardWin({
+    concealedTiles: player.concealedTiles,
+    melds: player.melds,
+    flowers: player.flowers,
+    winningTile: null,
+    winningSeat: seat
+  }).isWinning) {
+    candidates.push({
+      actionType: 'win-self-draw',
+      tile: null,
+      consumedTiles: [],
+      meldTile: null
+    })
+  }
+
+  for (const tile of getDistinctTiles(player.concealedTiles)) {
+    const matchingTiles = findMatchingTiles(player.concealedTiles, tile)
+
+    if (matchingTiles.length >= 4) {
+      candidates.push({
+        actionType: 'kan-concealed',
+        tile,
+        consumedTiles: matchingTiles.slice(0, 4),
+        meldTile: null
+      })
+    }
+  }
+
+  for (const meld of player.melds) {
+    if (meld.type !== 'pon')
+      continue
+
+    const [meldTile] = meld.tiles
+
+    if (meldTile == null)
+      continue
+
+    const matchingTiles = findMatchingTiles(player.concealedTiles, meldTile)
+
+    if (matchingTiles.length === 0)
+      continue
+
+    candidates.push({
+      actionType: 'kan-added',
+      tile: meldTile,
+      consumedTiles: [matchingTiles[0]!],
+      meldTile
+    })
+  }
+
+  return candidates.sort(compareSelfTurnCandidate)
+}
+
+export const applyHumanSelfTurnAction = (
+  round: BaselineRoundState,
+  action: HumanSelfTurnAction
+): BaselineRoundState => {
+  const legalCandidate = getLegalSelfTurnCandidates(round, action.seat).find(candidate => isSameSelfTurnCandidate(candidate, action))
+
+  if (legalCandidate == null)
+    throw new Error('human self-turn action is not currently legal')
+
+  if (legalCandidate.actionType === 'win-self-draw') {
+    return {
+      ...round,
+      currentSeat: action.seat,
+      phase: 'ended',
+      pendingActionWindow: null,
+      lastClaimResolution: null,
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: action.seat,
+          discarderSeat: null
+        })
+      }
+    }
+  }
+
+  if (legalCandidate.actionType === 'kan-concealed') {
+    const player = round.players[action.seat]
+    const concealedTiles = removeTiles(player.concealedTiles, legalCandidate.consumedTiles)
+    const flowers = [...player.flowers]
+    const wall = [...round.table.wall]
+
+    drawReplacementFromWallTail({ concealedTiles, flowers, wall })
+
+    return {
+      ...round,
+      currentSeat: action.seat,
+      phase: 'discard',
+      pendingActionWindow: null,
+      lastClaimResolution: null,
+      table: {
+        ...round.table,
+        wall
+      },
+      players: {
+        ...round.players,
+        [action.seat]: {
+          ...player,
+          concealedTiles,
+          flowers,
+          melds: [
+            ...player.melds,
+            {
+              type: 'kan-concealed',
+              tiles: legalCandidate.consumedTiles,
+              claimedTile: null,
+              claimedFromSeat: null
+            }
+          ]
+        }
+      }
+    }
+  }
+
+  const player = round.players[action.seat]
+  const concealedTiles = removeTiles(player.concealedTiles, legalCandidate.consumedTiles)
+  const flowers = [...player.flowers]
+  const wall = [...round.table.wall]
+  const melds = player.melds.map((meld) => {
+    if (meld.type !== 'pon')
+      return meld
+
+    const [meldTile] = meld.tiles
+
+    if (meldTile == null || legalCandidate.meldTile == null || !isSameTile(meldTile, legalCandidate.meldTile))
+      return meld
+
+    return {
+      ...meld,
+      type: 'kan-added' as const,
+      tiles: [...meld.tiles, legalCandidate.consumedTiles[0]!]
+    }
+  })
+
+  drawReplacementFromWallTail({ concealedTiles, flowers, wall })
+
+  return {
+    ...round,
+    currentSeat: action.seat,
+    phase: 'discard',
+    pendingActionWindow: null,
+    lastClaimResolution: null,
+    table: {
+      ...round.table,
+      wall
+    },
+    players: {
+      ...round.players,
+      [action.seat]: {
+        ...player,
+        concealedTiles,
+        flowers,
+        melds
+      }
+    }
+  }
+}
+
 export const evaluateExhaustiveDraw = (round: BaselineRoundState): BaselineRoundState => {
   if (round.outcome.status !== 'in-progress')
     return round
@@ -304,6 +515,19 @@ const createPlayersBySeat = (): PlayersBySeat => {
   }
 }
 
+const compareSelfTurnCandidate = (left: HumanSelfTurnCandidate, right: HumanSelfTurnCandidate): number => {
+  const actionOrder: HumanSelfTurnActionType[] = ['win-self-draw', 'kan-concealed', 'kan-added']
+  const actionDelta = actionOrder.indexOf(left.actionType) - actionOrder.indexOf(right.actionType)
+
+  if (actionDelta !== 0)
+    return actionDelta
+
+  if (left.tile == null || right.tile == null)
+    return left.tile == null ? -1 : 1
+
+  return compareTile(left.tile, right.tile)
+}
+
 const drawReplacementFromWallTail = (input: {
   concealedTiles: Tile[]
   flowers: Tile[]
@@ -320,6 +544,17 @@ const drawReplacementFromWallTail = (input: {
     input.concealedTiles.push(replacementTile)
     return
   }
+}
+
+const getDistinctTiles = (tiles: Tile[]): Tile[] => {
+  const distinct: Tile[] = []
+
+  for (const tile of tiles) {
+    if (!distinct.some(candidate => isSameTile(candidate, tile)))
+      distinct.push(tile)
+  }
+
+  return distinct
 }
 
 const drawFromWallHead = (wall: Tile[]): Tile => {
@@ -355,10 +590,20 @@ const isValidClaim = (round: BaselineRoundState, claim: PendingActionClaim): boo
   const legalCandidates = getLegalClaimCandidates(round, claim.seat)
 
   return legalCandidates.some((candidate) => {
-    return candidate.actionType === claim.actionType
-      && isSameTile(candidate.tile, claim.tile!)
-      && areSameTiles(candidate.consumedTiles, claim.consumedTiles ?? [])
+    if (candidate.actionType !== claim.actionType || !isSameTile(candidate.tile, claim.tile!))
+      return false
+
+    if (claim.consumedTiles == null)
+      return true
+
+    return areSameTiles(candidate.consumedTiles, claim.consumedTiles)
   })
+}
+
+const isSameSelfTurnCandidate = (candidate: HumanSelfTurnCandidate, action: HumanSelfTurnAction): boolean => {
+  return candidate.actionType === action.actionType
+    && areSameTiles(candidate.consumedTiles, action.consumedTiles ?? [])
+    && isSameOptionalTile(candidate.meldTile, action.meldTile ?? null)
 }
 
 const pickHighestPriorityClaim = (
@@ -402,6 +647,38 @@ const asClaimResolution = (claim: PendingActionClaim): ClaimResolution => {
   }
 }
 
+const removeTiles = (sourceTiles: Tile[], targetTiles: Tile[]): Tile[] => {
+  const remainingTiles = [...sourceTiles]
+
+  for (const targetTile of targetTiles) {
+    const tileIndex = remainingTiles.findIndex(tile => isSameTile(tile, targetTile))
+
+    if (tileIndex === -1)
+      throw new Error('required tile is not present in concealed tiles')
+
+    remainingTiles.splice(tileIndex, 1)
+  }
+
+  return remainingTiles
+}
+
+const areSameTiles = (left: Tile[], right: Tile[]): boolean => {
+  if (left.length !== right.length)
+    return false
+
+  return left.every((tile, index) => {
+    const otherTile = right[index]
+    return otherTile != null && isSameTile(tile, otherTile)
+  })
+}
+
+const isSameOptionalTile = (left: Tile | null, right: Tile | null): boolean => {
+  if (left == null || right == null)
+    return left === right
+
+  return isSameTile(left, right)
+}
+
 const getNextSeat = (seat: Seat): Seat => {
   const currentIndex = ALL_SEATS.indexOf(seat)
 
@@ -410,6 +687,16 @@ const getNextSeat = (seat: Seat): Seat => {
 
 const isSameTile = (left: Tile, right: Tile): boolean => {
   return left.suit === right.suit && left.rank === right.rank
+}
+
+const compareTile = (left: Tile, right: Tile): number => {
+  const suitOrder = ['characters', 'dots', 'bamboo', 'winds', 'dragons', 'flower'] as const
+  const suitDelta = suitOrder.indexOf(left.suit) - suitOrder.indexOf(right.suit)
+
+  if (suitDelta !== 0)
+    return suitDelta
+
+  return String(left.rank).localeCompare(String(right.rank), 'en')
 }
 
 const isWinningClaim = (
@@ -474,13 +761,4 @@ const isNumberTile = (tile: Tile): tile is Extract<Tile, { suit: 'characters' | 
 
 const isValidSequenceRank = (rank: number): rank is 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => {
   return rank >= 1 && rank <= 9
-}
-
-const areSameTiles = (left: Tile[], right: Tile[]): boolean => {
-  if (left.length !== right.length)
-    return false
-
-  return left.every((tile, index) => {
-    return right[index] != null && isSameTile(tile, right[index]!)
-  })
 }
