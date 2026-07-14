@@ -67,6 +67,9 @@ export const useGameSessionStore = defineStore('game-session', () => {
     runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
       wall: createBaselineWall()
     }))
+
+    if (round.value != null && !isWaitingForHumanDiscard(round.value) && !isWaitingForHumanClaim(round.value) && round.value.phase !== 'ended')
+      advanceTurn()
   }
 
   const drawCurrentSeat = () => {

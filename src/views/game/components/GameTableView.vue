@@ -24,7 +24,7 @@ const isHumanTurn = computed(() => {
 })
 
 const lastClaimLabel = computed(() => {
-  return props.snapshot.lastClaimResolution?.type ?? 'none'
+  return formatClaimType(props.snapshot.lastClaimResolution?.type ?? 'pass')
 })
 
 const visibleClaimCandidates = computed(() => {
@@ -34,21 +34,109 @@ const visibleClaimCandidates = computed(() => {
 })
 
 const formatTile = (tile: Tile): string => {
-  return `${tile.suit}-${tile.rank}`
+  if (tile.suit === 'characters')
+    return `${NUMBER_LABELS[tile.rank - 1]}萬`
+
+  if (tile.suit === 'dots')
+    return `${NUMBER_LABELS[tile.rank - 1]}筒`
+
+  if (tile.suit === 'bamboo')
+    return `${NUMBER_LABELS[tile.rank - 1]}條`
+
+  if (tile.suit === 'winds')
+    return WIND_LABELS[tile.rank]
+
+  return DRAGON_LABELS[tile.rank]
 }
 
 const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
   if (candidate.consumedTiles.length === 0)
-    return candidate.actionType
+    return formatClaimType(candidate.actionType)
 
-  return `${candidate.actionType}:${candidate.consumedTiles.map(formatTile).join('+')}`
+  return `${formatClaimType(candidate.actionType)}：${candidate.consumedTiles.map(formatTile).join('、')}`
 }
 
 const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
   if (candidate.consumedTiles.length === 0)
-    return candidate.actionType
+    return formatSelfTurnActionType(candidate.actionType)
 
-  return `${candidate.actionType}:${candidate.consumedTiles.map(formatTile).join('+')}`
+  return `${formatSelfTurnActionType(candidate.actionType)}：${candidate.consumedTiles.map(formatTile).join('、')}`
+}
+
+const NUMBER_LABELS = ['一', '二', '三', '四', '五', '六', '七', '八', '九'] as const
+
+const WIND_LABELS = {
+  east: '東風',
+  south: '南風',
+  west: '西風',
+  north: '北風'
+} as const
+
+const DRAGON_LABELS = {
+  red: '紅中',
+  green: '青發',
+  white: '白板'
+} as const
+
+const formatSeat = (seat: Seat): string => {
+  return {
+    east: '東家',
+    south: '南家',
+    west: '西家',
+    north: '北家'
+  }[seat]
+}
+
+const formatWind = (seat: Seat): string => {
+  return WIND_LABELS[seat]
+}
+
+const formatPhase = (phase: GameTableSnapshotViewModel['phase']): string => {
+  return {
+    draw: '摸牌',
+    discard: '出牌',
+    'claim-window': '宣告',
+    ended: '本局結束'
+  }[phase]
+}
+
+const formatOutcome = (outcome: GameTableSnapshotViewModel['outcome']): string => {
+  return {
+    'in-progress': '進行中',
+    win: '和牌',
+    draw: '流局'
+  }[outcome]
+}
+
+const formatClaimType = (type: 'pass' | 'chi' | 'pon' | 'kan-exposed' | 'win'): string => {
+  return {
+    pass: '略過',
+    chi: '吃牌',
+    pon: '碰牌',
+    'kan-exposed': '明槓',
+    win: '和牌'
+  }[type] ?? '未知宣告'
+}
+
+const formatSelfTurnActionType = (actionType: HumanSelfTurnCandidate['actionType']): string => {
+  return {
+    'win-self-draw': '自摸',
+    'kan-concealed': '暗槓',
+    'kan-added': '加槓'
+  }[actionType]
+}
+
+const formatResultType = (type: NonNullable<GameTableSnapshotViewModel['resultSummary']>['type']): string => {
+  return type === 'win' ? '和牌' : '流局'
+}
+
+const formatDrawReason = (reason: string | null): string => {
+  if (reason == null)
+    return '無'
+
+  return {
+    'wall-exhausted': '牌牆耗盡'
+  }[reason] ?? '未分類流局'
 }
 </script>
 
@@ -56,35 +144,35 @@ const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
   <section class="game-table-view" data-testid="game-table-view">
     <header class="table-summary" data-testid="table-summary">
       <div class="summary-chip" data-testid="summary-dealer">
-        <span class="summary-label">dealer</span>
-        <strong>{{ snapshot.dealerSeat }}</strong>
+        <span class="summary-label">莊家</span>
+        <strong>{{ formatSeat(snapshot.dealerSeat) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-wind">
-        <span class="summary-label">wind</span>
-        <strong>{{ snapshot.prevailingWind }}</strong>
+        <span class="summary-label">圈風</span>
+        <strong>{{ formatWind(snapshot.prevailingWind) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-current-seat">
-        <span class="summary-label">turn</span>
-        <strong>{{ snapshot.currentSeat }}</strong>
+        <span class="summary-label">目前輪到</span>
+        <strong>{{ formatSeat(snapshot.currentSeat) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-phase">
-        <span class="summary-label">phase</span>
-        <strong>{{ snapshot.phase }}</strong>
+        <span class="summary-label">階段</span>
+        <strong>{{ formatPhase(snapshot.phase) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-last-claim">
-        <span class="summary-label">claim</span>
+        <span class="summary-label">上次宣告</span>
         <strong>{{ lastClaimLabel }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-outcome">
-        <span class="summary-label">outcome</span>
-        <strong>{{ snapshot.outcome }}</strong>
+        <span class="summary-label">局面結果</span>
+        <strong>{{ formatOutcome(snapshot.outcome) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-wall">
-        <span class="summary-label">wall</span>
+        <span class="summary-label">剩餘牌牆</span>
         <strong>{{ snapshot.wallCount }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-total-discards">
-        <span class="summary-label">discards</span>
+        <span class="summary-label">總捨牌數</span>
         <strong>{{ snapshot.totalDiscards }}</strong>
       </div>
     </header>
@@ -95,28 +183,28 @@ const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
       data-testid="round-result-summary"
     >
       <div class="summary-chip" data-testid="result-type">
-        <span class="summary-label">result</span>
-        <strong>{{ snapshot.resultSummary.type }}</strong>
+        <span class="summary-label">結果</span>
+        <strong>{{ formatResultType(snapshot.resultSummary.type) }}</strong>
       </div>
       <div class="summary-chip" data-testid="result-ended">
-        <span class="summary-label">ended</span>
-        <strong>{{ snapshot.resultSummary.ended ? 'yes' : 'no' }}</strong>
+        <span class="summary-label">是否結束</span>
+        <strong>{{ snapshot.resultSummary.ended ? '是' : '否' }}</strong>
       </div>
       <div class="summary-chip" data-testid="result-winner">
-        <span class="summary-label">winner</span>
-        <strong>{{ snapshot.resultSummary.winnerSeat ?? 'none' }}</strong>
+        <span class="summary-label">和牌者</span>
+        <strong>{{ snapshot.resultSummary.winnerSeat == null ? '無' : formatSeat(snapshot.resultSummary.winnerSeat) }}</strong>
       </div>
       <div class="summary-chip" data-testid="result-discarder">
-        <span class="summary-label">discarder</span>
-        <strong>{{ snapshot.resultSummary.discarderSeat ?? 'none' }}</strong>
+        <span class="summary-label">放槍者</span>
+        <strong>{{ snapshot.resultSummary.discarderSeat == null ? '無' : formatSeat(snapshot.resultSummary.discarderSeat) }}</strong>
       </div>
       <div class="summary-chip" data-testid="result-total-tai">
-        <span class="summary-label">tai</span>
-        <strong>{{ snapshot.resultSummary.totalTai ?? 'none' }}</strong>
+        <span class="summary-label">總台數</span>
+        <strong>{{ snapshot.resultSummary.totalTai ?? '無' }}</strong>
       </div>
       <div class="summary-chip" data-testid="result-draw-reason">
-        <span class="summary-label">draw</span>
-        <strong>{{ snapshot.resultSummary.drawReason ?? 'none' }}</strong>
+        <span class="summary-label">流局原因</span>
+        <strong>{{ formatDrawReason(snapshot.resultSummary.drawReason) }}</strong>
       </div>
     </section>
 
@@ -129,29 +217,29 @@ const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
         :data-seat="player.seat"
       >
         <div class="player-header">
-          <h2 class="player-seat">{{ player.seat }}</h2>
+          <h2 class="player-seat">{{ formatSeat(player.seat) }}</h2>
           <span class="player-score">{{ player.score }}</span>
         </div>
         <dl class="player-stats">
           <div class="player-stat">
-            <dt>concealed</dt>
+            <dt>手牌</dt>
             <dd>{{ player.concealedCount }}</dd>
           </div>
           <div class="player-stat">
-            <dt>flowers</dt>
+            <dt>花牌</dt>
             <dd>{{ player.flowerCount }}</dd>
           </div>
           <div class="player-stat">
-            <dt>melds</dt>
+            <dt>副露</dt>
             <dd>{{ player.meldCount }}</dd>
           </div>
           <div class="player-stat">
-            <dt>discards</dt>
+            <dt>捨牌</dt>
             <dd>{{ player.discardCount }}</dd>
           </div>
           <div class="player-stat">
-            <dt>ready</dt>
-            <dd>{{ player.declaredReady ? 'yes' : 'no' }}</dd>
+            <dt>聽牌</dt>
+            <dd>{{ player.declaredReady ? '是' : '否' }}</dd>
           </div>
         </dl>
         <div

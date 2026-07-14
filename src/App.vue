@@ -9,10 +9,10 @@
       </RouterLink>
       <nav class="app-nav">
         <RouterLink class="app-link" to="/">
-          /
+          首頁
         </RouterLink>
         <RouterLink class="app-link" to="/game">
-          /game
+          牌局
         </RouterLink>
       </nav>
     </header>

@@ -5,7 +5,7 @@ const NUMBER_TILE_RANKS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 const WIND_TILE_RANKS: WindTileRank[] = ['east', 'south', 'west', 'north']
 const DRAGON_TILE_RANKS: DragonTileRank[] = ['red', 'green', 'white']
 
-export const createBaselineWall = (): Tile[] => {
+export const createBaselineWall = (random: () => number = Math.random): Tile[] => {
   const tiles: Tile[] = []
 
   for (const suit of NUMBER_TILE_SUITS) {
@@ -30,6 +30,13 @@ export const createBaselineWall = (): Tile[] => {
 
   for (const rank of FLOWER_TILE_RANKS) {
     tiles.push({ suit: 'flower', rank })
+  }
+
+  for (let index = tiles.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    const currentTile = tiles[index]!
+    tiles[index] = tiles[swapIndex]!
+    tiles[swapIndex] = currentTile
   }
 
   return tiles

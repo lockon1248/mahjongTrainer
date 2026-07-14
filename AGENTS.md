@@ -260,6 +260,17 @@ Drift examples include:
 - rewriting spec text without changing progress visibility
 - creating side documents when the repo already has the needed `openspec` artifacts
 
+## 17. Default UI Language Rule
+
+For this repo, product-facing UI language must default to Traditional Chinese.
+
+Required behavior:
+
+1. unless the user explicitly requests another language, page titles, buttons, labels, status text, help text, empty states, and result text must use Traditional Chinese
+2. internal field names, route paths, enum names, debug identifiers, and raw domain terms must not be shown directly as product UI copy
+3. if the current implementation is only exposing debug or raw domain text, the assistant must treat that as incomplete UI, not finished product copy
+4. English is allowed only for necessary technical terms, code identifiers, or when the user explicitly asks for English UI
+
 Required behavior:
 
 1. if the next implementation step is clear, prefer advancing the relevant mainline or child change

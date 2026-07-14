@@ -95,7 +95,7 @@ describe('human self-turn actions', () => {
 
     const renderedButtons = wrapper.findAll('[data-testid="human-self-turn-action"]').map(button => button.text())
 
-    expect(renderedButtons).toEqual(['win-self-draw', 'kan-concealed:characters-9+characters-9+characters-9+characters-9'])
+    expect(renderedButtons).toEqual(['自摸', '暗槓：九萬、九萬、九萬、九萬'])
   })
 
   it('emits the selected self-turn candidate back to the parent', async () => {

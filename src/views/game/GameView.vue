@@ -46,8 +46,8 @@ const handleNextRound = () => {
 <template>
   <section class="game-view" data-testid="game-view">
     <div class="game-header">
-      <p class="game-kicker">local round</p>
-      <h1 class="game-title">/game</h1>
+      <p class="game-kicker">本機對局</p>
+      <h1 class="game-title">麻將牌局</h1>
     </div>
 
     <p v-if="error != null" class="game-error" data-testid="game-error">

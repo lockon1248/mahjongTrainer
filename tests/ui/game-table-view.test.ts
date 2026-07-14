@@ -17,7 +17,7 @@ describe('game table view', () => {
     })
 
     expect(wrapper.find('[data-testid="game-table-view"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="table-summary"]').text()).toContain('east')
+    expect(wrapper.get('[data-testid="table-summary"]').text()).toContain('東家')
     expect(wrapper.findAll('[data-testid="player-seat"]')).toHaveLength(4)
     expect(wrapper.get('[data-seat="east"]').text()).toContain('17')
     expect(wrapper.get('[data-seat="south"]').text()).toContain('16')

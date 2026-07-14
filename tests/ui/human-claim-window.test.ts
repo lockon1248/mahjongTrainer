@@ -91,7 +91,7 @@ describe('human claim window', () => {
 
     const renderedButtons = wrapper.findAll('[data-testid="human-claim-action"]').map(button => button.text())
 
-    expect(renderedButtons).toEqual(['pass', 'chi:characters-1+characters-2'])
+    expect(renderedButtons).toEqual(['略過', '吃牌：一萬、二萬'])
   })
 
   it('emits the selected legal claim candidate back to the parent', async () => {
@@ -134,8 +134,8 @@ describe('human claim window', () => {
       selfTurnCandidates: []
     })
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('east')
-    expect(wrapper.get('[data-testid="summary-phase"]').text()).toContain('discard')
-    expect(wrapper.get('[data-testid="summary-last-claim"]').text()).toContain('chi')
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
+    expect(wrapper.get('[data-testid="summary-phase"]').text()).toContain('出牌')
+    expect(wrapper.get('[data-testid="summary-last-claim"]').text()).toContain('吃牌')
   })
 })

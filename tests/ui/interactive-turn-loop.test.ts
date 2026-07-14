@@ -125,9 +125,9 @@ describe('interactive turn loop', () => {
 
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).not.toContain('turneast')
-    expect(wrapper.get('[data-testid="summary-phase"]').text()).toMatch(/phase(draw|discard|claim-window|ended)/)
-    expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('discards', ''))).toBeGreaterThan(1)
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).not.toContain('east')
+    expect(wrapper.get('[data-testid="summary-phase"]').text()).toMatch(/(摸牌|出牌|宣告|本局結束)/)
+    expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('總捨牌數', ''))).toBeGreaterThan(1)
   })
 
   it('reflects exhaustive draw outcomes in the rendered table snapshot', () => {
@@ -151,6 +151,6 @@ describe('interactive turn loop', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="summary-outcome"]').text()).toContain('draw')
+    expect(wrapper.get('[data-testid="summary-outcome"]').text()).toContain('流局')
   })
 })

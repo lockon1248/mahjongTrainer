@@ -7,7 +7,7 @@
       <p class="home-kicker">mahjong trainer</p>
       <h1 class="home-title">台灣 16 張麻將</h1>
       <RouterLink class="home-link" to="/game">
-        /game
+        開始牌局
       </RouterLink>
     </div>
   </section>

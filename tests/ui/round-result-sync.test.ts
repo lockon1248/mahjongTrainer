@@ -98,10 +98,10 @@ describe('round result sync', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('win')
-    expect(wrapper.get('[data-testid="result-ended"]').text()).toContain('yes')
-    expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('south')
-    expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('west')
+    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('和牌')
+    expect(wrapper.get('[data-testid="result-ended"]').text()).toContain('是')
+    expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('南家')
+    expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('西家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('3')
   })
 
@@ -128,7 +128,7 @@ describe('round result sync', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('draw')
-    expect(wrapper.get('[data-testid="result-draw-reason"]').text()).toContain('wall-exhausted')
+    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('流局')
+    expect(wrapper.get('[data-testid="result-draw-reason"]').text()).toContain('牌牆耗盡')
   })
 })
