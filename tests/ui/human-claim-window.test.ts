@@ -34,6 +34,7 @@ const baseSnapshot: GameTableSnapshotViewModel = {
   players: [
     {
       seat: 'east',
+      relativePosition: 'bottom',
       concealedCount: 16,
       concealedTiles: [
         { suit: 'characters', rank: 1 },
@@ -41,37 +42,48 @@ const baseSnapshot: GameTableSnapshotViewModel = {
       ],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 1,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'south',
+      relativePosition: 'right',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 1,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'west',
+      relativePosition: 'top',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 2,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'north',
+      relativePosition: 'left',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 2,
+      discards: [],
       score: 0,
       declaredReady: false
     }
@@ -137,5 +149,23 @@ describe('human claim window', () => {
     expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
     expect(wrapper.get('[data-testid="summary-phase"]').text()).toContain('出牌')
     expect(wrapper.get('[data-testid="summary-last-claim"]').text()).toContain('吃牌')
+  })
+
+  it('clarifies claim-window ownership and shows strong seat flags on the table', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: baseSnapshot,
+        humanSeat: 'east',
+        claimCandidates,
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('剛出牌')
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('北家')
+    expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('請宣告')
+    expect(wrapper.get('[data-testid="player-status-north"]').text()).toContain('剛出牌')
+    expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')
+    expect(wrapper.get('[data-seat="north"]').classes()).toContain('player-panel--recent')
   })
 })

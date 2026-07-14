@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { HumanClaimCandidate, HumanSelfTurnCandidate, Seat, Tile } from '@/core'
-import type { GameTableSnapshotViewModel } from '@/views/game/types'
+import type { GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 
 const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
@@ -23,6 +23,10 @@ const isHumanTurn = computed(() => {
     && props.snapshot.outcome === 'in-progress'
 })
 
+const hasHumanClaimWindow = computed(() => {
+  return props.snapshot.phase === 'claim-window' && visibleClaimCandidates.value.length > 1
+})
+
 const lastClaimLabel = computed(() => {
   return formatClaimType(props.snapshot.lastClaimResolution?.type ?? 'pass')
 })
@@ -33,20 +37,69 @@ const visibleClaimCandidates = computed(() => {
   })
 })
 
+const discardPools = computed<GameTablePlayerViewModel[]>(() => {
+  const order = ['top', 'left', 'right', 'bottom'] as const
+
+  return order.flatMap((position) => {
+    const player = props.snapshot.players.find(candidate => candidate.relativePosition === position)
+
+    return player == null ? [] : [player]
+  })
+})
+
+const currentSeatSummaryLabel = computed(() => {
+  return props.snapshot.phase === 'claim-window' ? '剛出牌' : '目前操作'
+})
+
+const isPlayerActive = (player: GameTablePlayerViewModel): boolean => {
+  if (props.snapshot.phase === 'claim-window')
+    return player.seat === props.humanSeat && hasHumanClaimWindow.value
+
+  return player.seat === props.snapshot.currentSeat
+}
+
+const isPlayerRecent = (player: GameTablePlayerViewModel): boolean => {
+  return props.snapshot.phase === 'claim-window' && player.seat === props.snapshot.currentSeat
+}
+
+const getPlayerStatus = (player: GameTablePlayerViewModel): string | null => {
+  if (props.snapshot.phase === 'claim-window') {
+    if (player.seat === props.humanSeat && hasHumanClaimWindow.value)
+      return '請宣告'
+
+    if (player.seat === props.snapshot.currentSeat)
+      return '剛出牌'
+  }
+
+  if (player.seat === props.snapshot.currentSeat) {
+    if (props.snapshot.phase === 'draw')
+      return player.seat === props.humanSeat ? '輪到你摸牌' : '正在摸牌'
+
+    if (props.snapshot.phase === 'discard')
+      return player.seat === props.humanSeat ? '輪到你' : '正在出牌'
+  }
+
+  if (player.seat === props.humanSeat)
+    return '你'
+
+  return null
+}
+
 const formatTile = (tile: Tile): string => {
-  if (tile.suit === 'characters')
-    return `${NUMBER_LABELS[tile.rank - 1]}萬`
-
-  if (tile.suit === 'dots')
-    return `${NUMBER_LABELS[tile.rank - 1]}筒`
-
-  if (tile.suit === 'bamboo')
-    return `${NUMBER_LABELS[tile.rank - 1]}條`
-
-  if (tile.suit === 'winds')
-    return WIND_LABELS[tile.rank]
-
-  return DRAGON_LABELS[tile.rank]
+  switch (tile.suit) {
+    case 'characters':
+      return `${NUMBER_LABELS[tile.rank - 1]}萬`
+    case 'dots':
+      return `${NUMBER_LABELS[tile.rank - 1]}筒`
+    case 'bamboo':
+      return `${NUMBER_LABELS[tile.rank - 1]}條`
+    case 'winds':
+      return WIND_LABELS[tile.rank]
+    case 'dragons':
+      return DRAGON_LABELS[tile.rank]
+    case 'flower':
+      return FLOWER_LABELS[tile.rank]
+  }
 }
 
 const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
@@ -78,6 +131,17 @@ const DRAGON_LABELS = {
   white: '白板'
 } as const
 
+const FLOWER_LABELS = {
+  spring: '春',
+  summer: '夏',
+  autumn: '秋',
+  winter: '冬',
+  plum: '梅',
+  orchid: '蘭',
+  bamboo: '竹',
+  chrysanthemum: '菊'
+} as const
+
 const formatSeat = (seat: Seat): string => {
   return {
     east: '東家',
@@ -102,7 +166,7 @@ const formatPhase = (phase: GameTableSnapshotViewModel['phase']): string => {
 
 const formatOutcome = (outcome: GameTableSnapshotViewModel['outcome']): string => {
   return {
-    'in-progress': '進行中',
+    'in-progress': '對局中',
     win: '和牌',
     draw: '流局'
   }[outcome]
@@ -126,6 +190,16 @@ const formatSelfTurnActionType = (actionType: HumanSelfTurnCandidate['actionType
   }[actionType]
 }
 
+const formatMeldType = (type: GameTablePlayerViewModel['melds'][number]['type']): string => {
+  return {
+    chi: '吃',
+    pon: '碰',
+    'kan-concealed': '暗槓',
+    'kan-exposed': '明槓',
+    'kan-added': '加槓'
+  }[type]
+}
+
 const formatResultType = (type: NonNullable<GameTableSnapshotViewModel['resultSummary']>['type']): string => {
   return type === 'win' ? '和牌' : '流局'
 }
@@ -138,6 +212,7 @@ const formatDrawReason = (reason: string | null): string => {
     'wall-exhausted': '牌牆耗盡'
   }[reason] ?? '未分類流局'
 }
+
 </script>
 
 <template>
@@ -152,7 +227,7 @@ const formatDrawReason = (reason: string | null): string => {
         <strong>{{ formatWind(snapshot.prevailingWind) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-current-seat">
-        <span class="summary-label">目前輪到</span>
+        <span class="summary-label">{{ currentSeatSummaryLabel }}</span>
         <strong>{{ formatSeat(snapshot.currentSeat) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-phase">
@@ -164,7 +239,7 @@ const formatDrawReason = (reason: string | null): string => {
         <strong>{{ lastClaimLabel }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-outcome">
-        <span class="summary-label">局面結果</span>
+        <span class="summary-label">本局狀態</span>
         <strong>{{ formatOutcome(snapshot.outcome) }}</strong>
       </div>
       <div class="summary-chip" data-testid="summary-wall">
@@ -208,16 +283,38 @@ const formatDrawReason = (reason: string | null): string => {
       </div>
     </section>
 
-    <div class="table-grid">
+    <div class="mahjong-table" data-testid="mahjong-table">
       <article
         v-for="player in snapshot.players"
         :key="player.seat"
         class="player-panel"
         data-testid="player-seat"
+        :class="[
+          `player-panel--${player.relativePosition}`,
+          {
+            'player-panel--active': isPlayerActive(player),
+            'player-panel--recent': isPlayerRecent(player)
+          }
+        ]"
         :data-seat="player.seat"
+        :data-relative-position="player.relativePosition"
       >
         <div class="player-header">
-          <h2 class="player-seat">{{ formatSeat(player.seat) }}</h2>
+          <div class="player-header-main">
+            <h2 class="player-seat">{{ formatSeat(player.seat) }}</h2>
+            <span
+              v-if="getPlayerStatus(player) != null"
+              class="player-status-badge"
+              :class="{
+                'player-status-badge--human-turn': player.seat === humanSeat && snapshot.phase === 'discard' && snapshot.currentSeat === humanSeat,
+                'player-status-badge--claim': player.seat === humanSeat && hasHumanClaimWindow,
+                'player-status-badge--recent': snapshot.phase === 'claim-window' && player.seat === snapshot.currentSeat
+              }"
+              :data-testid="`player-status-${player.seat}`"
+            >
+              {{ getPlayerStatus(player) }}
+            </span>
+          </div>
           <span class="player-score">{{ player.score }}</span>
         </div>
         <dl class="player-stats">
@@ -243,6 +340,28 @@ const formatDrawReason = (reason: string | null): string => {
           </div>
         </dl>
         <div
+          v-if="player.melds.length > 0"
+          class="player-melds"
+          :data-testid="`player-melds-${player.seat}`"
+        >
+          <div
+            v-for="(meld, meldIndex) in player.melds"
+            :key="`${player.seat}-meld-${meld.type}-${meldIndex}`"
+            class="player-meld"
+          >
+            <span class="player-meld-type">{{ formatMeldType(meld.type) }}</span>
+            <div class="player-meld-tiles">
+              <span
+                v-for="(tile, tileIndex) in meld.tiles"
+                :key="`${player.seat}-meld-tile-${meldIndex}-${tile.suit}-${tile.rank}-${tileIndex}`"
+                class="player-meld-tile"
+              >
+                {{ formatTile(tile) }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
           v-if="player.seat === humanSeat"
           class="player-concealed-tiles"
           data-testid="human-concealed-tiles"
@@ -260,6 +379,40 @@ const formatDrawReason = (reason: string | null): string => {
           </button>
         </div>
       </article>
+
+      <section class="table-center" data-testid="center-discard-pools">
+        <div
+          v-for="player in discardPools"
+          :key="player.seat"
+          class="discard-pool"
+          :class="`discard-pool--${player.relativePosition}`"
+          :data-testid="`discard-pool-${player.seat}`"
+        >
+          <div class="discard-pool-header">
+            <strong>{{ formatSeat(player.seat) }}</strong>
+            <span>{{ player.discardCount }} 張</span>
+          </div>
+          <div
+            v-if="player.discards.length > 0"
+            class="discard-tile-list"
+          >
+            <span
+              v-for="(tile, tileIndex) in player.discards"
+              :key="`${player.seat}-discard-${tile.suit}-${tile.rank}-${tileIndex}`"
+              class="discard-tile"
+              :class="{
+                'discard-tile--latest': tileIndex === player.discards.length - 1
+              }"
+              :data-testid="`discard-tile-${player.seat}-${tileIndex}`"
+            >
+              {{ formatTile(tile) }}
+            </span>
+          </div>
+          <p v-else class="discard-empty">
+            暫無捨牌
+          </p>
+        </div>
+      </section>
     </div>
     <div
       v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1"
@@ -339,12 +492,22 @@ const formatDrawReason = (reason: string | null): string => {
 }
 
 .table-grid {
+  display: none;
+}
+
+.mahjong-table {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: minmax(12rem, 0.85fr) minmax(16rem, 1.3fr) minmax(12rem, 0.85fr);
+  grid-template-areas:
+    ". top ."
+    "left center right"
+    "bottom bottom bottom";
+  align-items: stretch;
   gap: 1rem;
 }
 
 .player-panel {
+  position: relative;
   border-radius: 1.25rem;
   padding: 1rem;
   background:
@@ -353,16 +516,79 @@ const formatDrawReason = (reason: string | null): string => {
   box-shadow: 0 1rem 2rem rgba(20, 50, 41, 0.16);
 }
 
+.player-panel--active {
+  box-shadow:
+    0 0 0 3px rgba(241, 212, 138, 0.92),
+    0 1.25rem 2.2rem rgba(20, 50, 41, 0.22);
+  background:
+    linear-gradient(180deg, rgba(38, 89, 72, 0.98), rgba(21, 56, 46, 0.98));
+}
+
+.player-panel--recent {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.26),
+    0 1rem 2rem rgba(20, 50, 41, 0.18);
+}
+
+.player-panel--top {
+  grid-area: top;
+}
+
+.player-panel--right {
+  grid-area: right;
+}
+
+.player-panel--bottom {
+  grid-area: bottom;
+}
+
+.player-panel--left {
+  grid-area: left;
+}
+
 .player-header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.player-header-main {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .player-seat,
 .player-score {
   margin: 0;
+}
+
+.player-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.32rem 0.72rem;
+  background: rgba(248, 242, 231, 0.14);
+  color: #f8f2e7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.player-status-badge--human-turn {
+  background: #f1d48a;
+  color: #17382e;
+}
+
+.player-status-badge--claim {
+  background: #f4a259;
+  color: #2f1706;
+}
+
+.player-status-badge--recent {
+  background: rgba(255, 255, 255, 0.18);
+  color: #f8f2e7;
 }
 
 .player-stats {
@@ -395,6 +621,104 @@ const formatDrawReason = (reason: string | null): string => {
   margin-top: 1rem;
 }
 
+.player-melds {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.player-meld {
+  display: grid;
+  gap: 0.45rem;
+  border-radius: 0.95rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(248, 242, 231, 0.08);
+}
+
+.player-meld-type {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f1d48a;
+}
+
+.player-meld-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.player-meld-tile {
+  border: 1px solid rgba(241, 212, 138, 0.28);
+  border-radius: 0.7rem;
+  padding: 0.28rem 0.52rem;
+  background: rgba(241, 212, 138, 0.12);
+  color: #fff2c6;
+  font-size: 0.9rem;
+}
+
+.table-center {
+  grid-area: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-content: start;
+  border: 1px solid rgba(59, 88, 68, 0.16);
+  border-radius: 1.4rem;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at center, rgba(244, 227, 183, 0.08), transparent 65%),
+    linear-gradient(180deg, rgba(35, 80, 65, 0.98), rgba(21, 51, 43, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.discard-pool {
+  min-height: 8.5rem;
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgba(246, 239, 226, 0.1);
+  color: #f8f2e7;
+}
+
+.discard-pool-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.discard-pool-header span {
+  font-size: 0.8rem;
+  color: rgba(248, 242, 231, 0.72);
+}
+
+.discard-tile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.discard-tile {
+  border: 1px solid rgba(248, 242, 231, 0.16);
+  border-radius: 0.75rem;
+  padding: 0.3rem 0.55rem;
+  background: rgba(248, 242, 231, 0.12);
+  font-size: 0.92rem;
+}
+
+.discard-tile--latest {
+  border-color: rgba(241, 212, 138, 0.9);
+  background: rgba(241, 212, 138, 0.22);
+  color: #fff5d7;
+  box-shadow: 0 0 0 1px rgba(241, 212, 138, 0.22);
+}
+
+.discard-empty {
+  margin: 0;
+  color: rgba(248, 242, 231, 0.72);
+}
+
 .concealed-tile-button {
   border: 1px solid rgba(248, 242, 231, 0.18);
   border-radius: 0.8rem;
@@ -424,5 +748,32 @@ const formatDrawReason = (reason: string | null): string => {
   color: #214538;
   font: inherit;
   cursor: pointer;
+}
+
+@media (max-width: 1080px) {
+  .mahjong-table {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "top top"
+      "left right"
+      "center center"
+      "bottom bottom";
+  }
+}
+
+@media (max-width: 720px) {
+  .mahjong-table {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "top"
+      "right"
+      "center"
+      "left"
+      "bottom";
+  }
+
+  .table-center {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

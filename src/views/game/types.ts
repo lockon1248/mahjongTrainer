@@ -1,12 +1,17 @@
-import type { ClaimResolution, RoundOutcome, RoundPhase, Seat, Tile } from '@/core'
+import type { ClaimResolution, Meld, RoundOutcome, RoundPhase, Seat, Tile } from '@/core'
+
+export type GameTableRelativePosition = 'bottom' | 'right' | 'top' | 'left'
 
 export type GameTablePlayerViewModel = {
   seat: Seat
+  relativePosition: GameTableRelativePosition
   concealedCount: number
   concealedTiles: Tile[]
   flowerCount: number
   meldCount: number
+  melds: Meld[]
   discardCount: number
+  discards: Tile[]
   score: number
   declaredReady: boolean
 }

@@ -38,6 +38,7 @@ const baseSnapshot: GameTableSnapshotViewModel = {
   players: [
     {
       seat: 'east',
+      relativePosition: 'bottom',
       concealedCount: 17,
       concealedTiles: [
         { suit: 'characters', rank: 1 },
@@ -45,37 +46,48 @@ const baseSnapshot: GameTableSnapshotViewModel = {
       ],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 1,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'south',
+      relativePosition: 'right',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 1,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'west',
+      relativePosition: 'top',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 2,
+      discards: [],
       score: 0,
       declaredReady: false
     },
     {
       seat: 'north',
+      relativePosition: 'left',
       concealedCount: 16,
       concealedTiles: [],
       flowerCount: 0,
       meldCount: 0,
+      melds: [],
       discardCount: 2,
+      discards: [],
       score: 0,
       declaredReady: false
     }

@@ -7,41 +7,53 @@ import GameTableView from '@/views/game/components/GameTableView.vue'
 const basePlayers: GameTableSnapshotViewModel['players'] = [
   {
     seat: 'east',
+    relativePosition: 'bottom',
     concealedCount: 16,
     concealedTiles: [],
     flowerCount: 0,
     meldCount: 0,
+    melds: [],
     discardCount: 8,
+    discards: [],
     score: 0,
     declaredReady: false
   },
   {
     seat: 'south',
+    relativePosition: 'right',
     concealedCount: 17,
     concealedTiles: [],
     flowerCount: 0,
     meldCount: 0,
+    melds: [],
     discardCount: 7,
+    discards: [],
     score: 0,
     declaredReady: false
   },
   {
     seat: 'west',
+    relativePosition: 'top',
     concealedCount: 16,
     concealedTiles: [],
     flowerCount: 0,
     meldCount: 0,
+    melds: [],
     discardCount: 7,
+    discards: [],
     score: 0,
     declaredReady: false
   },
   {
     seat: 'north',
+    relativePosition: 'left',
     concealedCount: 16,
     concealedTiles: [],
     flowerCount: 0,
     meldCount: 0,
+    melds: [],
     discardCount: 8,
+    discards: [],
     score: 0,
     declaredReady: false
   }

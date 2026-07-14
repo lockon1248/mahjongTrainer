@@ -209,12 +209,42 @@ export const resolveClaimWindow = (
     }
   }
 
+  const claimedPlayer = round.players[winningClaim.seat]
+  const concealedTiles = removeTiles(claimedPlayer.concealedTiles, winningClaim.consumedTiles ?? [])
+  const triggeringSeat = pendingActionWindow.triggeringSeat!
+  const triggeringTile = pendingActionWindow.triggeringTile!
+  const updatedDiscardPool = removeLastMatchingTile(round.table.discards[triggeringSeat], triggeringTile)
+  const meldTiles = [...(winningClaim.consumedTiles ?? []), triggeringTile].sort(compareTile)
+
   return {
     ...round,
     currentSeat: winningClaim.seat,
     phase: 'discard',
     pendingActionWindow: null,
-    lastClaimResolution: asClaimResolution(winningClaim)
+    lastClaimResolution: asClaimResolution(winningClaim),
+    table: {
+      ...round.table,
+      discards: {
+        ...round.table.discards,
+        [triggeringSeat]: updatedDiscardPool
+      }
+    },
+    players: {
+      ...round.players,
+      [winningClaim.seat]: {
+        ...claimedPlayer,
+        concealedTiles,
+        melds: [
+          ...claimedPlayer.melds,
+          {
+            type: winningClaim.actionType,
+            tiles: meldTiles,
+            claimedTile: triggeringTile,
+            claimedFromSeat: triggeringSeat
+          }
+        ]
+      }
+    }
   }
 }
 
@@ -660,6 +690,20 @@ const removeTiles = (sourceTiles: Tile[], targetTiles: Tile[]): Tile[] => {
   }
 
   return remainingTiles
+}
+
+const removeLastMatchingTile = (sourceTiles: Tile[], targetTile: Tile): Tile[] => {
+  const remainingTiles = [...sourceTiles]
+
+  for (let index = remainingTiles.length - 1; index >= 0; index -= 1) {
+    if (!isSameTile(remainingTiles[index]!, targetTile))
+      continue
+
+    remainingTiles.splice(index, 1)
+    return remainingTiles
+  }
+
+  throw new Error('claimed discard tile is not present in discard pool')
 }
 
 const areSameTiles = (left: Tile[], right: Tile[]): boolean => {

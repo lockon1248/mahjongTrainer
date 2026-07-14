@@ -26,7 +26,9 @@ describe('interactive turn loop', () => {
       }
     })
 
-    const selectedTile = store.round!.players.east.concealedTiles[0]!
+    const selectedTile = createGameTableSnapshot(store.round!, store.humanSeat).players
+      .find(player => player.seat === store.humanSeat)!
+      .concealedTiles[0]!
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
     expect(discardSpy).toHaveBeenCalledWith(selectedTile)

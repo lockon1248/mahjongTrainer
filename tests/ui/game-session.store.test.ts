@@ -65,6 +65,13 @@ const createClaimWindowRound = (
     ...round,
     currentSeat: triggeringSeat,
     phase: 'claim-window',
+    table: {
+      ...round.table,
+      discards: {
+        ...round.table.discards,
+        [triggeringSeat]: [triggeringTile]
+      }
+    },
     pendingActionWindow: {
       ...createPendingActionWindow(),
       triggeringSeat,
@@ -299,6 +306,8 @@ describe('game session store', () => {
     expect(store.round?.phase).toBe('discard')
     expect(store.round?.currentSeat).toBe('east')
     expect(store.round?.lastClaimResolution?.type).toBe('chi')
+    expect(store.round?.players.east.melds[0]?.type).toBe('chi')
+    expect(store.round?.table.discards.north).toHaveLength(0)
   })
 
   it('exposes no human self-turn actions when the current discard turn has no legal self-turn candidate', () => {

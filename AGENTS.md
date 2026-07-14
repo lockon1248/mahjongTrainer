@@ -258,6 +258,53 @@ Drift examples include:
 
 - polishing `Purpose` / wording that does not unblock the next implementation step
 - rewriting spec text without changing progress visibility
+
+## 17. Harness Engineering Rule
+
+When fixing bugs, regressions, or mismatches between tests and real play,
+the assistant must use a Harness Engineering workflow instead of relying
+on existing green tests as proof of correctness.
+
+Required behavior:
+
+1. convert the user-reported behavior into a minimal reproducible case
+2. identify the wrong layer before fixing:
+   - core / rules
+   - store / state transition
+   - selector / view-model mapping
+   - UI rendering / copy / affordance
+3. add the narrowest failing regression test at the lowest wrong layer first
+4. fix the root cause at that layer before doing higher-layer cleanup
+5. only after root-cause repair may the assistant add UI semantic or
+   readability adjustments
+
+Fixture discipline:
+
+1. test fixtures must represent reachable real states
+2. the assistant must not rely on half-valid fixtures that omit linked
+   data such as paired state fields, companion collections, or required
+   transition outputs
+3. if a fixture could not be reached through the actual system flow, it
+   must be repaired before trusting the test result
+
+E2E discipline:
+
+1. if the bug concerns multi-step interaction, state continuity, or
+   player-visible interpretation across phases, the assistant should add
+   or update E2E coverage in addition to lower-level regression tests
+2. E2E is for end-to-end closure, not a replacement for core or store
+   regression tests
+3. after an interactive bugfix, "unit/store/component tests pass" alone
+   is not sufficient if the same user journey is still not covered by a
+   real-flow or E2E verification path
+
+Stop condition:
+
+1. "existing tests pass" is not an acceptable completion claim after a
+   reproduced user bug
+2. the fix is only considered closed when the reproduced scenario is now
+   covered and passes at the correct harness layer, and the relevant
+   interactive flow has been rechecked
 - creating side documents when the repo already has the needed `openspec` artifacts
 
 ## 17. Default UI Language Rule

@@ -59,6 +59,13 @@ const createClaimWindowRound = (
     ...round,
     currentSeat: triggeringSeat,
     phase: 'claim-window',
+    table: {
+      ...round.table,
+      discards: {
+        ...round.table.discards,
+        [triggeringSeat]: [triggeringTile]
+      }
+    },
     pendingActionWindow: {
       ...createPendingActionWindow(),
       triggeringSeat,
@@ -165,6 +172,41 @@ describe('round flow claim resolution', () => {
     })
     expect(resolved.currentSeat).toBe('west')
     expect(resolved.phase).toBe('discard')
+  })
+
+  it('moves a claimed pon into melds, removes consumed tiles from concealed hand, and removes the claimed discard from the pool', () => {
+    const discardedTile = dragon('red')
+    const pendingRound = createClaimWindowRound(discardedTile, 'east', {
+      south: [
+        ...chars(1, 2, 3),
+        ...dots(1, 2, 3),
+        ...bamboos(1, 2, 3),
+        wind('south'),
+        wind('south'),
+        dragon('red'),
+        dragon('red'),
+        dragon('green'),
+        dragon('white')
+      ]
+    })
+    const claims: PendingActionClaim[] = [
+      { seat: 'south', actionType: 'pon', tile: discardedTile, consumedTiles: [dragon('red'), dragon('red')] }
+    ]
+
+    const resolved = resolveClaimWindow(pendingRound, claims)
+
+    expect(resolved.currentSeat).toBe('south')
+    expect(resolved.phase).toBe('discard')
+    expect(resolved.players.south.melds).toEqual([
+      {
+        type: 'pon',
+        tiles: [dragon('red'), dragon('red'), dragon('red')],
+        claimedTile: dragon('red'),
+        claimedFromSeat: 'east'
+      }
+    ])
+    expect(resolved.players.south.concealedTiles.filter(tile => tile.suit === 'dragons' && tile.rank === 'red')).toHaveLength(0)
+    expect(resolved.table.discards.east.filter(tile => tile.suit === 'dragons' && tile.rank === 'red')).toHaveLength(0)
   })
 
   it('advances to the next seat draw phase when every claimant passes', () => {
