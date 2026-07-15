@@ -6,8 +6,8 @@ import type {
   ScoringRuleConfig
 } from '@/core/config/types'
 
-const TOP_LEVEL_KEYS = new Set(['claimPriorityOrder', 'flowerReplacementMode', 'settlement', 'postDraw', 'specialHands'])
-const SETTLEMENT_KEYS = new Set(['selfDrawPaymentMode', 'discardWinPaymentMode', 'minimumTai'])
+const TOP_LEVEL_KEYS = new Set(['scoringProfile', 'claimPriorityOrder', 'flowerReplacementMode', 'settlement', 'postDraw', 'specialHands'])
+const SETTLEMENT_KEYS = new Set(['selfDrawPaymentMode', 'discardWinPaymentMode', 'minimumTai', 'maxTai'])
 const POST_DRAW_KEYS = new Set(['dealerContinuation', 'readyHandCheck', 'readyHandPayment'])
 const SPECIAL_HAND_KEYS = new Set(['heavenWin', 'bigThreeDragons', 'littleThreeDragons', 'earthWin', 'qiangGang'])
 
@@ -15,6 +15,7 @@ export * from '@/core/config/types'
 
 export const createBaselineRuleConfig = (): MahjongRuleConfig => {
   return {
+    scoringProfile: 'classic-taiwan',
     claimPriorityOrder: ['win', 'kan-exposed', 'pon', 'chi'],
     flowerReplacementMode: 'tail-replacement',
     settlement: {
@@ -23,6 +24,9 @@ export const createBaselineRuleConfig = (): MahjongRuleConfig => {
       minimumTai: {
         status: 'configured',
         value: 0
+      },
+      maxTai: {
+        status: 'unresolved'
       }
     },
     postDraw: {
@@ -90,6 +94,7 @@ export const mergeRuleConfig = (
     ok: true,
     config: {
       ...baseConfig,
+      scoringProfile: overrides.scoringProfile ?? baseConfig.scoringProfile,
       claimPriorityOrder: overrides.claimPriorityOrder ?? baseConfig.claimPriorityOrder,
       flowerReplacementMode: overrides.flowerReplacementMode ?? baseConfig.flowerReplacementMode,
       settlement: {
@@ -109,15 +114,12 @@ export const mergeRuleConfig = (
 }
 
 export const getRoundFlowRuleConfig = (config: MahjongRuleConfig): RoundFlowRuleConfig => {
-  return {
-    claimPriorityOrder: config.claimPriorityOrder,
-    flowerReplacementMode: config.flowerReplacementMode,
-    postDraw: config.postDraw
-  }
+  return { ...config }
 }
 
 export const getScoringRuleConfig = (config: MahjongRuleConfig): ScoringRuleConfig => {
   return {
+    scoringProfile: config.scoringProfile,
     settlement: config.settlement,
     specialHands: config.specialHands
   }

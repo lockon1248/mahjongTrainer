@@ -78,42 +78,93 @@ AA
 
 ## 台型清單
 
-本 baseline 的 scoring 主線改採「先固定權威工作清單，再逐批定案並落地」：
+本 baseline 的 scoring 主線改採「先固定權威牌型目錄，再由 rule config 選擇 profile 與啟用規則」。
 
-### 第一批必做台型主線
+### Scoring profile
 
-- 莊家胡
-- 自摸
-- 最低胡牌台數門檻
-- 天胡
-- 大三元
-- 小三元
+本專案第一版權威 profile 固定為兩套，可由 `Rule Config` 切換：
 
-### 第一批已定值規則
-
-- 最低胡牌台數：`0 台起胡`
-- 天胡：啟用，`24 台`
-- 大三元：啟用，`8 台`
-- 小三元：啟用，`4 台`
-
-### 第二批待擴充台型主線
-
-- 花牌計分
-- 風牌相關台型
-- 門清相關台型
-- 對對胡 / 混一色 / 清一色等一般進階台型
-- 其他特殊胡型
+| profile id | 中文名稱 | 用途 |
+| --- | --- | --- |
+| `classic-taiwan` | 一般台數表 | 採一般台灣 16 張台數表邏輯 |
+| `flower-wind-bonus` | 見花見字 | 採 GameTower 頁面中的見花見字特殊規則 |
 
 ### 權威規則落地原則
 
 - 每一個台型在進入程式邏輯前，必須先在本文件或後續權威 spec 中補上：
+  - 穩定識別 `pattern id`
   - 台型名稱
+  - 適用 profile
   - 是否啟用
   - 台數值
-  - 是否可與其他台型疊加
-  - 若屬特殊胡型，需標示成立條件與是否覆蓋一般台型
+  - 成立條件
+  - 可否與其他台型疊加
+  - 若屬覆蓋型規則，需列出會覆蓋哪些基礎台型
+- `scoringItems` 必須使用穩定識別與對應名稱、台數、命中原因；不得只回傳一段顯示字串。
 - 未完成上述資料前，不得直接把台型數值寫進 scoring code。
-- 若某台型僅列為主線工作項目而尚未定值，程式只能保留開關或待實作入口，不得自行猜數值。
+- 若某台型僅列為工作項目而尚未定值，程式只能保留開關或未定案狀態，不得自行猜數值。
+
+### 共用台型目錄
+
+除非表格特別標示互斥或覆蓋，以下台型預設可與其他已命中台型疊加：
+
+| pattern id | 名稱 | profile | 啟用 | 台數 | 成立條件 | 疊加 / 覆蓋規則 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dealer-win` | 莊家 | 兩者 | 啟用 | 1 | 胡牌者為莊家 | 可疊加 |
+| `self-draw` | 自摸 | 兩者 | 啟用 | 1 | 自摸完成和牌 | 若同時命中 `concealed-self-draw`，由後者覆蓋，不重複計 `self-draw` |
+| `dragon-triplet` | 三元牌 | 兩者 | 啟用 | 1 | 任一組中、發、白刻子 | 每一組刻子各算 1 台；若命中 `big-three-dragons` 或 `little-three-dragons` 仍可疊加 |
+| `big-three-dragons` | 大三元 | 兩者 | 啟用 | 8 | 中、發、白三組刻子 | 可與 `dragon-triplet` 疊加 |
+| `little-three-dragons` | 小三元 | 兩者 | 啟用 | 4 | 中、發、白其中兩組刻子加另一組對子 | 可與 `dragon-triplet` 疊加 |
+| `big-four-winds` | 大四喜 | 兩者 | 啟用 | 16 | 東、南、西、北四組刻子 | 可與風牌類台型疊加，除非後續 profile 明定覆蓋 |
+| `little-four-winds` | 小四喜 | 兩者 | 啟用 | 8 | 東、南、西、北其中三組刻子加另一組對子 | 可與風牌類台型疊加，除非後續 profile 明定覆蓋 |
+| `all-triplets` | 碰碰胡 | 兩者 | 啟用 | 4 | 五組面子皆為刻子或槓子，沒有順子 | 可疊加 |
+| `half-flush` | 混一色 | 兩者 | 啟用 | 4 | 整副牌由字牌與單一數牌花色組成 | 與 `full-flush` 互斥 |
+| `full-flush` | 清一色 | 兩者 | 啟用 | 8 | 整副牌由同一花色組成，或全部是字牌 | 覆蓋 `half-flush` |
+| `single-wait` | 獨聽 | 兩者 | 啟用 | 1 | 只聽一張牌 | 與 `fully-open-hand` 可疊加；若命中 `earth-ready` 或 `heaven-ready`，仍可保留 `single-wait` |
+| `heaven-win` | 天胡 | 兩者 | 啟用 | 24 | 莊家配牌完成後，尚未打出第一張牌前已成和 | 可與 `dealer-win` 疊加 |
+| `earth-win` | 地胡 | 兩者 | 啟用 | 16 | 閒家配牌後第一次自摸即胡牌 | 可與 `self-draw` 疊加 |
+| `eight-flowers-win` | 八仙過海 | 兩者 | 啟用 | 8 | 同一家取得全部八張花牌即可立即胡牌 | 屬特殊胡型；與一般花牌台數是否並算，先採可疊加 |
+| `robbing-kong` | 搶槓胡 | 兩者 | 啟用 | 1 | 對手加槓時，被加上的那張牌正好可胡 | 可疊加 |
+| `last-tile-self-draw` | 海底撈月 | 兩者 | 啟用 | 1 | 海底最後一張牌自摸胡牌 | 可與 `self-draw` 疊加 |
+| `kong-draw` | 槓上開花 | 兩者 | 啟用 | 1 | 因明槓、暗槓、加槓或補花補牌後胡牌 | 可與 `self-draw` 疊加 |
+| `ready-declared` | 聽牌 | 兩者 | 啟用 | 1 | 宣告聽牌後胡牌 | 若命中 `earth-ready` 或 `heaven-ready`，由後兩者覆蓋，不重複計 `ready-declared` |
+| `earth-ready` | 地聽 | 兩者 | 啟用 | 4 | 起牌後前八張海底牌內，且四家沒有吃碰明槓時宣告聽牌 | 覆蓋 `ready-declared`；不得過水 |
+| `heaven-ready` | 天聽 | 兩者 | 啟用 | 8 | 莊家取完牌並打出第一張牌後即為聽牌 | 覆蓋 `ready-declared`；不得過水 |
+
+### `classic-taiwan` profile 台型
+
+| pattern id | 名稱 | 啟用 | 台數 | 成立條件 | 疊加 / 覆蓋規則 |
+| --- | --- | --- | --- | --- | --- |
+| `three-concealed-triplets` | 三暗刻 | 啟用 | 2 | 有三副自己摸成的刻子 | 可疊加 |
+| `four-concealed-triplets` | 四暗刻 | 啟用 | 5 | 有四副自己摸成的刻子 | 可與 `three-concealed-triplets` 擇高；不重複計 |
+| `five-concealed-triplets` | 五暗刻 | 啟用 | 8 | 有五副自己摸成的刻子 | 覆蓋 `three-concealed-triplets`、`four-concealed-triplets` |
+| `fully-open-hand` | 全求 | 啟用 | 2 | 胡牌時手中只剩單吊一張，其餘皆為吃、碰或明槓 | 不與 `single-wait` 重複計台 |
+| `four-seasons` | 春夏秋冬 | 啟用 | 2 | 花牌湊滿春夏秋冬 | 可與其他花牌類台型疊加 |
+| `plum-orchid-bamboo-chrysanthemum` | 梅蘭竹菊 | 啟用 | 2 | 花牌湊滿梅蘭竹菊 | 可與其他花牌類台型疊加 |
+| `all-sequences` | 平胡 | 啟用 | 2 | 五組面子皆為順子，無刻子；將眼不可為字牌；不可為獨聽；不可自摸；不可有花牌；必須無字無花 | 與 `single-wait`、`self-draw`、花牌類、字牌類互斥 |
+| `concealed-hand` | 門清 | 啟用 | 1 | 沒有吃也沒有碰，手牌皆為自摸整理 | 若同時命中 `concealed-self-draw`，由後者覆蓋，不重複計 `concealed-hand` |
+| `concealed-self-draw` | 門清自摸 | 啟用 | 3 | 門清且自摸胡牌 | 覆蓋 `concealed-hand` 與 `self-draw` |
+| `seat-or-round-wind` | 風牌 | 啟用 | 1 | 命中圈風或門風的風牌刻子 | 同一組刻子只算 1 台；不同有效刻子可累加 |
+| `seat-flower` | 花牌 | 啟用 | 1 | 花牌與自己門位相對應：東對春梅、南對夏蘭、西對秋竹、北對冬菊 | 每張有效對位花牌各算 1 台 |
+
+### `flower-wind-bonus` profile 台型
+
+| pattern id | 名稱 | 啟用 | 台數 | 成立條件 | 疊加 / 覆蓋規則 |
+| --- | --- | --- | --- | --- | --- |
+| `any-flower` | 見花見台 | 啟用 | 1 | 只要有任一張花牌即可計台 | 每張花牌各算 1 台；不再使用 `seat-flower` |
+| `any-wind-triplet` | 見風見台 | 啟用 | 1 | 任一組東、南、西、北風刻子 | 每組風刻子各算 1 台；不再使用 `seat-or-round-wind` |
+| `no-honors-no-flowers` | 無字無花 | 啟用 | 2 | 胡牌時完全沒有字牌與花牌 | 可與 `all-sequences` 疊加，前提仍滿足各自條件 |
+| `exposed-kong-bonus` | 槓牌 | 啟用 | 1 | 每一組明槓或加槓 | 若同一組為暗槓則由 `concealed-kong-bonus` 覆蓋，不重複計 |
+| `concealed-kong-bonus` | 暗槓 | 啟用 | 2 | 每一組暗槓 | 覆蓋同一組 `exposed-kong-bonus` |
+
+### 第一版 catalog 納入邊界
+
+以下項目暫不列入第一版完整練習器 catalog，原因是其本質偏房規、平台加成或連莊支付延伸，而非手牌台型判讀核心：
+
+- 連莊 / 拉莊
+- 幸運柴神
+
+這些項目保留在後續擴充，不得在本輪 runtime code 先行寫死。
 
 ## 結算規則
 
@@ -138,14 +189,16 @@ AA
 以下項目目前不得直接寫死；若未有明確設定或後續 spec，實作時必須視為待確認或待定值：
 
 | 項目 | 狀態 | 備註 |
+| --- | --- | --- |
 | 台型完整清單 | 進行中 | 已先固定第一批與第二批工作清單，細項仍需逐批定值 |
-| 特殊胡型是否採用 | 進行中 | 第一批至少含天胡、大三元、小三元；其餘特殊胡待後續批次 |
-| 搶槓規則 | 待確認 | 是否允許、何時可搶槓 |
-| 是否封頂 | 待定值 | 是否有上限與上限值需明定 |
+| 特殊胡型是否採用 | 已部分定值 | 第一版已納入天胡、地胡、八仙過海、搶槓胡；其餘特殊胡待後續批次 |
+| 搶槓規則 | 已部分定值 | 先定義 `robbing-kong` 計台；完整時機與流程仍需 round flow 規格補齊 |
+| 是否封頂 | 待定值 | `Rule Config` 必須保留 `maxTai` 與衝突規則設定入口，但本 baseline 尚不指定數值 |
 | 過水限制 | 待確認 | 過手可否再胡或再宣告 |
 | 流局是否查聽 | 待確認 | 流局後是否需要依聽牌狀態處理 |
-| 花牌是否直接計分 | 進行中 | 已列入第二批 scoring 主線，計分方式待定值 |
+| 花牌是否直接計分 | 已定值 | 依 profile 切換：`classic-taiwan` 採對位花，`flower-wind-bonus` 採見花見台 |
 | 最低胡牌台數 | 已定值 | 採 `0 台起胡` |
+| 低關聯平台加成台型 | 排除於 v1 | `幸運柴神` 不列入第一版練習器 catalog |
 
 ## 可配置規則
 
@@ -153,21 +206,26 @@ AA
 
 | 規則項目 | 預設 baseline | 備註 |
 | --- | --- | --- |
+| scoring profile | `classic-taiwan` | 必須可切換為 `flower-wind-bonus` |
 | 是否可吃 | 是 | baseline 採可吃上家 |
 | 是否可槓上家 | 待確認 | 不同桌規差異大 |
 | 自摸是否三家包 | 是 | 金額與附加條件不可寫死 |
 | 放槍是否包牌 | 否／待確認 | 先保留為設定項 |
-| 花牌計分 | 待定值 | 需由權威 scoring 規則定義 |
+| 花牌計分 | 依 profile 切換 | `classic-taiwan` 為對位花；`flower-wind-bonus` 為每張花牌計台 |
+| 風牌計分 | 依 profile 切換 | `classic-taiwan` 為圈風／門風；`flower-wind-bonus` 為任一風刻子計台 |
 | 最低胡牌台數 | `0 台起胡` | 牌型成立即可胡牌 |
-| 是否天地胡 | 待確認 | 若採用，需拆分天胡 / 地胡定義與台數 |
+| 是否天地胡 | 啟用 | 天胡 24 台、地胡 16 台 |
 | 是否天胡 | 啟用，24 台 | 只屬於莊家，配牌後莊家尚未打出第一張牌前已成和 |
+| 是否地胡 | 啟用，16 台 | 只屬於閒家，配牌後第一次自摸即胡牌 |
 | 是否大三元 | 啟用，8 台 | 中、發、白三組刻子 |
 | 是否小三元 | 啟用，4 台 | 中、發、白其中兩組刻子加一組對子 |
 | 是否七搶一 | 待確認 | 特殊胡型 |
-| 是否八仙過海 | 待確認 | 特殊胡型 |
-| 是否允許搶槓 | 待確認 | 與宣告流程相關 |
+| 是否八仙過海 | 啟用，8 台 | 先納入第一版 catalog |
+| 是否允許搶槓 | 已部分定值 | 計台規則已定，流程仍待 round flow 補齊 |
 | 是否過水限制 | 待確認 | 與宣告窗口相關 |
 | 是否一炮多響 | 待確認 | 與結算流程相關 |
+| 是否封頂 | 待確認 | `Rule Config` 必須能設定 `maxTai` |
+| 台型衝突規則 | 啟用 | `Rule Config` 必須能設定互斥／覆蓋規則切片 |
 | 連莊規則 | 莊家胡牌連莊 | 其他條件待後續明定 |
 | 拉莊規則 | 待確認 | 不在本 baseline 內寫死 |
 | 流局是否查聽 | 待確認 | 不在本 baseline 內寫死 |
@@ -183,6 +241,18 @@ AA
 - `SCORE-*`：驗證自摸與放槍的基礎支付責任來自規則設定
 - `SCORE-DISCARD-WIN-*`：驗證榮和結果也必須經過 scoring evaluation 與 settlement
 - `SCORE-MINIMUM-TAI-*`：驗證最低胡牌台數門檻會影響和牌是否可成立
+- `SCORE-PROFILE-*`：驗證同一手牌在不同 scoring profile 下會得到不同台型組合
+- `SCORE-CONFLICT-*`：驗證互斥、覆蓋、不重複計台與封頂規則
 - `PATTERN-HEAVEN-WIN-*`：驗證天胡特殊胡型的成立條件與結果摘要
+- `PATTERN-EARTH-WIN-*`：驗證地胡特殊胡型的成立條件與結果摘要
 - `PATTERN-BIG-THREE-DRAGONS-*`：驗證大三元特殊胡型的成立條件與結果摘要
 - `PATTERN-LITTLE-THREE-DRAGONS-*`：驗證小三元特殊胡型的成立條件與結果摘要
+- `PATTERN-DRAGON-TRIPLET-*`：驗證三元牌刻子可逐組計台
+- `PATTERN-CONCEALED-SET-*`：驗證三暗刻 / 四暗刻 / 五暗刻擇高計台
+- `PATTERN-OPEN-HAND-*`：驗證全求與獨聽不重複計台
+- `PATTERN-FLUSH-*`：驗證混一色與清一色互斥
+- `PATTERN-SEQUENCE-*`：驗證平胡的限制條件
+- `PATTERN-CONCEALED-HAND-*`：驗證門清與門清自摸的覆蓋關係
+- `PATTERN-WIND-FLOWER-*`：驗證花牌與風牌在不同 profile 的計法差異
+- `PATTERN-KONG-BONUS-*`：驗證見花見字 profile 下槓牌與暗槓不重複計台
+- `UI-SCORING-RESULT-*`：驗證 UI 能顯示來自權威 `scoringItems` 的台型與總台數

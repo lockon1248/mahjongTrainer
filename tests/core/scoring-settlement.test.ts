@@ -30,6 +30,17 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const flower = (rank: 'spring' | 'summer' | 'autumn' | 'winter' | 'plum' | 'orchid' | 'bamboo' | 'chrysanthemum'): Tile => {
+  return { suit: 'flower', rank }
+}
+
+const scoringItem = (
+  patternId: string,
+  label: string,
+  tai: number,
+  reason: string
+) => ({ patternId, label, tai, reason })
+
 describe('scoring settlement', () => {
   it('builds a self-draw settlement result with matched scoring items and totalTai', () => {
     const input: StandardWinInput = {
@@ -59,8 +70,11 @@ describe('scoring settlement', () => {
         type: 'self-draw',
         payerSeats: ['south', 'west', 'north']
       },
-      scoringItems: ['dealer-win', 'self-draw'],
-      totalTai: 2,
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌')
+      ],
+      totalTai: 4,
       minimumTai: {
         status: 'configured',
         value: 0
@@ -96,8 +110,10 @@ describe('scoring settlement', () => {
         type: 'discard-win',
         payerSeats: ['west']
       },
-      scoringItems: [],
-      totalTai: 0,
+      scoringItems: [
+        scoringItem('concealed-hand', '門清', 1, '沒有吃也沒有碰，手牌皆為自摸整理')
+      ],
+      totalTai: 1,
       minimumTai: {
         status: 'configured',
         value: 0
@@ -126,8 +142,8 @@ describe('scoring settlement', () => {
     const winning = validateStandardWin(input)
 
     expect(winning.isWinning).toBe(true)
-    expect(winning.matchedPatterns).toEqual(['dealer-win', 'self-draw'])
-    expect(winning.totalTai).toBe(2)
+    expect(winning.matchedPatterns).toEqual(['dealer-win', 'concealed-self-draw'])
+    expect(winning.totalTai).toBe(4)
     expect(winning.settlement).toEqual({
       winnerSeat: 'east',
       discarderSeat: null,
@@ -135,8 +151,11 @@ describe('scoring settlement', () => {
         type: 'self-draw',
         payerSeats: ['south', 'west', 'north']
       },
-      scoringItems: ['dealer-win', 'self-draw'],
-      totalTai: 2,
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌')
+      ],
+      totalTai: 4,
       minimumTai: {
         status: 'configured',
         value: 0
@@ -150,7 +169,7 @@ describe('scoring settlement', () => {
         selfDrawPaymentMode: 'winner-only',
         minimumTai: {
           status: 'configured',
-          value: 3
+          value: 5
         }
       }
     })
@@ -182,7 +201,7 @@ describe('scoring settlement', () => {
 
     expect(settlement).toBeNull()
     expect(winning.isWinning).toBe(false)
-    expect(winning.totalTai).toBe(2)
+    expect(winning.totalTai).toBe(4)
     expect(winning.settlement).toBeNull()
   })
 
@@ -192,7 +211,7 @@ describe('scoring settlement', () => {
         selfDrawPaymentMode: 'winner-only',
         minimumTai: {
           status: 'configured',
-          value: 2
+          value: 4
         }
       }
     })
@@ -229,18 +248,21 @@ describe('scoring settlement', () => {
         type: 'winner-only',
         payerSeats: ['east']
       },
-      scoringItems: ['dealer-win', 'self-draw'],
-      totalTai: 2,
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌')
+      ],
+      totalTai: 4,
       minimumTai: {
         status: 'configured',
-        value: 2
+        value: 4
       }
     })
     expect(winning.isWinning).toBe(true)
-    expect(winning.totalTai).toBe(2)
+    expect(winning.totalTai).toBe(4)
     expect(winning.settlement?.minimumTai).toEqual({
       status: 'configured',
-      value: 2
+      value: 4
     })
   })
 
@@ -270,9 +292,13 @@ describe('scoring settlement', () => {
     const matchedPatterns = evaluateScoringPatterns(input, breakdown)
     const settlement = buildSettlementResult(input, matchedPatterns)
 
-    expect(matchedPatterns).toEqual(['dealer-win', 'self-draw', 'heaven-win'])
-    expect(settlement?.totalTai).toBe(26)
-    expect(settlement?.scoringItems).toEqual(['dealer-win', 'self-draw', 'heaven-win'])
+    expect(matchedPatterns).toEqual(['dealer-win', 'concealed-self-draw', 'heaven-win'])
+    expect(settlement?.totalTai).toBe(28)
+    expect(settlement?.scoringItems).toEqual([
+      scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+      scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌'),
+      scoringItem('heaven-win', '天胡', 24, '莊家配牌完成後尚未打出第一張牌前已成和')
+    ])
   })
 
   it('assigns configured tai to big three dragons and little three dragons', () => {
@@ -319,7 +345,122 @@ describe('scoring settlement', () => {
     const bigPatterns = evaluateScoringPatterns(bigThreeDragons, decomposeStandardHand(bigThreeDragons))
     const littlePatterns = evaluateScoringPatterns(littleThreeDragons, decomposeStandardHand(littleThreeDragons))
 
-    expect(buildSettlementResult(bigThreeDragons, bigPatterns)?.totalTai).toBe(8)
-    expect(buildSettlementResult(littleThreeDragons, littlePatterns)?.totalTai).toBe(4)
+    expect(buildSettlementResult(bigThreeDragons, bigPatterns)?.totalTai).toBe(9)
+    expect(buildSettlementResult(littleThreeDragons, littlePatterns)?.totalTai).toBe(5)
+  })
+
+  it('keeps concealed-self-draw and removes concealed-hand plus self-draw from the final scoring items', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(4, 5, 6),
+        ...dots(2, 3, 4),
+        ...dots(6, 7, 8),
+        ...bamboos(5, 6, 7),
+        chars(9)[0]
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: chars(9)[0],
+      winningSeat: 'south',
+      discarderSeat: null
+    }
+
+    const patterns = evaluateScoringPatterns(input, decomposeStandardHand(input))
+
+    expect(patterns).toEqual(['concealed-self-draw'])
+    expect(buildSettlementResult(input, patterns)?.scoringItems).toEqual([
+      scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌')
+    ])
+  })
+
+  it('keeps full-flush and removes half-flush from the final scoring items', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(2, 3, 4),
+        ...chars(4, 5, 6),
+        ...chars(6, 7, 8),
+        ...chars(8, 8, 8),
+        chars(9)[0]
+      ],
+      melds: [],
+      flowers: [],
+      winningTile: chars(9)[0],
+      winningSeat: 'south',
+      discarderSeat: 'west'
+    }
+
+    const patterns = evaluateScoringPatterns(input, decomposeStandardHand(input))
+
+    expect(patterns).toEqual(['concealed-hand', 'full-flush'])
+    expect(buildSettlementResult(input, patterns)?.scoringItems).toEqual([
+      scoringItem('concealed-hand', '門清', 1, '沒有吃也沒有碰，手牌皆為自摸整理'),
+      scoringItem('full-flush', '清一色', 8, '整副牌由同一花色組成')
+    ])
+  })
+
+  it('keeps concealed-kong-bonus and removes exposed-kong-bonus for the same kong group', () => {
+    const bonus = mergeRuleConfig(createBaselineRuleConfig(), {
+      scoringProfile: 'flower-wind-bonus'
+    })
+
+    if (!bonus.ok)
+      throw new Error(bonus.error)
+
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...dots(4, 5, 6),
+        ...bamboos(7, 8, 9),
+        dragon('red'),
+        dragon('red'),
+        dragon('red'),
+        wind('east')
+      ],
+      melds: [
+        {
+          type: 'kan-concealed',
+          tiles: [...chars(7, 7, 7), chars(7)[0]],
+          claimedTile: null,
+          claimedFromSeat: null
+        }
+      ],
+      flowers: [flower('spring')],
+      winningTile: wind('east'),
+      winningSeat: 'south',
+      discarderSeat: null
+    }
+
+    const patterns = evaluateScoringPatterns(input, decomposeStandardHand(input), bonus.config)
+
+    expect(patterns).toEqual(['concealed-self-draw', 'any-flower', 'concealed-kong-bonus'])
+    expect(buildSettlementResult(input, patterns, bonus.config)?.scoringItems).toEqual([
+      scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌'),
+      scoringItem('any-flower', '見花見台', 1, '任一花牌皆可計台'),
+      scoringItem('concealed-kong-bonus', '暗槓', 2, '每一組暗槓計 2 台')
+    ])
+  })
+
+  it('does not keep all-sequences when self-draw or flowers violate its exclusion rules', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(4, 5, 6),
+        ...dots(2, 3, 4),
+        ...dots(6, 7, 8),
+        ...bamboos(5, 6, 7),
+        chars(9)[0]
+      ],
+      melds: [],
+      flowers: [flower('spring')],
+      winningTile: chars(9)[0],
+      winningSeat: 'east',
+      discarderSeat: null
+    }
+
+    const patterns = evaluateScoringPatterns(input, decomposeStandardHand(input))
+
+    expect(patterns).not.toContain('all-sequences')
   })
 })

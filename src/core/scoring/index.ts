@@ -1,3 +1,4 @@
+export * from '@/core/scoring/catalog'
 export * from '@/core/scoring/decomposition'
 export * from '@/core/scoring/patterns'
 export * from '@/core/scoring/settlement'

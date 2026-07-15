@@ -13,5 +13,7 @@ interface Window {
     seedDiscardWinScenario: () => void
     seedBigThreeDragonsClaimScenario: () => void
     seedDrawNextRoundScenario: () => void
+    seedClassicFlowerProfileWinScenario: () => void
+    seedBonusFlowerProfileWinScenario: () => void
   }
 }

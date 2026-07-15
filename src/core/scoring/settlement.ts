@@ -1,14 +1,7 @@
 import { createBaselineRuleConfig, getScoringRuleConfig, type MahjongRuleConfig } from '@/core/config'
+import { createScoringItem } from '@/core/scoring/catalog'
 import { ALL_SEATS } from '@/core/types/seat'
 import type { ScoringPatternResult, SettlementResult, StandardWinInput } from '@/core/scoring/types'
-
-const PATTERN_TAI: Record<ScoringPatternResult, number> = {
-  'dealer-win': 1,
-  'self-draw': 1,
-  'heaven-win': 24,
-  'big-three-dragons': 8,
-  'little-three-dragons': 4
-}
 
 export const buildSettlementResult = (
   input: StandardWinInput,
@@ -21,7 +14,8 @@ export const buildSettlementResult = (
 
   const scoringRuleConfig = getScoringRuleConfig(ruleConfig ?? createBaselineRuleConfig())
   const isSelfDraw = input.discarderSeat == null
-  const totalTai = matchedPatterns.reduce((total, patternId) => total + PATTERN_TAI[patternId], 0)
+  const scoringItems = matchedPatterns.map(createScoringItem)
+  const totalTai = scoringItems.reduce((total, item) => total + item.tai, 0)
 
   if (
     scoringRuleConfig.settlement.minimumTai.status === 'configured'
@@ -47,7 +41,7 @@ export const buildSettlementResult = (
           type: 'discard-win',
           payerSeats: input.discarderSeat ? [input.discarderSeat] : []
     },
-    scoringItems: matchedPatterns,
+    scoringItems,
     totalTai,
     minimumTai: scoringRuleConfig.settlement.minimumTai
   }

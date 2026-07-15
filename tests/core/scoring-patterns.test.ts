@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createBaselineRuleConfig,
   decomposeStandardHand,
   evaluateScoringPatterns,
+  mergeRuleConfig,
   type StandardWinInput,
   type Tile
 } from '@/core/index'
@@ -26,6 +28,10 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const flower = (rank: 'spring' | 'summer' | 'autumn' | 'winter' | 'plum' | 'orchid' | 'bamboo' | 'chrysanthemum'): Tile => {
+  return { suit: 'flower', rank }
+}
+
 describe('scoring patterns', () => {
   it('returns supported baseline pattern identifiers in a stable order', () => {
     const input: StandardWinInput = {
@@ -47,7 +53,7 @@ describe('scoring patterns', () => {
 
     const breakdown = decomposeStandardHand(input)
 
-    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['dealer-win', 'self-draw'])
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['dealer-win', 'concealed-self-draw'])
   })
 
   it('omits unsupported unresolved patterns', () => {
@@ -99,7 +105,7 @@ describe('scoring patterns', () => {
 
     const breakdown = decomposeStandardHand(input)
 
-    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['dealer-win', 'self-draw', 'heaven-win'])
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['dealer-win', 'concealed-self-draw', 'heaven-win'])
   })
 
   it('detects big three dragons from three dragon triplets', () => {
@@ -126,7 +132,7 @@ describe('scoring patterns', () => {
 
     const breakdown = decomposeStandardHand(input)
 
-    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['big-three-dragons'])
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['concealed-hand', 'big-three-dragons'])
   })
 
   it('detects little three dragons from two dragon triplets and one dragon pair', () => {
@@ -152,6 +158,50 @@ describe('scoring patterns', () => {
 
     const breakdown = decomposeStandardHand(input)
 
-    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['little-three-dragons'])
+    expect(evaluateScoringPatterns(input, breakdown)).toEqual(['concealed-hand', 'little-three-dragons'])
+  })
+
+  it('uses the active scoring profile to change flower and wind related patterns for the same hand', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [
+        ...chars(1, 2, 3),
+        ...chars(2, 3, 4),
+        ...dots(4, 5, 6),
+        ...bamboos(7, 8, 9),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ],
+      melds: [],
+      flowers: [flower('spring'), flower('plum')],
+      winningTile: dragon('red'),
+      winningSeat: 'east',
+      discarderSeat: null
+    }
+
+    const breakdown = decomposeStandardHand(input)
+    const classic = createBaselineRuleConfig()
+    const bonus = mergeRuleConfig(createBaselineRuleConfig(), {
+      scoringProfile: 'flower-wind-bonus'
+    })
+
+    if (!bonus.ok)
+      throw new Error(bonus.error)
+
+    expect(evaluateScoringPatterns(input, breakdown, classic)).toEqual([
+      'dealer-win',
+      'concealed-self-draw',
+      'seat-flower',
+      'seat-flower'
+    ])
+
+    expect(evaluateScoringPatterns(input, breakdown, bonus.config)).toEqual([
+      'dealer-win',
+      'concealed-self-draw',
+      'any-flower',
+      'any-flower',
+      'any-wind-triplet'
+    ])
   })
 })

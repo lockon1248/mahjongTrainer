@@ -21,6 +21,13 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const scoringItem = (
+  patternId: string,
+  label: string,
+  tai: number,
+  reason: string
+) => ({ patternId, label, tai, reason })
+
 describe('scoring win validation', () => {
   it('returns a winning result for WIN-STANDARD-001', () => {
     const input: StandardWinInput = {
@@ -109,7 +116,7 @@ describe('scoring win validation', () => {
       settlement: {
         minimumTai: {
           status: 'configured',
-          value: 1
+          value: 2
         }
       }
     })
@@ -138,8 +145,8 @@ describe('scoring win validation', () => {
 
     expect(result.isWinning).toBe(false)
     expect(result.breakdown?.meldGroups).toHaveLength(5)
-    expect(result.matchedPatterns).toEqual([])
-    expect(result.totalTai).toBe(0)
+    expect(result.matchedPatterns).toEqual(['concealed-hand'])
+    expect(result.totalTai).toBe(1)
     expect(result.settlement).toBeNull()
   })
 
@@ -148,7 +155,7 @@ describe('scoring win validation', () => {
       settlement: {
         minimumTai: {
           status: 'configured',
-          value: 2
+          value: 4
         }
       }
     })
@@ -176,11 +183,15 @@ describe('scoring win validation', () => {
     const result = validateStandardWin(input, merged.config)
 
     expect(result.isWinning).toBe(true)
-    expect(result.matchedPatterns).toEqual(['dealer-win', 'self-draw'])
-    expect(result.totalTai).toBe(2)
+    expect(result.matchedPatterns).toEqual(['dealer-win', 'concealed-self-draw'])
+    expect(result.totalTai).toBe(4)
+    expect(result.settlement?.scoringItems).toEqual([
+      scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+      scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌')
+    ])
     expect(result.settlement?.minimumTai).toEqual({
       status: 'configured',
-      value: 2
+      value: 4
     })
   })
 })

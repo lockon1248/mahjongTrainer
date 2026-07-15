@@ -27,6 +27,13 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const scoringItem = (
+  patternId: string,
+  label: string,
+  tai: number,
+  reason: string
+) => ({ patternId, label, tai, reason })
+
 const buildWall = (...tailTiles: Tile[]): Tile[] => {
   const pool: Tile[] = [
     ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
@@ -141,8 +148,12 @@ describe('human self-turn actions', () => {
       type: 'win',
       winnerSeat: 'east',
       discarderSeat: null,
-      totalTai: 26,
-      scoringItems: ['dealer-win', 'self-draw', 'heaven-win'],
+      totalTai: 28,
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('concealed-self-draw', '門清自摸', 3, '門清且自摸胡牌'),
+        scoringItem('heaven-win', '天胡', 24, '莊家配牌完成後尚未打出第一張牌前已成和')
+      ],
       drawReason: null,
       unresolved: []
     })

@@ -4,6 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 
+const scoringItem = (
+  patternId: string,
+  label: string,
+  tai: number,
+  reason: string
+) => ({ patternId, label, tai, reason })
+
 const basePlayers: GameTableSnapshotViewModel['players'] = [
   {
     seat: 'east',
@@ -101,7 +108,10 @@ describe('round result sync', () => {
             discarderSeat: 'west',
             totalTai: 3,
             drawReason: null,
-            scoringItems: ['dealer-win', 'self-draw']
+            scoringItems: [
+              scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+              scoringItem('self-draw', '自摸', 2, '自摸完成和牌')
+            ]
           }
         },
         humanSeat: 'east',
@@ -115,8 +125,8 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('西家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('3')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家胡')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('自摸')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家 1 台')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('自摸 2 台')
   })
 
   it('renders discard-win scoring items for a discard win result', () => {
@@ -133,7 +143,9 @@ describe('round result sync', () => {
             discarderSeat: 'south',
             totalTai: 1,
             drawReason: null,
-            scoringItems: ['dealer-win']
+            scoringItems: [
+              scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家')
+            ]
           }
         },
         humanSeat: 'east',
@@ -145,7 +157,7 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('東家')
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('1')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家胡')
+    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家 1 台')
   })
 
   it('renders the draw reason for a draw result', () => {

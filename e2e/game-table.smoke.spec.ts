@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 
 test.describe('牌桌 smoke e2e', () => {
+  test.setTimeout(90_000)
+
   const waitForBridge = async (page: Page) => {
     await page.waitForFunction(() => {
       const bridge = (window as Window & {
@@ -9,6 +11,8 @@ test.describe('牌桌 smoke e2e', () => {
           seedDiscardWinScenario: () => void
           seedBigThreeDragonsClaimScenario: () => void
           seedDrawNextRoundScenario: () => void
+          seedClassicFlowerProfileWinScenario: () => void
+          seedBonusFlowerProfileWinScenario: () => void
         }
       }).__MAHJONG_E2E__
 
@@ -16,6 +20,8 @@ test.describe('牌桌 smoke e2e', () => {
         && typeof bridge?.seedDiscardWinScenario === 'function'
         && typeof bridge?.seedBigThreeDragonsClaimScenario === 'function'
         && typeof bridge?.seedDrawNextRoundScenario === 'function'
+        && typeof bridge?.seedClassicFlowerProfileWinScenario === 'function'
+        && typeof bridge?.seedBonusFlowerProfileWinScenario === 'function'
     })
   }
 
@@ -75,8 +81,9 @@ test.describe('牌桌 smoke e2e', () => {
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
     await expect(page.getByTestId('result-type')).toContainText('和牌')
-    await expect(page.getByTestId('result-total-tai')).toContainText('1')
-    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家胡')
+    await expect(page.getByTestId('result-total-tai')).toContainText('2')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
   })
 
   test('特殊胡型場景會在瀏覽器中顯示大三元台數', async ({ page }) => {
@@ -91,9 +98,49 @@ test.describe('牌桌 smoke e2e', () => {
     await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
-    await expect(page.getByTestId('result-total-tai')).toContainText('9')
+    await expect(page.getByTestId('result-total-tai')).toContainText('10')
     await expect(page.getByTestId('result-scoring-items')).toContainText('大三元')
-    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家胡')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
+  })
+
+  test('同一手牌在不同 scoring profile 下會顯示不同台型摘要', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & {
+        __MAHJONG_E2E__: { seedClassicFlowerProfileWinScenario: () => void }
+      }).__MAHJONG_E2E__.seedClassicFlowerProfileWinScenario()
+    })
+
+    await expect(page.getByTestId('human-claim-actions')).toBeVisible()
+    await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
+
+    await expect(page.getByTestId('result-total-tai')).toContainText('4')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('花牌 1 台')
+    await expect(page.getByTestId('result-scoring-items')).not.toContainText('見風見台 1 台')
+
+    await page.reload()
+    await waitForBridge(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & {
+        __MAHJONG_E2E__: { seedBonusFlowerProfileWinScenario: () => void }
+      }).__MAHJONG_E2E__.seedBonusFlowerProfileWinScenario()
+    })
+
+    await expect(page.getByTestId('human-claim-actions')).toBeVisible()
+    await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
+
+    await expect(page.getByTestId('result-total-tai')).toContainText('5')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('見花見台 1 台')
+    await expect(page.getByTestId('result-scoring-items')).toContainText('見風見台 1 台')
+    await expect(page.getByTestId('result-scoring-items')).not.toContainText('花牌 1 台')
   })
 
   test('流局結果畫面按下一局後會回到新局且不顯示錯誤', async ({ page }) => {

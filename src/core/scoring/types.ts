@@ -6,7 +6,19 @@ import type { Tile } from '@/core/types/tile'
 export type BreakdownGroupKind = 'sequence' | 'triplet' | 'quad' | 'pair'
 export type BreakdownGroupSource = 'concealed' | 'meld'
 export type SettlementType = 'self-draw' | 'discard-win'
-export type SupportedPatternId = 'dealer-win' | 'self-draw' | 'heaven-win' | 'big-three-dragons' | 'little-three-dragons'
+export type SupportedPatternId =
+  | 'dealer-win'
+  | 'self-draw'
+  | 'heaven-win'
+  | 'big-three-dragons'
+  | 'little-three-dragons'
+  | 'seat-flower'
+  | 'any-flower'
+  | 'any-wind-triplet'
+  | 'concealed-hand'
+  | 'concealed-self-draw'
+  | 'full-flush'
+  | 'concealed-kong-bonus'
 
 export type BreakdownGroup = {
   kind: BreakdownGroupKind
@@ -33,6 +45,13 @@ export type StandardWinInput = {
 
 export type ScoringPatternResult = SupportedPatternId
 
+export type ScoringItem = {
+  patternId: SupportedPatternId
+  label: string
+  tai: number
+  reason: string
+}
+
 export type PaymentResponsibility = {
   type: SettlementType | 'winner-only'
   payerSeats: Seat[]
@@ -42,7 +61,7 @@ export type SettlementResult = {
   winnerSeat: Seat | null
   discarderSeat: Seat | null
   paymentResponsibility: PaymentResponsibility | null
-  scoringItems: string[]
+  scoringItems: ScoringItem[]
   totalTai: number | null
   minimumTai?: RuleConfigState<number> | null
 }

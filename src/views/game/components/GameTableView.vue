@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { HumanClaimCandidate, HumanSelfTurnCandidate, Seat, Tile } from '@/core'
+import type { HumanClaimCandidate, HumanSelfTurnCandidate, ScoringItem, Seat, Tile } from '@/core'
 import type { GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 
 const props = defineProps<{
@@ -213,14 +213,8 @@ const formatDrawReason = (reason: string | null): string => {
   }[reason] ?? '未分類流局'
 }
 
-const formatScoringItem = (item: string): string => {
-  return {
-    'dealer-win': '莊家胡',
-    'self-draw': '自摸',
-    'heaven-win': '天胡',
-    'big-three-dragons': '大三元',
-    'little-three-dragons': '小三元'
-  }[item] ?? item
+const formatScoringItem = (item: ScoringItem): string => {
+  return `${item.label} ${item.tai} 台`
 }
 
 </script>

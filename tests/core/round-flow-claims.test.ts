@@ -31,6 +31,13 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const scoringItem = (
+  patternId: string,
+  label: string,
+  tai: number,
+  reason: string
+) => ({ patternId, label, tai, reason })
+
 const buildWall = (): Tile[] => {
   const pool: Tile[] = [
     ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
@@ -138,11 +145,59 @@ describe('round flow claim resolution', () => {
       type: 'win',
       winnerSeat: 'east',
       discarderSeat: 'south',
-      totalTai: 1,
-      scoringItems: ['dealer-win'],
+      totalTai: 2,
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('concealed-hand', '門清', 1, '沒有吃也沒有碰，手牌皆為自摸整理')
+      ],
       drawReason: null,
       unresolved: []
     })
+  })
+
+  it('uses the round scoring profile when resolving a win claim result', () => {
+    const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      scoringProfile: 'flower-wind-bonus'
+    })
+
+    if (!merged.ok)
+      throw new Error(merged.error)
+
+    const discardedTile = dragon('red')
+    const pendingRound = createClaimWindowRound(discardedTile, 'south', {
+      east: [
+        ...chars(1, 2, 3),
+        ...chars(2, 3, 4),
+        ...dots(4, 5, 6),
+        ...bamboos(7, 8, 9),
+        wind('east'),
+        wind('east'),
+        wind('east'),
+        dragon('red')
+      ]
+    })
+
+    pendingRound.ruleConfig = merged.config
+    pendingRound.players.east.flowers = [
+      { suit: 'flower', rank: 'spring' },
+      { suit: 'flower', rank: 'plum' }
+    ]
+
+    const resolved = resolveClaimWindow(pendingRound, [
+      { seat: 'east', actionType: 'win', tile: discardedTile }
+    ])
+
+    if (resolved.outcome.status !== 'win')
+      throw new Error('expected win outcome')
+
+    expect(resolved.outcome.result.totalTai).toBe(5)
+    expect(resolved.outcome.result.scoringItems).toEqual([
+      scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+      scoringItem('concealed-hand', '門清', 1, '沒有吃也沒有碰，手牌皆為自摸整理'),
+      scoringItem('any-flower', '見花見台', 1, '任一花牌皆可計台'),
+      scoringItem('any-flower', '見花見台', 1, '任一花牌皆可計台'),
+      scoringItem('any-wind-triplet', '見風見台', 1, '任一風牌刻子皆可計台')
+    ])
   })
 
   it('prefers exposed kan over chi when no win exists', () => {

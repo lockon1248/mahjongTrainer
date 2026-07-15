@@ -1,4 +1,4 @@
-import type { ClaimResolution, Meld, RoundOutcome, RoundPhase, Seat, Tile } from '@/core'
+import type { ClaimResolution, Meld, RoundOutcome, RoundPhase, ScoringItem, Seat, Tile } from '@/core'
 
 export type GameTableRelativePosition = 'bottom' | 'right' | 'top' | 'left'
 
@@ -37,5 +37,5 @@ export type GameTableResultSummaryViewModel = {
   discarderSeat: Seat | null
   totalTai: number | null
   drawReason: string | null
-  scoringItems: string[]
+  scoringItems: ScoringItem[]
 }

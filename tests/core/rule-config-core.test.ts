@@ -9,6 +9,7 @@ import {
 describe('rule config core', () => {
   it('builds a baseline default config from a single source of truth', () => {
     expect(createBaselineRuleConfig()).toEqual({
+      scoringProfile: 'classic-taiwan',
       claimPriorityOrder: ['win', 'kan-exposed', 'pon', 'chi'],
       flowerReplacementMode: 'tail-replacement',
       settlement: {
@@ -17,6 +18,9 @@ describe('rule config core', () => {
         minimumTai: {
           status: 'configured',
           value: 0
+        },
+        maxTai: {
+          status: 'unresolved'
         }
       },
       postDraw: {
@@ -55,11 +59,16 @@ describe('rule config core', () => {
 
   it('merges supported override keys while preserving unrelated defaults', () => {
     const result = mergeRuleConfig(createBaselineRuleConfig(), {
+      scoringProfile: 'flower-wind-bonus',
       claimPriorityOrder: ['chi', 'pon', 'kan-exposed', 'win'],
       settlement: {
         minimumTai: {
           status: 'configured',
           value: 2
+        },
+        maxTai: {
+          status: 'configured',
+          value: 16
         }
       }
     })
@@ -67,6 +76,7 @@ describe('rule config core', () => {
     expect(result).toEqual({
       ok: true,
       config: {
+        scoringProfile: 'flower-wind-bonus',
         claimPriorityOrder: ['chi', 'pon', 'kan-exposed', 'win'],
         flowerReplacementMode: 'tail-replacement',
         settlement: {
@@ -75,6 +85,10 @@ describe('rule config core', () => {
           minimumTai: {
             status: 'configured',
             value: 2
+          },
+          maxTai: {
+            status: 'configured',
+            value: 16
           }
         },
         postDraw: {
@@ -112,11 +126,16 @@ describe('rule config core', () => {
 
   it('provides stable round flow and scoring config slices from the same root config', () => {
     const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+      scoringProfile: 'flower-wind-bonus',
       claimPriorityOrder: ['chi', 'pon', 'kan-exposed', 'win'],
       settlement: {
         minimumTai: {
           status: 'configured',
           value: 3
+        },
+        maxTai: {
+          status: 'configured',
+          value: 12
         }
       },
       postDraw: {
@@ -131,8 +150,21 @@ describe('rule config core', () => {
       throw new Error(merged.error)
 
     expect(getRoundFlowRuleConfig(merged.config)).toEqual({
+      scoringProfile: 'flower-wind-bonus',
       claimPriorityOrder: ['chi', 'pon', 'kan-exposed', 'win'],
       flowerReplacementMode: 'tail-replacement',
+      settlement: {
+        selfDrawPaymentMode: 'all-other-players',
+        discardWinPaymentMode: 'discarder-only',
+        minimumTai: {
+          status: 'configured',
+          value: 3
+        },
+        maxTai: {
+          status: 'configured',
+          value: 12
+        }
+      },
       postDraw: {
         dealerContinuation: {
           status: 'configured',
@@ -143,17 +175,6 @@ describe('rule config core', () => {
         },
         readyHandPayment: {
           status: 'unresolved'
-        }
-      }
-    })
-
-    expect(getScoringRuleConfig(merged.config)).toEqual({
-      settlement: {
-        selfDrawPaymentMode: 'all-other-players',
-        discardWinPaymentMode: 'discarder-only',
-        minimumTai: {
-          status: 'configured',
-          value: 3
         }
       },
       specialHands: {
@@ -176,6 +197,55 @@ describe('rule config core', () => {
           status: 'unresolved'
         }
       }
+    })
+
+    expect(getScoringRuleConfig(merged.config)).toEqual({
+      scoringProfile: 'flower-wind-bonus',
+      settlement: {
+        selfDrawPaymentMode: 'all-other-players',
+        discardWinPaymentMode: 'discarder-only',
+        minimumTai: {
+          status: 'configured',
+          value: 3
+        },
+        maxTai: {
+          status: 'configured',
+          value: 12
+        }
+      },
+      specialHands: {
+        heavenWin: {
+          status: 'configured',
+          value: true
+        },
+        bigThreeDragons: {
+          status: 'configured',
+          value: true
+        },
+        littleThreeDragons: {
+          status: 'configured',
+          value: true
+        },
+        earthWin: {
+          status: 'unresolved'
+        },
+        qiangGang: {
+          status: 'unresolved'
+        }
+      }
+    })
+  })
+
+  it('rejects unknown scoring override keys instead of silently ignoring them', () => {
+    const result = mergeRuleConfig(createBaselineRuleConfig(), {
+      settlement: {
+        unsupportedScoringKey: true
+      }
+    } as never)
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Unknown rule config key: unsupportedScoringKey"
     })
   })
 })

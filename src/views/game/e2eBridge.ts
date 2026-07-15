@@ -2,7 +2,10 @@ import {
   createBaselineRound,
   createDrawRoundResult,
   createPendingActionWindow,
+  createBaselineRuleConfig,
+  mergeRuleConfig,
   type BaselineRoundState,
+  type MahjongRuleConfig,
   type Seat,
   type Tile
 } from '@/core'
@@ -15,6 +18,8 @@ type GameE2EBridge = {
   seedDiscardWinScenario: () => void
   seedBigThreeDragonsClaimScenario: () => void
   seedDrawNextRoundScenario: () => void
+  seedClassicFlowerProfileWinScenario: () => void
+  seedBonusFlowerProfileWinScenario: () => void
 }
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
@@ -57,9 +62,10 @@ const buildWall = (): Tile[] => {
 const createClaimWindowRound = (
   triggeringTile: Tile,
   triggeringSeat: Seat,
-  seatTiles: Partial<Record<Seat, Tile[]>>
+  seatTiles: Partial<Record<Seat, Tile[]>>,
+  ruleConfig?: MahjongRuleConfig
 ): BaselineRoundState => {
-  const round = createBaselineRound({ wall: buildWall() })
+  const round = createBaselineRound({ wall: buildWall(), ruleConfig })
 
   return {
     ...round,
@@ -177,6 +183,53 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
           result: createDrawRoundResult()
         }
       }
+      store.error = null
+    },
+    seedClassicFlowerProfileWinScenario() {
+      store.round = createClaimWindowRound(dragon('red'), 'south', {
+        east: [
+          ...chars(1, 2, 3),
+          ...chars(2, 3, 4),
+          ...dots(4, 5, 6),
+          ...bamboos(7, 8, 9),
+          wind('east'),
+          wind('east'),
+          wind('east'),
+          dragon('red')
+        ]
+      }, {
+        ...createBaselineRuleConfig()
+      })
+      store.round.players.east.flowers = [
+        { suit: 'flower', rank: 'spring' },
+        { suit: 'flower', rank: 'plum' }
+      ]
+      store.error = null
+    },
+    seedBonusFlowerProfileWinScenario() {
+      const merged = mergeRuleConfig(createBaselineRuleConfig(), {
+        scoringProfile: 'flower-wind-bonus'
+      })
+
+      if (!merged.ok)
+        throw new Error(merged.error)
+
+      store.round = createClaimWindowRound(dragon('red'), 'south', {
+        east: [
+          ...chars(1, 2, 3),
+          ...chars(2, 3, 4),
+          ...dots(4, 5, 6),
+          ...bamboos(7, 8, 9),
+          wind('east'),
+          wind('east'),
+          wind('east'),
+          dragon('red')
+        ]
+      }, merged.config)
+      store.round.players.east.flowers = [
+        { suit: 'flower', rank: 'spring' },
+        { suit: 'flower', rank: 'plum' }
+      ]
       store.error = null
     }
   }

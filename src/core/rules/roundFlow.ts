@@ -83,10 +83,7 @@ export const createNextRoundFromCompletedRound = (
   return createBaselineRound({
     wall: input.wall,
     ruleConfig: {
-      ...createBaselineRuleConfig(),
-      claimPriorityOrder: round.ruleConfig.claimPriorityOrder,
-      flowerReplacementMode: round.ruleConfig.flowerReplacementMode,
-      postDraw: round.ruleConfig.postDraw
+      ...round.ruleConfig
     },
     dealerSeat: nextDealerSeat,
     prevailingWind: round.table.prevailingWind
@@ -199,7 +196,7 @@ export const resolveClaimWindow = (
       winningTile: pendingActionWindow.triggeringTile,
       winningSeat: winningClaim.seat,
       discarderSeat: pendingActionWindow.triggeringSeat
-    })
+    }, round.ruleConfig)
 
     if (!scoring.isWinning || scoring.settlement == null)
       throw new Error('winning claim must resolve through a valid scoring result')
@@ -317,7 +314,7 @@ export const getLegalClaimCandidates = (
 
   const candidatesByAction = new Map<HumanClaimActionType, HumanClaimCandidate[]>()
 
-  if (isWinningClaim(player, triggeringTile, seat, triggeringSeat)) {
+  if (isWinningClaim(player, triggeringTile, seat, triggeringSeat, round.ruleConfig)) {
     candidatesByAction.set('win', [{
       actionType: 'win',
       tile: triggeringTile,
@@ -442,7 +439,7 @@ export const applyHumanSelfTurnAction = (
       winContext: {
         isHeavenWin: isHeavenWinRound(round, action.seat)
       }
-    })
+    }, round.ruleConfig)
 
     if (!scoring.isWinning || scoring.settlement == null)
       throw new Error('self draw win must resolve through a valid scoring result')
@@ -778,7 +775,8 @@ const isWinningClaim = (
   player: PlayersBySeat[Seat],
   triggeringTile: Tile,
   seat: Seat,
-  discarderSeat: Seat
+  discarderSeat: Seat,
+  ruleConfig: MahjongRuleConfig
 ): boolean => {
   return validateStandardWin({
     concealedTiles: player.concealedTiles,
@@ -787,7 +785,7 @@ const isWinningClaim = (
     winningTile: triggeringTile,
     winningSeat: seat,
     discarderSeat
-  }).isWinning
+  }, ruleConfig).isWinning
 }
 
 const isHeavenWinRound = (round: BaselineRoundState, seat: Seat): boolean => {
