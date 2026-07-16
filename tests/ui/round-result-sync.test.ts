@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
+import type { Tile } from '@/core'
 
 const scoringItem = (
   patternId: string,
@@ -10,6 +11,14 @@ const scoringItem = (
   tai: number,
   reason: string
 ) => ({ patternId, label, tai, reason })
+
+const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
+  return ranks.map(rank => ({ suit: 'characters', rank }))
+}
+
+const wind = (rank: 'east' | 'south' | 'west' | 'north'): Tile => {
+  return { suit: 'winds', rank }
+}
 
 const basePlayers: GameTableSnapshotViewModel['players'] = [
   {
@@ -127,6 +136,53 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('3')
     expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家 1 台')
     expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('自摸 2 台')
+  })
+
+  it('reveals the winning AI hand on the winner panel after a round ends', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...inProgressSnapshot,
+          phase: 'ended',
+          outcome: 'win',
+          players: [
+            ...basePlayers,
+          ].map((player) => {
+            if (player.seat !== 'south')
+              return player
+
+            return {
+              ...player,
+              concealedCount: 5,
+              revealedWinningTiles: [
+                ...chars(1, 2, 3),
+                wind('east'),
+                wind('east')
+              ]
+            }
+          }),
+          resultSummary: {
+            type: 'win',
+            ended: true,
+            winnerSeat: 'south',
+            discarderSeat: 'west',
+            totalTai: 3,
+            drawReason: null,
+            scoringItems: [
+              scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+              scoringItem('self-draw', '自摸', 2, '自摸完成和牌')
+            ]
+          }
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('和牌手牌')
+    expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('一萬')
+    expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('東風')
   })
 
   it('renders discard-win scoring items for a discard win result', () => {

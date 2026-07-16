@@ -7,6 +7,7 @@ export type GameTablePlayerViewModel = {
   relativePosition: GameTableRelativePosition
   concealedCount: number
   concealedTiles: Tile[]
+  revealedWinningTiles?: Tile[]
   flowerCount: number
   meldCount: number
   melds: Meld[]

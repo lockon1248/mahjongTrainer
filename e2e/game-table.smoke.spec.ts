@@ -13,6 +13,8 @@ test.describe('牌桌 smoke e2e', () => {
           seedDrawNextRoundScenario: () => void
           seedClassicFlowerProfileWinScenario: () => void
           seedBonusFlowerProfileWinScenario: () => void
+          seedDealerRotationNextRoundScenario: () => void
+          seedAiWinRevealScenario: () => void
         }
       }).__MAHJONG_E2E__
 
@@ -22,6 +24,8 @@ test.describe('牌桌 smoke e2e', () => {
         && typeof bridge?.seedDrawNextRoundScenario === 'function'
         && typeof bridge?.seedClassicFlowerProfileWinScenario === 'function'
         && typeof bridge?.seedBonusFlowerProfileWinScenario === 'function'
+        && typeof bridge?.seedDealerRotationNextRoundScenario === 'function'
+        && typeof bridge?.seedAiWinRevealScenario === 'function'
     })
   }
 
@@ -34,6 +38,7 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page).toHaveURL(/\/game$/)
     await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
     await expect(page.getByTestId('summary-dealer')).toContainText('東家')
+    await expect(page.getByTestId('player-dealer-east')).toContainText('莊家')
     await expect(page.getByTestId('game-table-view')).not.toContainText('聽牌')
   })
 
@@ -49,6 +54,40 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
     await expect(page.getByTestId('summary-total-discards')).not.toContainText('0')
     await expect(page.getByTestId('summary-last-claim')).toBeVisible()
+  })
+
+  test('AI 不會在真人出牌後瞬間跳步，而是保留可讀的延遲節奏', async ({ page }) => {
+    await page.goto('/game')
+
+    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await page.getByTestId('human-discard-tile').first().click()
+
+    await expect(page.getByTestId('summary-current-seat')).toContainText('東家')
+
+    await page.waitForTimeout(600)
+    await expect(page.getByTestId('summary-current-seat')).toContainText('東家')
+
+    await expect.poll(async () => {
+      return page.getByTestId('summary-current-seat').textContent()
+    }, {
+      timeout: 3000
+    }).not.toContain('東家')
+  })
+
+  test('真人出牌後 AI 會持續接續推進，不會停在下家卡死', async ({ page }) => {
+    await page.goto('/game')
+
+    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await page.getByTestId('human-discard-tile').first().click()
+
+    await expect(page.getByTestId('summary-total-discards')).toContainText('1')
+
+    await expect.poll(async () => {
+      const text = await page.getByTestId('summary-total-discards').textContent()
+      return Number((text ?? '').replace('總捨牌數', '').trim())
+    }, {
+      timeout: 9000
+    }).toBeGreaterThan(1)
   })
 
   test('人類宣告碰牌後，副露、暗手與中央捨牌池會同步更新', async ({ page }) => {
@@ -162,6 +201,45 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('next-round-actions')).toHaveCount(0)
     await expect(page.getByTestId('summary-outcome')).toContainText('對局中')
     await expect(page.getByTestId('summary-dealer')).toContainText('東家')
+    await expect(page.getByTestId('player-dealer-east')).toContainText('莊家')
     await expect(page.getByTestId('human-discard-tile')).toHaveCount(17)
+  })
+
+  test('非莊家和牌後開下一局會輪莊到下家，並且先停在新莊家的出牌回合', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & {
+        __MAHJONG_E2E__: { seedDealerRotationNextRoundScenario: () => void }
+      }).__MAHJONG_E2E__.seedDealerRotationNextRoundScenario()
+    })
+
+    await expect(page.getByTestId('round-result-summary')).toBeVisible()
+    await expect(page.getByTestId('summary-dealer')).toContainText('東家')
+
+    await page.getByTestId('next-round-action').click()
+
+    await expect(page.getByTestId('summary-dealer')).toContainText('西家')
+    await expect(page.getByTestId('player-dealer-west')).toContainText('莊家')
+    await expect(page.getByTestId('player-active-west')).toContainText('目前出牌')
+    await expect(page.getByTestId('summary-current-seat')).toContainText('西家')
+  })
+
+  test('AI 和牌後會在得勝牌區亮出自己的和牌手牌', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & {
+        __MAHJONG_E2E__: { seedAiWinRevealScenario: () => void }
+      }).__MAHJONG_E2E__.seedAiWinRevealScenario()
+    })
+
+    await expect(page.getByTestId('round-result-summary')).toBeVisible()
+    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('和牌手牌')
+    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('一萬')
+    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('四筒')
+    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('東風')
   })
 })

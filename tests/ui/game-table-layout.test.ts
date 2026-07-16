@@ -154,7 +154,7 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('碰')
   })
 
-  it('highlights the latest discard in each center discard pool', () => {
+  it('highlights only the current latest discard tile in the center pools', () => {
     const wrapper = mount(GameTableView, {
       props: {
         snapshot,
@@ -164,10 +164,24 @@ describe('game table layout', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="discard-tile-east-1"]').classes()).toContain('discard-tile--latest')
+    expect(wrapper.get('[data-testid="discard-tile-east-1"]').classes()).not.toContain('discard-tile--latest')
     expect(wrapper.get('[data-testid="discard-tile-east-0"]').classes()).not.toContain('discard-tile--latest')
-    expect(wrapper.get('[data-testid="discard-tile-south-0"]').classes()).toContain('discard-tile--latest')
+    expect(wrapper.get('[data-testid="discard-tile-south-0"]').classes()).not.toContain('discard-tile--latest')
     expect(wrapper.get('[data-testid="discard-tile-north-2"]').classes()).toContain('discard-tile--latest')
+  })
+
+  it('keeps the active emphasis on the player panel instead of moving it into the discard pool', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')
+    expect(wrapper.get('[data-testid="discard-pool-east"]').classes()).not.toContain('shadow-[0_0_0_2px_rgba(255,214,122,0.22),0_0.9rem_1.4rem_rgba(56,23,8,0.18)]')
   })
 
   it('shows a strong on-table flag for the active human seat', () => {
@@ -181,6 +195,7 @@ describe('game table layout', () => {
     })
 
     expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('輪到你')
+    expect(wrapper.get('[data-testid="player-active-east"]').text()).toContain('目前出牌')
   })
 
   it('highlights the active player panel during a human discard turn', () => {

@@ -1,10 +1,13 @@
-import type { BaselineRoundState, Seat } from '@/core'
+import { ALL_SEATS, type BaselineRoundState, type Seat } from '@/core'
+import {
+  DRAGON_TILE_ORDER,
+  FLOWER_TILE_ORDER,
+  TILE_SUIT_ORDER,
+  WIND_TILE_ORDER
+} from '@/ui/constants/tiles'
 import type { GameTableRelativePosition, GameTableSnapshotViewModel } from '@/views/game/types'
 
-const SEAT_ORDER: Seat[] = ['east', 'south', 'west', 'north']
-const WIND_RANK_ORDER = ['east', 'south', 'west', 'north'] as const
-const DRAGON_RANK_ORDER = ['red', 'green', 'white'] as const
-const FLOWER_RANK_ORDER = ['spring', 'summer', 'autumn', 'winter', 'plum', 'orchid', 'bamboo', 'chrysanthemum'] as const
+const SEAT_ORDER: readonly Seat[] = ALL_SEATS
 
 const getRelativePosition = (
   seat: Seat,
@@ -18,8 +21,7 @@ const getRelativePosition = (
 }
 
 const compareTile = (left: BaselineRoundState['players'][Seat]['concealedTiles'][number], right: BaselineRoundState['players'][Seat]['concealedTiles'][number]): number => {
-  const suitOrder = ['characters', 'dots', 'bamboo', 'winds', 'dragons', 'flower'] as const
-  const suitDelta = suitOrder.indexOf(left.suit) - suitOrder.indexOf(right.suit)
+  const suitDelta = TILE_SUIT_ORDER.indexOf(left.suit) - TILE_SUIT_ORDER.indexOf(right.suit)
 
   if (suitDelta !== 0)
     return suitDelta
@@ -32,19 +34,35 @@ const compareTile = (left: BaselineRoundState['players'][Seat]['concealedTiles']
   }
 
   if (left.suit === 'winds' && right.suit === 'winds')
-    return WIND_RANK_ORDER.indexOf(left.rank) - WIND_RANK_ORDER.indexOf(right.rank)
+    return WIND_TILE_ORDER.indexOf(left.rank) - WIND_TILE_ORDER.indexOf(right.rank)
 
   if (left.suit === 'dragons' && right.suit === 'dragons')
-    return DRAGON_RANK_ORDER.indexOf(left.rank) - DRAGON_RANK_ORDER.indexOf(right.rank)
+    return DRAGON_TILE_ORDER.indexOf(left.rank) - DRAGON_TILE_ORDER.indexOf(right.rank)
 
   if (left.suit === 'flower' && right.suit === 'flower')
-    return FLOWER_RANK_ORDER.indexOf(left.rank) - FLOWER_RANK_ORDER.indexOf(right.rank)
+    return FLOWER_TILE_ORDER.indexOf(left.rank) - FLOWER_TILE_ORDER.indexOf(right.rank)
 
   return 0
 }
 
 const sortDisplayTiles = (tiles: BaselineRoundState['players'][Seat]['concealedTiles']): BaselineRoundState['players'][Seat]['concealedTiles'] => {
   return [...tiles].sort(compareTile)
+}
+
+const getRevealedWinningTiles = (round: BaselineRoundState, seat: Seat): BaselineRoundState['players'][Seat]['concealedTiles'] => {
+  if (round.outcome.status !== 'win' || round.outcome.result.winnerSeat !== seat)
+    return []
+
+  const winningTile = round.outcome.result.discarderSeat != null
+    && round.lastClaimResolution?.seat === seat
+    && round.lastClaimResolution.type === 'win'
+    ? round.lastClaimResolution.tile
+    : null
+
+  return sortDisplayTiles([
+    ...round.players[seat].concealedTiles,
+    ...(winningTile == null ? [] : [winningTile])
+  ])
 }
 
 export const createGameTableSnapshot = (
@@ -80,6 +98,7 @@ export const createGameTableSnapshot = (
         relativePosition: getRelativePosition(player.seat, humanSeat),
         concealedCount: player.concealedTiles.length,
         concealedTiles: player.seat === humanSeat ? sortDisplayTiles(player.concealedTiles) : [],
+        revealedWinningTiles: getRevealedWinningTiles(round, player.seat),
         flowerCount: player.flowers.length,
         meldCount: player.melds.length,
         melds: player.melds.map(meld => ({

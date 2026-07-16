@@ -3,6 +3,7 @@ import {
   createDrawRoundResult,
   createPendingActionWindow,
   createBaselineRuleConfig,
+  createWinRoundResult,
   mergeRuleConfig,
   type BaselineRoundState,
   type MahjongRuleConfig,
@@ -20,6 +21,8 @@ type GameE2EBridge = {
   seedDrawNextRoundScenario: () => void
   seedClassicFlowerProfileWinScenario: () => void
   seedBonusFlowerProfileWinScenario: () => void
+  seedDealerRotationNextRoundScenario: () => void
+  seedAiWinRevealScenario: () => void
 }
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
@@ -230,6 +233,59 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
         { suit: 'flower', rank: 'spring' },
         { suit: 'flower', rank: 'plum' }
       ]
+      store.error = null
+    },
+    seedDealerRotationNextRoundScenario() {
+      const round = createBaselineRound({ wall: buildWall() })
+      store.round = {
+        ...round,
+        currentSeat: 'south',
+        phase: 'ended',
+        table: {
+          ...round.table,
+          dealerSeat: 'east'
+        },
+        outcome: {
+          status: 'win',
+          result: createWinRoundResult({
+            winnerSeat: 'south',
+            discarderSeat: 'west'
+          })
+        }
+      }
+      store.error = null
+    },
+    seedAiWinRevealScenario() {
+      const round = createBaselineRound({ wall: buildWall() })
+      store.round = {
+        ...round,
+        currentSeat: 'south',
+        phase: 'ended',
+        players: {
+          ...round.players,
+          south: {
+            ...round.players.south,
+            concealedTiles: [
+              ...chars(1, 2, 3),
+              ...dots(4, 5, 6),
+              ...bamboos(7, 8, 9),
+              wind('east'),
+              wind('east'),
+              wind('east'),
+              dragon('red'),
+              dragon('red')
+            ]
+          }
+        },
+        outcome: {
+          status: 'win',
+          result: createWinRoundResult({
+            winnerSeat: 'south',
+            discarderSeat: null,
+            totalTai: 3
+          })
+        }
+      }
       store.error = null
     }
   }

@@ -2,8 +2,10 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { createBaselineRound, createBaselineWall, createWinRoundResult, evaluateExhaustiveDraw } from '@/core'
 import { useGameSessionStore } from '@/stores/gameSession'
+import { AI_TURN_DELAY_MS } from '@/views/game/constants'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import GameView from '@/views/game/GameView.vue'
 import GameTableView from '@/views/game/components/GameTableView.vue'
@@ -11,9 +13,11 @@ import GameTableView from '@/views/game/components/GameTableView.vue'
 describe('interactive turn loop', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.useRealTimers()
   })
 
-  it('forwards a human discard click into the store without recomputing rules in the component', async () => {
+  it('schedules AI advancement after a human discard instead of pushing immediately', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
@@ -32,6 +36,12 @@ describe('interactive turn loop', () => {
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
     expect(discardSpy).toHaveBeenCalledWith(selectedTile)
+    expect(advanceSpy).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS - 1)
+    expect(advanceSpy).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
     expect(advanceSpy).toHaveBeenCalledTimes(1)
   })
 
@@ -115,7 +125,8 @@ describe('interactive turn loop', () => {
     expect(nextRoundSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('renders turn progress after the round advances through AI seats', async () => {
+  it('renders turn progress only after the delayed AI advancement fires', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
 
@@ -127,8 +138,34 @@ describe('interactive turn loop', () => {
 
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).not.toContain('east')
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
+
+    await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).not.toContain('東家')
     expect(wrapper.get('[data-testid="summary-phase"]').text()).toMatch(/(摸牌|出牌|宣告|本局結束)/)
+    expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('總捨牌數', ''))).toBeGreaterThanOrEqual(1)
+  })
+
+  it('keeps scheduling later AI steps instead of stalling after the first delayed step', async () => {
+    vi.useFakeTimers()
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = mount(GameView, {
+      global: {
+        plugins: [pinia]
+      }
+    })
+
+    await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="summary-total-discards"]').text()).toContain('1')
+
+    await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS * 4)
+    await nextTick()
+
     expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('總捨牌數', ''))).toBeGreaterThan(1)
   })
 

@@ -21,6 +21,27 @@ const claimCandidates: HumanClaimCandidate[] = [
   }
 ]
 
+const ponAndWinClaimCandidates: HumanClaimCandidate[] = [
+  {
+    actionType: 'pass',
+    tile: { suit: 'characters', rank: 3 },
+    consumedTiles: []
+  },
+  {
+    actionType: 'pon',
+    tile: { suit: 'characters', rank: 3 },
+    consumedTiles: [
+      { suit: 'characters', rank: 3 },
+      { suit: 'characters', rank: 3 }
+    ]
+  },
+  {
+    actionType: 'win',
+    tile: { suit: 'characters', rank: 3 },
+    consumedTiles: []
+  }
+]
+
 const baseSnapshot: GameTableSnapshotViewModel = {
   humanSeat: 'east',
   currentSeat: 'north',
@@ -167,5 +188,36 @@ describe('human claim window', () => {
     expect(wrapper.get('[data-testid="player-status-north"]').text()).toContain('剛出牌')
     expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')
     expect(wrapper.get('[data-seat="north"]').classes()).toContain('player-panel--recent')
+  })
+
+  it('marks the current target discard with pon and win highlight semantics only on that tile', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...baseSnapshot,
+          players: baseSnapshot.players.map((player) => {
+            if (player.seat !== 'north')
+              return player
+
+            return {
+              ...player,
+              discards: [
+                { suit: 'dots', rank: 1 },
+                { suit: 'characters', rank: 3 }
+              ],
+              discardCount: 2
+            }
+          })
+        },
+        humanSeat: 'east',
+        claimCandidates: ponAndWinClaimCandidates,
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="discard-tile-north-1"]').classes()).toContain('discard-tile--pon')
+    expect(wrapper.get('[data-testid="discard-tile-north-1"]').classes()).toContain('discard-tile--win')
+    expect(wrapper.get('[data-testid="discard-tile-north-0"]').classes()).not.toContain('discard-tile--pon')
+    expect(wrapper.get('[data-testid="discard-tile-north-0"]').classes()).not.toContain('discard-tile--win')
   })
 })

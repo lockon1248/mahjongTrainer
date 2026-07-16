@@ -27,8 +27,6 @@ import {
 } from '@/core'
 
 const HUMAN_SEAT: Seat = 'east'
-const TURN_ADVANCEMENT_LIMIT = 32
-
 export const useGameSessionStore = defineStore('game-session', () => {
   const round = shallowRef<BaselineRoundState | null>(null)
   const error = shallowRef<string | null>(null)
@@ -67,9 +65,6 @@ export const useGameSessionStore = defineStore('game-session', () => {
     runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
       wall: createBaselineWall()
     }))
-
-    if (round.value != null && !isWaitingForHumanDiscard(round.value) && !isWaitingForHumanClaim(round.value) && round.value.phase !== 'ended')
-      advanceTurn()
   }
 
   const drawCurrentSeat = () => {
@@ -144,67 +139,54 @@ export const useGameSessionStore = defineStore('game-session', () => {
   }
 
   const advanceTurn = () => {
-    const initialRound = requireRound()
+    const currentRound = requireRound()
 
-    if (isWaitingForHumanDiscard(initialRound) || isWaitingForHumanClaim(initialRound) || initialRound.phase === 'ended')
+    if (isWaitingForHumanDiscard(currentRound) || isWaitingForHumanClaim(currentRound) || currentRound.phase === 'ended')
       return
 
     runRoundTransition(() => {
-      let nextRound = initialRound
+      if (currentRound.phase === 'draw')
+        return drawForCurrentSeat(currentRound)
 
-      for (let step = 0; step < TURN_ADVANCEMENT_LIMIT; step += 1) {
-        if (nextRound.phase === 'ended' || isWaitingForHumanDiscard(nextRound) || isWaitingForHumanClaim(nextRound))
-          return nextRound
+      if (currentRound.phase === 'discard') {
+        const legalSelfTurnActions = getLegalSelfTurnCandidates(currentRound, currentRound.currentSeat)
 
-        if (nextRound.phase === 'draw') {
-          nextRound = drawForCurrentSeat(nextRound)
-          continue
-        }
-
-        if (nextRound.phase === 'discard') {
-          const legalSelfTurnActions = getLegalSelfTurnCandidates(nextRound, nextRound.currentSeat)
-
-          if (legalSelfTurnActions.length > 0) {
-            const aiSelfTurnDecision = chooseAiSelfTurnDecision({
-              seat: nextRound.currentSeat,
-              concealedTiles: nextRound.players[nextRound.currentSeat].concealedTiles,
-              melds: nextRound.players[nextRound.currentSeat].melds,
-              flowers: nextRound.players[nextRound.currentSeat].flowers,
-              candidates: legalSelfTurnActions,
-              ruleConfig: createBaselineRuleConfig()
-            })
-
-            nextRound = applyHumanSelfTurnAction(nextRound, {
-              seat: nextRound.currentSeat,
-              actionType: aiSelfTurnDecision.actionType,
-              consumedTiles: aiSelfTurnDecision.consumedTiles,
-              meldTile: aiSelfTurnDecision.meldTile
-            })
-            continue
-          }
-
-          const aiContext = createAiDecisionContext(nextRound, {
-            seat: nextRound.currentSeat
-          })
-          const decision = chooseAiDiscardDecision({
-            seat: aiContext.seat,
-            concealedTiles: aiContext.legalDiscards,
-            melds: aiContext.melds,
-            flowers: aiContext.flowers,
+        if (legalSelfTurnActions.length > 0) {
+          const aiSelfTurnDecision = chooseAiSelfTurnDecision({
+            seat: currentRound.currentSeat,
+            concealedTiles: currentRound.players[currentRound.currentSeat].concealedTiles,
+            melds: currentRound.players[currentRound.currentSeat].melds,
+            flowers: currentRound.players[currentRound.currentSeat].flowers,
+            candidates: legalSelfTurnActions,
             ruleConfig: createBaselineRuleConfig()
           })
 
-          nextRound = discardTile(nextRound, {
-            seat: nextRound.currentSeat,
-            tile: decision.tile
+          return applyHumanSelfTurnAction(currentRound, {
+            seat: currentRound.currentSeat,
+            actionType: aiSelfTurnDecision.actionType,
+            consumedTiles: aiSelfTurnDecision.consumedTiles,
+            meldTile: aiSelfTurnDecision.meldTile
           })
-          continue
         }
 
-        nextRound = resolveClaimWindow(nextRound, collectAiClaims(nextRound))
+        const aiContext = createAiDecisionContext(currentRound, {
+          seat: currentRound.currentSeat
+        })
+        const decision = chooseAiDiscardDecision({
+          seat: aiContext.seat,
+          concealedTiles: aiContext.legalDiscards,
+          melds: aiContext.melds,
+          flowers: aiContext.flowers,
+          ruleConfig: createBaselineRuleConfig()
+        })
+
+        return discardTile(currentRound, {
+          seat: currentRound.currentSeat,
+          tile: decision.tile
+        })
       }
 
-      throw new Error(`advanceTurn exceeded ${TURN_ADVANCEMENT_LIMIT} steps`)
+      return resolveClaimWindow(currentRound, collectAiClaims(currentRound))
     })
   }
 

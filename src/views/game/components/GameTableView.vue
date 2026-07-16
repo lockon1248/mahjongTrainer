@@ -1,7 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { HumanClaimCandidate, HumanSelfTurnCandidate, ScoringItem, Seat, Tile } from '@/core'
+import {
+  CLAIM_TYPE_LABELS,
+  formatDrawReasonLabel,
+  formatOutcomeLabel,
+  formatPhaseLabel,
+  formatScoringItemLabel,
+  formatSeatLabel,
+  formatWindLabel,
+  MELD_TYPE_LABELS,
+  RESULT_TYPE_LABELS,
+  SELF_TURN_ACTION_LABELS
+} from '@/ui/constants/display'
+import { formatTileLabel } from '@/ui/constants/tiles'
 import type { GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
+
+const SEAT_ORDER: readonly Seat[] = ['east', 'south', 'west', 'north']
 
 const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
@@ -37,6 +52,16 @@ const visibleClaimCandidates = computed(() => {
   })
 })
 
+const hasPonClaim = computed(() => {
+  return props.snapshot.phase === 'claim-window'
+    && props.claimCandidates.some(candidate => candidate.actionType === 'pon')
+})
+
+const hasWinClaim = computed(() => {
+  return props.snapshot.phase === 'claim-window'
+    && props.claimCandidates.some(candidate => candidate.actionType === 'win')
+})
+
 const discardPools = computed<GameTablePlayerViewModel[]>(() => {
   const order = ['top', 'left', 'right', 'bottom'] as const
 
@@ -51,6 +76,10 @@ const currentSeatSummaryLabel = computed(() => {
   return props.snapshot.phase === 'claim-window' ? '剛出牌' : '目前操作'
 })
 
+const localRoundLabel = computed(() => {
+  return `${formatWind(props.snapshot.prevailingWind)}${getSeatRoundLabel(props.snapshot.dealerSeat)}局`
+})
+
 const isPlayerActive = (player: GameTablePlayerViewModel): boolean => {
   if (props.snapshot.phase === 'claim-window')
     return player.seat === props.humanSeat && hasHumanClaimWindow.value
@@ -60,6 +89,10 @@ const isPlayerActive = (player: GameTablePlayerViewModel): boolean => {
 
 const isPlayerRecent = (player: GameTablePlayerViewModel): boolean => {
   return props.snapshot.phase === 'claim-window' && player.seat === props.snapshot.currentSeat
+}
+
+const isDealer = (player: GameTablePlayerViewModel): boolean => {
+  return player.seat === props.snapshot.dealerSeat
 }
 
 const getPlayerStatus = (player: GameTablePlayerViewModel): string | null => {
@@ -85,204 +118,216 @@ const getPlayerStatus = (player: GameTablePlayerViewModel): string | null => {
   return null
 }
 
-const formatTile = (tile: Tile): string => {
-  switch (tile.suit) {
-    case 'characters':
-      return `${NUMBER_LABELS[tile.rank - 1]}萬`
-    case 'dots':
-      return `${NUMBER_LABELS[tile.rank - 1]}筒`
-    case 'bamboo':
-      return `${NUMBER_LABELS[tile.rank - 1]}條`
-    case 'winds':
-      return WIND_LABELS[tile.rank]
-    case 'dragons':
-      return DRAGON_LABELS[tile.rank]
-    case 'flower':
-      return FLOWER_LABELS[tile.rank]
-  }
+const getPlayerActiveFlagLabel = (player: GameTablePlayerViewModel): string | null => {
+  if (!isPlayerActive(player))
+    return null
+
+  if (props.snapshot.phase === 'claim-window')
+    return player.seat === props.humanSeat ? '等待宣告' : '剛出牌'
+
+  return '目前出牌'
 }
 
 const formatClaimLabel = (candidate: HumanClaimCandidate): string => {
   if (candidate.consumedTiles.length === 0)
     return formatClaimType(candidate.actionType)
 
-  return `${formatClaimType(candidate.actionType)}：${candidate.consumedTiles.map(formatTile).join('、')}`
+  return `${formatClaimType(candidate.actionType)}：${candidate.consumedTiles.map(formatTileLabel).join('、')}`
 }
 
 const formatSelfTurnLabel = (candidate: HumanSelfTurnCandidate): string => {
   if (candidate.consumedTiles.length === 0)
     return formatSelfTurnActionType(candidate.actionType)
 
-  return `${formatSelfTurnActionType(candidate.actionType)}：${candidate.consumedTiles.map(formatTile).join('、')}`
+  return `${formatSelfTurnActionType(candidate.actionType)}：${candidate.consumedTiles.map(formatTileLabel).join('、')}`
 }
 
-const NUMBER_LABELS = ['一', '二', '三', '四', '五', '六', '七', '八', '九'] as const
-
-const WIND_LABELS = {
-  east: '東風',
-  south: '南風',
-  west: '西風',
-  north: '北風'
-} as const
-
-const DRAGON_LABELS = {
-  red: '紅中',
-  green: '青發',
-  white: '白板'
-} as const
-
-const FLOWER_LABELS = {
-  spring: '春',
-  summer: '夏',
-  autumn: '秋',
-  winter: '冬',
-  plum: '梅',
-  orchid: '蘭',
-  bamboo: '竹',
-  chrysanthemum: '菊'
-} as const
-
 const formatSeat = (seat: Seat): string => {
+  return formatSeatLabel(seat)
+}
+
+const getSeatRoundLabel = (seat: Seat): string => {
   return {
-    east: '東家',
-    south: '南家',
-    west: '西家',
-    north: '北家'
+    east: '東',
+    south: '南',
+    west: '西',
+    north: '北'
   }[seat]
 }
 
 const formatWind = (seat: Seat): string => {
-  return WIND_LABELS[seat]
+  return formatWindLabel(seat)
 }
 
 const formatPhase = (phase: GameTableSnapshotViewModel['phase']): string => {
-  return {
-    draw: '摸牌',
-    discard: '出牌',
-    'claim-window': '宣告',
-    ended: '本局結束'
-  }[phase]
+  return formatPhaseLabel(phase)
 }
 
 const formatOutcome = (outcome: GameTableSnapshotViewModel['outcome']): string => {
-  return {
-    'in-progress': '對局中',
-    win: '和牌',
-    draw: '流局'
-  }[outcome]
+  return formatOutcomeLabel(outcome)
 }
 
 const formatClaimType = (type: 'pass' | 'chi' | 'pon' | 'kan-exposed' | 'win'): string => {
-  return {
-    pass: '略過',
-    chi: '吃牌',
-    pon: '碰牌',
-    'kan-exposed': '明槓',
-    win: '和牌'
-  }[type] ?? '未知宣告'
+  return CLAIM_TYPE_LABELS[type] ?? '未知宣告'
 }
 
 const formatSelfTurnActionType = (actionType: HumanSelfTurnCandidate['actionType']): string => {
-  return {
-    'win-self-draw': '自摸',
-    'kan-concealed': '暗槓',
-    'kan-added': '加槓'
-  }[actionType]
+  return SELF_TURN_ACTION_LABELS[actionType]
 }
 
 const formatMeldType = (type: GameTablePlayerViewModel['melds'][number]['type']): string => {
-  return {
-    chi: '吃',
-    pon: '碰',
-    'kan-concealed': '暗槓',
-    'kan-exposed': '明槓',
-    'kan-added': '加槓'
-  }[type]
+  return MELD_TYPE_LABELS[type]
 }
 
 const formatResultType = (type: NonNullable<GameTableSnapshotViewModel['resultSummary']>['type']): string => {
-  return type === 'win' ? '和牌' : '流局'
+  return RESULT_TYPE_LABELS[type]
 }
 
 const formatDrawReason = (reason: string | null): string => {
-  if (reason == null)
-    return '無'
-
-  return {
-    'wall-exhausted': '牌牆耗盡'
-  }[reason] ?? '未分類流局'
+  return formatDrawReasonLabel(reason)
 }
 
 const formatScoringItem = (item: ScoringItem): string => {
-  return `${item.label} ${item.tai} 台`
+  return formatScoringItemLabel(item)
 }
 
+const getPlayerPanelClasses = (player: GameTablePlayerViewModel) => {
+  return [
+    'player-panel-shell',
+    {
+      'player-panel--active border border-[rgba(255,228,163,0.58)] shadow-[0_0_0_4px_rgba(255,205,101,0.42),0_1.25rem_2.2rem_rgba(20,50,41,0.26)] bg-[linear-gradient(180deg,rgba(52,113,91,0.99),rgba(26,67,55,0.99))]': isPlayerActive(player),
+      'player-panel--recent shadow-[0_0_0_2px_rgba(255,255,255,0.26),0_1rem_2rem_rgba(20,50,41,0.18)]': isPlayerRecent(player)
+    }
+  ]
+}
+
+const getPlayerStatusBadgeClasses = (player: GameTablePlayerViewModel) => {
+  return [
+    'player-status-pill bg-[rgba(248,242,231,0.14)] text-[#f8f2e7]',
+    {
+      'player-status-badge--human-turn bg-[#f1d48a] text-[#17382e]': player.seat === props.humanSeat && props.snapshot.phase === 'discard' && props.snapshot.currentSeat === props.humanSeat,
+      'player-status-badge--claim bg-[#f4a259] text-[#2f1706]': player.seat === props.humanSeat && hasHumanClaimWindow.value,
+      'player-status-badge--recent bg-[rgba(255,255,255,0.18)] text-[#f8f2e7]': props.snapshot.phase === 'claim-window' && player.seat === props.snapshot.currentSeat
+    }
+  ]
+}
+
+const getDiscardPoolClasses = (player: GameTablePlayerViewModel) => {
+  return [
+    'min-h-[8.5rem] rounded-4 p-[0.85rem] text-[#f8f2e7] transition-colors duration-200',
+    {
+      'bg-[rgba(246,239,226,0.1)]': !isPlayerRecent(player),
+      'border border-[rgba(255,255,255,0.26)] bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(246,239,226,0.12))] shadow-[0_0_0_1px_rgba(255,255,255,0.12)]': isPlayerRecent(player)
+    }
+  ]
+}
+
+const getLatestDiscardSeat = (): Seat | null => {
+  if (props.snapshot.outcome !== 'in-progress')
+    return null
+
+  if (props.snapshot.phase === 'claim-window')
+    return props.snapshot.currentSeat
+
+  const currentSeatIndex = SEAT_ORDER.indexOf(props.snapshot.currentSeat)
+
+  if (currentSeatIndex === -1)
+    return null
+
+  return SEAT_ORDER[(currentSeatIndex + SEAT_ORDER.length - 1) % SEAT_ORDER.length] ?? null
+}
+
+const isLatestDiscardTile = (player: GameTablePlayerViewModel, tileIndex: number): boolean => {
+  const latestDiscardSeat = getLatestDiscardSeat()
+
+  if (latestDiscardSeat == null || player.seat !== latestDiscardSeat)
+    return false
+
+  return tileIndex === player.discards.length - 1
+}
+
+const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: number) => {
+  const isLatestTile = isLatestDiscardTile(player, tileIndex)
+
+  return [
+    'tile-pill border-[rgba(248,242,231,0.16)] bg-[rgba(248,242,231,0.12)]',
+    {
+      'discard-tile--latest border-[rgba(255,232,164,0.98)] bg-[linear-gradient(180deg,rgba(255,220,118,0.48),rgba(242,163,63,0.44))] text-[#fffbea] shadow-[0_0_0_2px_rgba(255,223,133,0.28),0_0.55rem_1rem_rgba(77,42,10,0.24)]': isLatestTile,
+      'discard-tile--pon border-[rgba(255,120,120,0.98)] shadow-[0_0_0_2px_rgba(255,110,110,0.26),0_0.45rem_0.9rem_rgba(107,24,24,0.2)]': isLatestTile && hasPonClaim.value,
+      'discard-tile--win bg-[linear-gradient(180deg,rgba(255,235,120,0.52),rgba(232,188,45,0.46))] text-[#fffbea] shadow-[0_0_0_2px_rgba(255,224,102,0.26),0_0.45rem_0.9rem_rgba(92,70,16,0.2)]': isLatestTile && hasWinClaim.value
+    }
+  ]
+}
 </script>
 
 <template>
-  <section class="game-table-view" data-testid="game-table-view">
-    <header class="table-summary" data-testid="table-summary">
-      <div class="summary-chip" data-testid="summary-dealer">
-        <span class="summary-label">莊家</span>
+  <section class="grid gap-6" data-testid="game-table-view">
+    <header class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]" data-testid="table-summary">
+      <div class="table-chip" data-testid="summary-local-round">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">局次</span>
+        <strong>{{ localRoundLabel }}</strong>
+      </div>
+      <div class="table-chip" data-testid="summary-dealer">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">莊家</span>
         <strong>{{ formatSeat(snapshot.dealerSeat) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-wind">
-        <span class="summary-label">圈風</span>
+      <div class="table-chip" data-testid="summary-wind">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">圈風</span>
         <strong>{{ formatWind(snapshot.prevailingWind) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-current-seat">
-        <span class="summary-label">{{ currentSeatSummaryLabel }}</span>
+      <div class="table-chip" data-testid="summary-current-seat">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">{{ currentSeatSummaryLabel }}</span>
         <strong>{{ formatSeat(snapshot.currentSeat) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-phase">
-        <span class="summary-label">階段</span>
+      <div class="table-chip" data-testid="summary-phase">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">階段</span>
         <strong>{{ formatPhase(snapshot.phase) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-last-claim">
-        <span class="summary-label">上次宣告</span>
+      <div class="table-chip" data-testid="summary-last-claim">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">上次宣告</span>
         <strong>{{ lastClaimLabel }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-outcome">
-        <span class="summary-label">本局狀態</span>
+      <div class="table-chip" data-testid="summary-outcome">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">本局狀態</span>
         <strong>{{ formatOutcome(snapshot.outcome) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-wall">
-        <span class="summary-label">剩餘牌牆</span>
+      <div class="table-chip" data-testid="summary-wall">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">剩餘牌牆</span>
         <strong>{{ snapshot.wallCount }}</strong>
       </div>
-      <div class="summary-chip" data-testid="summary-total-discards">
-        <span class="summary-label">總捨牌數</span>
+      <div class="table-chip" data-testid="summary-total-discards">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">總捨牌數</span>
         <strong>{{ snapshot.totalDiscards }}</strong>
       </div>
     </header>
 
     <section
       v-if="snapshot.resultSummary != null"
-      class="table-summary"
+      class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
       data-testid="round-result-summary"
     >
-      <div class="summary-chip" data-testid="result-type">
-        <span class="summary-label">結果</span>
+      <div class="table-chip" data-testid="result-type">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">結果</span>
         <strong>{{ formatResultType(snapshot.resultSummary.type) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="result-ended">
-        <span class="summary-label">是否結束</span>
+      <div class="table-chip" data-testid="result-ended">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">是否結束</span>
         <strong>{{ snapshot.resultSummary.ended ? '是' : '否' }}</strong>
       </div>
-      <div class="summary-chip" data-testid="result-winner">
-        <span class="summary-label">和牌者</span>
+      <div class="table-chip" data-testid="result-winner">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">和牌者</span>
         <strong>{{ snapshot.resultSummary.winnerSeat == null ? '無' : formatSeat(snapshot.resultSummary.winnerSeat) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="result-discarder">
-        <span class="summary-label">放槍者</span>
+      <div class="table-chip" data-testid="result-discarder">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">放槍者</span>
         <strong>{{ snapshot.resultSummary.discarderSeat == null ? '無' : formatSeat(snapshot.resultSummary.discarderSeat) }}</strong>
       </div>
-      <div class="summary-chip" data-testid="result-total-tai">
-        <span class="summary-label">總台數</span>
+      <div class="table-chip" data-testid="result-total-tai">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">總台數</span>
         <strong>{{ snapshot.resultSummary.totalTai ?? '無' }}</strong>
       </div>
-      <div class="summary-chip" data-testid="result-scoring-items">
-        <span class="summary-label">台型明細</span>
+      <div class="table-chip" data-testid="result-scoring-items">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">台型明細</span>
         <strong>
           {{
             snapshot.resultSummary.scoringItems.length === 0
@@ -291,8 +336,8 @@ const formatScoringItem = (item: ScoringItem): string => {
           }}
         </strong>
       </div>
-      <div class="summary-chip" data-testid="result-draw-reason">
-        <span class="summary-label">流局原因</span>
+      <div class="table-chip" data-testid="result-draw-reason">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">流局原因</span>
         <strong>{{ formatDrawReason(snapshot.resultSummary.drawReason) }}</strong>
       </div>
     </section>
@@ -301,123 +346,147 @@ const formatScoringItem = (item: ScoringItem): string => {
       <article
         v-for="player in snapshot.players"
         :key="player.seat"
-        class="player-panel"
         data-testid="player-seat"
         :class="[
           `player-panel--${player.relativePosition}`,
-          {
-            'player-panel--active': isPlayerActive(player),
-            'player-panel--recent': isPlayerRecent(player)
-          }
+          getPlayerPanelClasses(player)
         ]"
         :data-seat="player.seat"
         :data-relative-position="player.relativePosition"
       >
-        <div class="player-header">
-          <div class="player-header-main">
-            <h2 class="player-seat">{{ formatSeat(player.seat) }}</h2>
+        <div class="flex items-start justify-between gap-4">
+          <div class="grid gap-[0.45rem]">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="m-0">{{ formatSeat(player.seat) }}</h2>
+              <span
+                v-if="isDealer(player)"
+                class="inline-flex items-center rounded-full border border-[rgba(241,212,138,0.48)] bg-[rgba(241,212,138,0.18)] px-[0.58rem] py-[0.18rem] text-[0.72rem] font-700 tracking-[0.08em] text-[#ffe6a7]"
+                :data-testid="`player-dealer-${player.seat}`"
+              >
+                莊家
+              </span>
+              <span
+                v-if="getPlayerActiveFlagLabel(player) != null"
+                class="inline-flex items-center rounded-[0.65rem] border border-[rgba(255,240,205,0.75)] bg-[linear-gradient(180deg,#f0713b,#c54d1e)] px-[0.72rem] py-[0.28rem] text-[0.76rem] font-800 tracking-[0.08em] text-[#fff7ea] shadow-[0_0.4rem_1rem_rgba(92,31,5,0.28)]"
+                :data-testid="`player-active-${player.seat}`"
+              >
+                {{ getPlayerActiveFlagLabel(player) }}
+              </span>
+            </div>
             <span
               v-if="getPlayerStatus(player) != null"
-              class="player-status-badge"
-              :class="{
-                'player-status-badge--human-turn': player.seat === humanSeat && snapshot.phase === 'discard' && snapshot.currentSeat === humanSeat,
-                'player-status-badge--claim': player.seat === humanSeat && hasHumanClaimWindow,
-                'player-status-badge--recent': snapshot.phase === 'claim-window' && player.seat === snapshot.currentSeat
-              }"
+              :class="getPlayerStatusBadgeClasses(player)"
               :data-testid="`player-status-${player.seat}`"
             >
               {{ getPlayerStatus(player) }}
             </span>
           </div>
         </div>
-        <dl class="player-stats">
-          <div class="player-stat">
-            <dt>手牌</dt>
-            <dd>{{ player.concealedCount }}</dd>
+        <dl class="player-stat-grid">
+          <div class="m-0">
+            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">手牌</dt>
+            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.concealedCount }}</dd>
           </div>
-          <div class="player-stat">
-            <dt>花牌</dt>
-            <dd>{{ player.flowerCount }}</dd>
+          <div class="m-0">
+            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">花牌</dt>
+            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.flowerCount }}</dd>
           </div>
-          <div class="player-stat">
-            <dt>副露</dt>
-            <dd>{{ player.meldCount }}</dd>
+          <div class="m-0">
+            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">副露</dt>
+            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.meldCount }}</dd>
           </div>
-          <div class="player-stat">
-            <dt>捨牌</dt>
-            <dd>{{ player.discardCount }}</dd>
+          <div class="m-0">
+            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">捨牌</dt>
+            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.discardCount }}</dd>
           </div>
         </dl>
         <div
           v-if="player.melds.length > 0"
-          class="player-melds"
+          class="mt-4 grid gap-[0.6rem]"
           :data-testid="`player-melds-${player.seat}`"
         >
           <div
             v-for="(meld, meldIndex) in player.melds"
             :key="`${player.seat}-meld-${meld.type}-${meldIndex}`"
-            class="player-meld"
+            class="player-meld-card"
           >
-            <span class="player-meld-type">{{ formatMeldType(meld.type) }}</span>
-            <div class="player-meld-tiles">
+            <span class="text-[0.75rem] font-700 tracking-[0.08em] text-[#f1d48a]">{{ formatMeldType(meld.type) }}</span>
+            <div class="flex flex-wrap gap-[0.45rem]">
               <span
                 v-for="(tile, tileIndex) in meld.tiles"
                 :key="`${player.seat}-meld-tile-${meldIndex}-${tile.suit}-${tile.rank}-${tileIndex}`"
-                class="player-meld-tile"
+                class="rounded-[0.7rem] border border-[rgba(241,212,138,0.28)] bg-[rgba(241,212,138,0.12)] px-[0.52rem] py-[0.28rem] text-[0.9rem] text-[#fff2c6]"
               >
-                {{ formatTile(tile) }}
+                {{ formatTileLabel(tile) }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="(player.revealedWinningTiles?.length ?? 0) > 0"
+          class="mt-4 grid gap-[0.6rem]"
+          :data-testid="`player-winning-tiles-${player.seat}`"
+        >
+          <div class="player-meld-card border border-[rgba(255,227,151,0.28)] bg-[rgba(255,229,160,0.08)]">
+            <span class="text-[0.75rem] font-700 tracking-[0.08em] text-[#ffe7a8]">和牌手牌</span>
+            <div class="flex flex-wrap gap-[0.45rem]">
+              <span
+                v-for="(tile, tileIndex) in player.revealedWinningTiles"
+                :key="`${player.seat}-winning-tile-${tile.suit}-${tile.rank}-${tileIndex}`"
+                class="rounded-[0.7rem] border border-[rgba(255,227,151,0.36)] bg-[rgba(255,227,151,0.12)] px-[0.52rem] py-[0.28rem] text-[0.9rem] text-[#fff4d0]"
+              >
+                {{ formatTileLabel(tile) }}
               </span>
             </div>
           </div>
         </div>
         <div
           v-if="player.seat === humanSeat"
-          class="player-concealed-tiles"
+          class="mt-4 flex flex-wrap gap-2"
           data-testid="human-concealed-tiles"
         >
           <button
             v-for="(tile, tileIndex) in player.concealedTiles"
             :key="`${player.seat}-${tile.suit}-${tile.rank}-${tileIndex}`"
-            class="concealed-tile-button"
+            class="cursor-pointer rounded-[0.8rem] border border-[rgba(248,242,231,0.18)] bg-[rgba(248,242,231,0.1)] px-[0.65rem] py-[0.45rem] text-inherit disabled:cursor-default disabled:opacity-56"
             data-testid="human-discard-tile"
             type="button"
             :disabled="!isHumanTurn"
             @click="emit('discard', tile)"
           >
-            {{ formatTile(tile) }}
+            {{ formatTileLabel(tile) }}
           </button>
         </div>
       </article>
 
-      <section class="table-center" data-testid="center-discard-pools">
+      <section class="table-center grid grid-cols-2 content-start gap-[0.9rem] rounded-[1.4rem] border border-[rgba(59,88,68,0.16)] bg-[radial-gradient(circle_at_center,rgba(244,227,183,0.08),transparent_65%),linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" data-testid="center-discard-pools">
         <div
           v-for="player in discardPools"
           :key="player.seat"
-          class="discard-pool"
-          :class="`discard-pool--${player.relativePosition}`"
+          :class="[
+            `discard-pool--${player.relativePosition}`,
+            getDiscardPoolClasses(player)
+          ]"
           :data-testid="`discard-pool-${player.seat}`"
         >
-          <div class="discard-pool-header">
+          <div class="mb-[0.7rem] flex items-baseline justify-between gap-3">
             <strong>{{ formatSeat(player.seat) }}</strong>
-            <span>{{ player.discardCount }} 張</span>
+            <span class="text-[0.8rem] text-[rgba(248,242,231,0.72)]">{{ player.discardCount }} 張</span>
           </div>
           <div
             v-if="player.discards.length > 0"
-            class="discard-tile-list"
+            class="flex flex-wrap gap-[0.45rem]"
           >
             <span
               v-for="(tile, tileIndex) in player.discards"
               :key="`${player.seat}-discard-${tile.suit}-${tile.rank}-${tileIndex}`"
-              class="discard-tile"
-              :class="{
-                'discard-tile--latest': tileIndex === player.discards.length - 1
-              }"
+              :class="getDiscardTileClasses(player, tileIndex)"
               :data-testid="`discard-tile-${player.seat}-${tileIndex}`"
             >
-              {{ formatTile(tile) }}
+              {{ formatTileLabel(tile) }}
             </span>
           </div>
-          <p v-else class="discard-empty">
+          <p v-else class="m-0 text-[rgba(248,242,231,0.72)]">
             暫無捨牌
           </p>
         </div>
@@ -425,13 +494,13 @@ const formatScoringItem = (item: ScoringItem): string => {
     </div>
     <div
       v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1"
-      class="claim-action-bar"
+      class="flex flex-wrap gap-3"
       data-testid="human-claim-actions"
     >
       <button
         v-for="(candidate, candidateIndex) in visibleClaimCandidates"
         :key="`${candidate.actionType}-${candidateIndex}`"
-        class="claim-action-button"
+        class="action-button-pill cursor-pointer"
         data-testid="human-claim-action"
         type="button"
         @click="emit('claim', candidate)"
@@ -441,13 +510,13 @@ const formatScoringItem = (item: ScoringItem): string => {
     </div>
     <div
       v-if="isHumanTurn && selfTurnCandidates.length > 0"
-      class="claim-action-bar"
+      class="flex flex-wrap gap-3"
       data-testid="human-self-turn-actions"
     >
       <button
         v-for="(candidate, candidateIndex) in selfTurnCandidates"
         :key="`${candidate.actionType}-${candidateIndex}`"
-        class="claim-action-button"
+        class="action-button-pill cursor-pointer"
         data-testid="human-self-turn-action"
         type="button"
         @click="emit('self-turn-action', candidate)"
@@ -457,11 +526,11 @@ const formatScoringItem = (item: ScoringItem): string => {
     </div>
     <div
       v-if="snapshot.outcome !== 'in-progress'"
-      class="claim-action-bar"
+      class="flex flex-wrap gap-3"
       data-testid="next-round-actions"
     >
       <button
-        class="claim-action-button"
+        class="action-button-pill cursor-pointer"
         data-testid="next-round-action"
         type="button"
         @click="emit('next-round')"
@@ -473,37 +542,6 @@ const formatScoringItem = (item: ScoringItem): string => {
 </template>
 
 <style scoped>
-.game-table-view {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.table-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-  gap: 0.75rem;
-}
-
-.summary-chip {
-  border: 1px solid rgba(59, 88, 68, 0.18);
-  border-radius: 1rem;
-  padding: 0.9rem 1rem;
-  background: rgba(248, 243, 232, 0.88);
-}
-
-.summary-label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #7d6a49;
-}
-
-.table-grid {
-  display: none;
-}
-
 .mahjong-table {
   display: grid;
   grid-template-columns: minmax(12rem, 0.85fr) minmax(16rem, 1.3fr) minmax(12rem, 0.85fr);
@@ -513,30 +551,6 @@ const formatScoringItem = (item: ScoringItem): string => {
     "bottom bottom bottom";
   align-items: stretch;
   gap: 1rem;
-}
-
-.player-panel {
-  position: relative;
-  border-radius: 1.25rem;
-  padding: 1rem;
-  background:
-    linear-gradient(180deg, rgba(30, 73, 60, 0.96), rgba(20, 50, 41, 0.96));
-  color: #f8f2e7;
-  box-shadow: 0 1rem 2rem rgba(20, 50, 41, 0.16);
-}
-
-.player-panel--active {
-  box-shadow:
-    0 0 0 3px rgba(241, 212, 138, 0.92),
-    0 1.25rem 2.2rem rgba(20, 50, 41, 0.22);
-  background:
-    linear-gradient(180deg, rgba(38, 89, 72, 0.98), rgba(21, 56, 46, 0.98));
-}
-
-.player-panel--recent {
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.26),
-    0 1rem 2rem rgba(20, 50, 41, 0.18);
 }
 
 .player-panel--top {
@@ -555,207 +569,8 @@ const formatScoringItem = (item: ScoringItem): string => {
   grid-area: left;
 }
 
-.player-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.player-header-main {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.player-seat {
-  margin: 0;
-}
-
-.player-status-badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  border-radius: 999px;
-  padding: 0.32rem 0.72rem;
-  background: rgba(248, 242, 231, 0.14);
-  color: #f8f2e7;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.player-status-badge--human-turn {
-  background: #f1d48a;
-  color: #17382e;
-}
-
-.player-status-badge--claim {
-  background: #f4a259;
-  color: #2f1706;
-}
-
-.player-status-badge--recent {
-  background: rgba(255, 255, 255, 0.18);
-  color: #f8f2e7;
-}
-
-.player-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 1rem 0 0;
-}
-
-.player-stat {
-  margin: 0;
-}
-
-.player-stat dt {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(248, 242, 231, 0.72);
-}
-
-.player-stat dd {
-  margin: 0.2rem 0 0;
-  font-size: 1.1rem;
-}
-
-.player-concealed-tiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.player-melds {
-  display: grid;
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-
-.player-meld {
-  display: grid;
-  gap: 0.45rem;
-  border-radius: 0.95rem;
-  padding: 0.7rem 0.8rem;
-  background: rgba(248, 242, 231, 0.08);
-}
-
-.player-meld-type {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #f1d48a;
-}
-
-.player-meld-tiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.player-meld-tile {
-  border: 1px solid rgba(241, 212, 138, 0.28);
-  border-radius: 0.7rem;
-  padding: 0.28rem 0.52rem;
-  background: rgba(241, 212, 138, 0.12);
-  color: #fff2c6;
-  font-size: 0.9rem;
-}
-
 .table-center {
   grid-area: center;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-  align-content: start;
-  border: 1px solid rgba(59, 88, 68, 0.16);
-  border-radius: 1.4rem;
-  padding: 1rem;
-  background:
-    radial-gradient(circle at center, rgba(244, 227, 183, 0.08), transparent 65%),
-    linear-gradient(180deg, rgba(35, 80, 65, 0.98), rgba(21, 51, 43, 0.98));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.discard-pool {
-  min-height: 8.5rem;
-  border-radius: 1rem;
-  padding: 0.85rem;
-  background: rgba(246, 239, 226, 0.1);
-  color: #f8f2e7;
-}
-
-.discard-pool-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.7rem;
-}
-
-.discard-pool-header span {
-  font-size: 0.8rem;
-  color: rgba(248, 242, 231, 0.72);
-}
-
-.discard-tile-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.discard-tile {
-  border: 1px solid rgba(248, 242, 231, 0.16);
-  border-radius: 0.75rem;
-  padding: 0.3rem 0.55rem;
-  background: rgba(248, 242, 231, 0.12);
-  font-size: 0.92rem;
-}
-
-.discard-tile--latest {
-  border-color: rgba(241, 212, 138, 0.9);
-  background: rgba(241, 212, 138, 0.22);
-  color: #fff5d7;
-  box-shadow: 0 0 0 1px rgba(241, 212, 138, 0.22);
-}
-
-.discard-empty {
-  margin: 0;
-  color: rgba(248, 242, 231, 0.72);
-}
-
-.concealed-tile-button {
-  border: 1px solid rgba(248, 242, 231, 0.18);
-  border-radius: 0.8rem;
-  padding: 0.45rem 0.65rem;
-  background: rgba(248, 242, 231, 0.1);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.concealed-tile-button:disabled {
-  opacity: 0.56;
-  cursor: default;
-}
-
-.claim-action-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.claim-action-button {
-  border: 1px solid rgba(59, 88, 68, 0.18);
-  border-radius: 999px;
-  padding: 0.6rem 0.9rem;
-  background: rgba(248, 243, 232, 0.88);
-  color: #214538;
-  font: inherit;
-  cursor: pointer;
 }
 
 @media (max-width: 1080px) {

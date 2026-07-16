@@ -10,9 +10,9 @@
 
 ## 3. AI 約兩秒出牌節奏
 
-- [x] 3.1 落地 design 的 task 3: ai 約兩秒出牌節奏、Requirement `AI auto-turn pacing remains human-readable` 與決策「AI 出牌節奏由 store 推進層節流，而不是 core 改成 async 規則」，讓 AI 自動推進以約兩秒節奏前進且不污染 core 介面，並以 `tests/ui/interactive-turn-loop.test.ts` 驗證。
+- [ ] 3.1 落地 design 的 task 3: ai 約兩秒出牌節奏、Requirement `AI auto-turn pacing remains human-readable` 與決策「AI 出牌節奏由 store 推進層節流，而不是 core 改成 async 規則」，讓 AI 自動推進以約兩秒節奏前進且不污染 core 介面，並以 `tests/ui/interactive-turn-loop.test.ts` 驗證。
 - [x] 3.2 落地 design 的 task 3: ai 約兩秒出牌節奏與 Requirement `Human claim windows are not skipped by AI pacing`，讓 AI 節奏在遇到人類合法 `claim-window` 時會停下而不是自動略過，並以 `tests/ui/game-session.store.test.ts` 與 `e2e/game-table.smoke.spec.ts` 驗證。
 
 ## 4. 完整驗證
 
-- [x] 4.1 完成本 change 回歸，讓 `npm run test -- tests/core/dealer-progression.test.ts tests/ui/next-round-flow.test.ts tests/ui/game-table-view.test.ts tests/ui/interactive-turn-loop.test.ts tests/ui/game-session.store.test.ts`、`npm run typecheck` 與 `npx playwright test e2e/game-table.smoke.spec.ts` 全部通過，並以命令輸出驗證。
+- [ ] 4.1 完成本 change 回歸，讓 `npm run test -- tests/core/dealer-progression.test.ts tests/ui/next-round-flow.test.ts tests/ui/game-table-view.test.ts tests/ui/interactive-turn-loop.test.ts tests/ui/game-session.store.test.ts`、`npm run typecheck` 與 `npx playwright test e2e/game-table.smoke.spec.ts` 全部通過，並以命令輸出驗證。

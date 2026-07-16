@@ -191,7 +191,7 @@ describe('game session store', () => {
     expect(store.round?.lastClaimResolution?.type).toBe('pass')
   })
 
-  it('auto-advances AI seats until the round reaches the next human discard turn', () => {
+  it('advances only one AI step per call so UI pacing can schedule readable progression', () => {
     const store = useGameSessionStore()
     const baseRound = createClaimWindowRound(dragon('white'), 'east', {
       east: [chars(1)[0]!, dots(1)[0]!],
@@ -400,11 +400,8 @@ describe('game session store', () => {
     expect(store.error).toBeNull()
     expect(store.round?.outcome.status).toBe('in-progress')
     expect(store.round?.table.dealerSeat).toBe('west')
-    expect(
-      store.round?.phase === 'discard'
-      && store.round?.currentSeat === 'west'
-      && store.round?.outcome.status === 'in-progress'
-    ).toBe(false)
+    expect(store.round?.phase).toBe('discard')
+    expect(store.round?.currentSeat).toBe('west')
   })
 
 

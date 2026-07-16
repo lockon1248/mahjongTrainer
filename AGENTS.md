@@ -394,3 +394,48 @@ Required behavior:
 1. if the next implementation step is clear, prefer advancing the relevant mainline or child change
 2. if progress visibility is broken, fix the mainline change before creating more side artifacts
 3. if work no longer clearly advances a mainline task, stop and return to the mainline change
+
+## 18. Audit Mode Discipline Rule
+
+當使用者要求「檢視」、「盤點」、「review spec 對照」、「告訴我哪裡沒做到卻打勾」、
+「為什麼沒有照 spec 做」或其他明顯屬於稽核 / 對帳 / 問責語意的工作時，
+assistant 必須先進入 **audit mode**，不得自行切換成 implementation / closure mode。
+
+Required behavior:
+
+1. 預設只做讀取、比對、列證據，不得先做實作、封存、回填主線、勾選 / 取消勾選 task，除非使用者之後明確要求修改
+2. 回答必須以 `findings first` 呈現，先列問題，再列次要補充
+3. 每一個結論都必須附上可追溯證據：
+   - spec / design / task file
+   - 實作 file
+   - 測試 file（若有）
+4. 若沒有直接證據，只能寫「無法證明」，不得寫「應該」、「看起來」、「推測」
+5. 若 spec、實作、測試三者互相矛盾，必須先明確指出矛盾，不得自行挑一邊當真相
+6. 稽核模式的任務完成前，不得順手幫使用者做 closure、封存、mainline sync 或額外 workflow 整理
+
+## 19. No Inference on Product Semantics Rule
+
+當需求涉及 UI 顏色語意、狀態文案、互動含義、規則顯示意義、結果解讀方式時，
+assistant 不得自行補完產品語意。
+
+Required behavior:
+
+1. 只能使用使用者明確提供的語意定義，或 repo 內權威 spec 已明寫的語意
+2. 若同一語意在不同文件或不同回覆中互相衝突，必須先列出衝突，不得自行正規化
+3. 不得把「功能有跑」直接等同於「語意正確」
+4. UI review / spec audit 時，必須分開回答：
+   - 現在畫面顯示什麼
+   - 這個顯示目前實際代表什麼
+   - spec / 使用者要求它應該代表什麼
+
+## 20. No Premature Closure Rule
+
+assistant 不得因為看到 task 全勾、局部測試通過、或 change 看起來接近完成，
+就自行推進封存、mainline 回填、workflow 收尾或完成宣告。
+
+Required behavior:
+
+1. `all_done` 只代表 tasks file 狀態，不自動代表可以 archive
+2. 若使用者當前要求是稽核、檢討、找問題、對 spec，assistant 不得在同一輪自行做 closure 動作
+3. 只有在使用者明確要求「修」、「整理 workflow」、「封存」、「回填主線」時，才可進入 closure / repair mode
+4. 若 assistant 已經誤進 closure mode，必須先停止、承認偏題、撤回不當動作，再回到原始任務

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import type { HumanClaimCandidate, HumanSelfTurnCandidate, Tile } from '@/core'
+import { AI_TURN_DELAY_MS } from '@/views/game/constants'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
@@ -23,18 +24,62 @@ const snapshot = computed(() => {
   return createGameTableSnapshot(round.value, gameSessionStore.humanSeat)
 })
 
+let autoAdvanceTimer: ReturnType<typeof window.setTimeout> | null = null
+
+const clearAutoAdvanceTimer = () => {
+  if (autoAdvanceTimer != null) {
+    window.clearTimeout(autoAdvanceTimer)
+    autoAdvanceTimer = null
+  }
+}
+
+const hasHumanClaimOpportunity = computed(() => {
+  return gameSessionStore.availableHumanClaims.some(candidate => candidate.actionType !== 'pass')
+})
+
+const shouldScheduleAiAdvance = computed(() => {
+  if (round.value == null || error.value != null)
+    return false
+
+  if (round.value.phase === 'ended' || round.value.outcome.status !== 'in-progress')
+    return false
+
+  if (round.value.currentSeat === gameSessionStore.humanSeat && round.value.phase === 'discard')
+    return false
+
+  if (round.value.phase === 'claim-window' && hasHumanClaimOpportunity.value)
+    return false
+
+  return true
+})
+
+watch([
+  shouldScheduleAiAdvance,
+  round
+], ([shouldSchedule]) => {
+  clearAutoAdvanceTimer()
+
+  if (!shouldSchedule)
+    return
+
+  autoAdvanceTimer = window.setTimeout(() => {
+    autoAdvanceTimer = null
+
+    if (shouldScheduleAiAdvance.value)
+      gameSessionStore.advanceTurn()
+  }, AI_TURN_DELAY_MS)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  clearAutoAdvanceTimer()
+})
+
 const handleHumanDiscard = (tile: Tile) => {
   gameSessionStore.discard(tile)
-
-  if (gameSessionStore.error == null)
-    gameSessionStore.advanceTurn()
 }
 
 const handleHumanClaim = (candidate: HumanClaimCandidate) => {
   gameSessionStore.submitHumanClaim(candidate.actionType, candidate.consumedTiles)
-
-  if (gameSessionStore.error == null)
-    gameSessionStore.advanceTurn()
 }
 
 const handleHumanSelfTurnAction = (candidate: HumanSelfTurnCandidate) => {
