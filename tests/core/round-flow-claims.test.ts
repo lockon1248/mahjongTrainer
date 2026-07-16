@@ -31,6 +31,10 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
+const flower = (rank: 'spring' | 'summer' | 'autumn' | 'winter' | 'plum' | 'orchid' | 'bamboo' | 'chrysanthemum'): Tile => {
+  return { suit: 'flower', rank }
+}
+
 const scoringItem = (
   patternId: string,
   label: string,
@@ -38,7 +42,7 @@ const scoringItem = (
   reason: string
 ) => ({ patternId, label, tai, reason })
 
-const buildWall = (): Tile[] => {
+const buildWall = (...tailTiles: Tile[]): Tile[] => {
   const pool: Tile[] = [
     ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
     ...dots(1, 2, 3, 4, 5, 6, 7, 8, 9),
@@ -52,7 +56,9 @@ const buildWall = (): Tile[] => {
     { suit: 'dragons', rank: 'white' }
   ]
 
-  return Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
+  const base = Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
+
+  return [...base, ...tailTiles]
 }
 
 const createClaimWindowRound = (
@@ -202,6 +208,7 @@ describe('round flow claim resolution', () => {
 
   it('prefers exposed kan over chi when no win exists', () => {
     const discardedTile = chars(3)[0]!
+    const replacementTile = dragon('green')
     const pendingRound = createClaimWindowRound(discardedTile, 'east', {
       west: [
         ...chars(3, 3, 3),
@@ -212,7 +219,8 @@ describe('round flow claim resolution', () => {
         dragon('red'),
         dragon('green'),
         dragon('white'),
-        chars(9)[0]!
+        chars(9)[0]!,
+        dots(9)[0]!
       ],
       south: [
         ...chars(1, 2, 4, 5),
@@ -226,6 +234,7 @@ describe('round flow claim resolution', () => {
         chars(7)[0]!
       ]
     })
+    pendingRound.table.wall = buildWall(replacementTile)
     const claims: PendingActionClaim[] = [
       { seat: 'west', actionType: 'kan-exposed', tile: discardedTile, consumedTiles: chars(3, 3, 3) },
       { seat: 'south', actionType: 'chi', tile: discardedTile, consumedTiles: chars(1, 2) }
@@ -240,6 +249,47 @@ describe('round flow claim resolution', () => {
     })
     expect(resolved.currentSeat).toBe('west')
     expect(resolved.phase).toBe('discard')
+    expect(resolved.players.west.melds).toEqual([
+      {
+        type: 'kan-exposed',
+        tiles: chars(3, 3, 3, 3),
+        claimedTile: discardedTile,
+        claimedFromSeat: 'east'
+      }
+    ])
+    expect(resolved.players.west.concealedTiles).toContainEqual(replacementTile)
+    expect(resolved.players.west.concealedTiles).toHaveLength(14)
+    expect(resolved.table.wall).toHaveLength(pendingRound.table.wall.length - 1)
+  })
+
+  it('reveals flower replacements and keeps drawing for an exposed kan until a non-flower tile is found', () => {
+    const discardedTile = chars(3)[0]!
+    const replacementTile = dragon('white')
+    const pendingRound = createClaimWindowRound(discardedTile, 'east', {
+      west: [
+        ...chars(3, 3, 3),
+        ...dots(1, 2, 3),
+        ...bamboos(1, 2, 3),
+        wind('west'),
+        wind('west'),
+        dragon('red'),
+        dragon('green'),
+        chars(9)[0]!,
+        dots(9)[0]!,
+        bamboos(9)[0]!
+      ]
+    })
+    pendingRound.table.wall = buildWall(replacementTile, flower('spring'))
+
+    const resolved = resolveClaimWindow(pendingRound, [
+      { seat: 'west', actionType: 'kan-exposed', tile: discardedTile, consumedTiles: chars(3, 3, 3) }
+    ])
+
+    expect(resolved.phase).toBe('discard')
+    expect(resolved.players.west.flowers).toContainEqual(flower('spring'))
+    expect(resolved.players.west.concealedTiles).toContainEqual(replacementTile)
+    expect(resolved.players.west.concealedTiles).toHaveLength(14)
+    expect(resolved.table.wall).toHaveLength(pendingRound.table.wall.length - 2)
   })
 
   it('moves a claimed pon into melds, removes consumed tiles from concealed hand, and removes the claimed discard from the pool', () => {

@@ -221,10 +221,15 @@ export const resolveClaimWindow = (
 
   const claimedPlayer = round.players[winningClaim.seat]
   const concealedTiles = removeTiles(claimedPlayer.concealedTiles, winningClaim.consumedTiles ?? [])
+  const flowers = [...claimedPlayer.flowers]
+  const wall = [...round.table.wall]
   const triggeringSeat = pendingActionWindow.triggeringSeat!
   const triggeringTile = pendingActionWindow.triggeringTile!
   const updatedDiscardPool = removeLastMatchingTile(round.table.discards[triggeringSeat], triggeringTile)
   const meldTiles = [...(winningClaim.consumedTiles ?? []), triggeringTile].sort(compareTile)
+
+  if (winningClaim.actionType === 'kan-exposed')
+    drawReplacementFromWallTail({ concealedTiles, flowers, wall })
 
   return {
     ...round,
@@ -234,6 +239,7 @@ export const resolveClaimWindow = (
     lastClaimResolution: asClaimResolution(winningClaim),
     table: {
       ...round.table,
+      wall,
       discards: {
         ...round.table.discards,
         [triggeringSeat]: updatedDiscardPool
@@ -244,6 +250,7 @@ export const resolveClaimWindow = (
       [winningClaim.seat]: {
         ...claimedPlayer,
         concealedTiles,
+        flowers,
         melds: [
           ...claimedPlayer.melds,
           {
