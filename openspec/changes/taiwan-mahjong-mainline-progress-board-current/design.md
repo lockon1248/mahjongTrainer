@@ -5,7 +5,7 @@ repo workflow 要求兩件事同時成立：
 1. repo 內必須永遠有一份 active mainline board
 2. 只有完成實作、完成驗證、正式 archive 的 child change 才能被主線當成完成
 
-目前這份 board 已重新接手 active 主線，recent child changes 的 archive 已補齊，但 current active child change 已從先前的 AI / 節奏修正切換成新的明槓補牌 bugfix。這份 board 必須回到「現在式真相」：哪些 child change 已正式 archive、目前哪一份正在修補可玩性 bug、下一份 change 會接哪個主線缺口。
+目前這份 board 已重新接手 active 主線，recent child changes 的 archive 已補齊，明槓補牌 bugfix 也已正式 archive。這份 board 必須回到最新真相：哪些 child change 已正式 archive、目前主線已經收斂到哪裡，以及下一份 change 會接哪個主線缺口。
 
 ## Goals / Non-Goals
 
@@ -14,7 +14,7 @@ repo workflow 要求兩件事同時成立：
 - 恢復一份 active mainline board
 - 讓 active board 如實反映目前唯一未完成 child change
 - 明確標示下一份 planned child change
-- 把目前正在修補的 `taiwan-mahjong-exposed-kan-replacement-draw-fix` 標示為 current active child change
+- 把 `taiwan-mahjong-exposed-kan-replacement-draw-fix` 回填到 completed，並清空目前 active child change
 
 **Non-Goals:**
 
@@ -29,7 +29,7 @@ repo workflow 要求兩件事同時成立：
 這份 board 的第一責任是回答「現在做到哪裡」。因此它必須先如實反映：
 
 - `taiwan-mahjong-center-discard-highlight-rules`、`taiwan-mahjong-unocss-and-shared-enums`、`taiwan-mahjong-dealer-rotation-and-turn-pace`、`taiwan-mahjong-ai-turn-stability`、`taiwan-mahjong-ai-decision-quality` 都已在 2026-07-16 正式 archive
-- 玩家回報的明槓後少一張活牌 bug 已確認 root cause 在 `round flow`，因此 current active child change 變為 `taiwan-mahjong-exposed-kan-replacement-draw-fix`
+- 玩家回報的明槓後少一張活牌 bug 已完成 root-cause 修正、驗證與正式 archive，需立即回填 completed mainline item
 - 下一份 child change 先保留為待定，不預先把未定需求假裝成主線完成
 
 ### 已 archive 的 recent changes 要回填到 completed，不得繼續假裝待盤點
@@ -52,9 +52,9 @@ repo workflow 要求兩件事同時成立：
 
 - Observable behavior:
   - 已 archive 的近期 child changes 被回填到 completed mainline items。
-  - board 明確揭露目前唯一未完成的 child change 是 `taiwan-mahjong-exposed-kan-replacement-draw-fix`。
+  - board 明確揭露 `taiwan-mahjong-exposed-kan-replacement-draw-fix` 已完成並 archive。
   - board 明確標示下一份 planned child change 仍待後續需求定義，不偷補功能名稱。
-  - `taiwan-mahjong-exposed-kan-replacement-draw-fix` 的完成條件明確包含明槓補牌修正與對應 core 驗證。
+  - active mainline board 不再錯誤顯示已 archive 的 change 為進行中。
 
 ### Task 3: 維持 successor handoff lifecycle
 
@@ -104,17 +104,13 @@ repo workflow 要求兩件事同時成立：
    - `taiwan-mahjong-dealer-rotation-and-turn-pace`
    - `taiwan-mahjong-ai-turn-stability`
    - `taiwan-mahjong-ai-decision-quality`
-
-### 目前進行中
-
 10. 明槓補牌 bugfix
    - `taiwan-mahjong-exposed-kan-replacement-draw-fix`
-   - completion condition：accepted `kan-exposed` 會在回到 `discard` 前完成尾端補牌，並補齊對應 core regression 後正式 archive
 
 ### 尚未開始
 
 11. 下一個 child change 待定
-   - current active child change：`taiwan-mahjong-exposed-kan-replacement-draw-fix`
+   - current active child change：none
    - next planned child change：待使用者下一步需求
    - completion condition：新的主線缺口被識別並開立對應 child change
 

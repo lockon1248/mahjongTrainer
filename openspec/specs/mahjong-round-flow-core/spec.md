@@ -145,13 +145,25 @@ round flow core SHALL 透過單一 pending claim window 來裁決互相競爭的
 #### 情境：沒有胡牌時明槓優先於碰與吃
 
 - **WHEN** pending claim window 中沒有胡牌宣告，且有效 rule config 將明槓排在較低優先級宣告之前
-- **THEN** round flow core SHALL 將該 claim window 裁決為明槓
+- **THEN** round flow core SHALL 將該 claim window 裁決為明槓，並 SHALL 在回到出牌階段前完成槓後補牌
 
 ##### 範例：明槓優先於吃牌
 
 - **GIVEN** 一張捨牌讓 west 可以形成明槓，south 可以吃牌
 - **WHEN** 兩個宣告都被送出，且在優先序為 `win > kan-exposed > pon > chi` 的 rule config 下不存在任何有效胡牌宣告
-- **THEN** 裁決結果 MUST 為 west 的明槓宣告
+- **THEN** 裁決結果 MUST 為 west 的明槓宣告，且 west MUST 在回到 `discard` 前完成尾端補牌
+
+#### 情境：明槓補牌遇到花牌時持續補到非花牌
+
+- **WHEN** pending claim window 接受 `kan-exposed`，且牌尾第一張 replacement tile 是花牌
+- **THEN** round flow core SHALL 先將該花牌移入玩家花牌區，並 SHALL 持續從牌尾補牌直到取得一張非花牌後才回到 `discard`
+
+##### 範例：明槓補牌花牌連補
+
+| 牌尾順序 | 回到 `discard` 前的預期結果 |
+| ----- | ----- |
+| `spring`, `5-dot` | `spring` 亮入 flowers，`5-dot` 加入 concealed tiles |
+| `plum`, `orchid`, `red-dragon` | 兩張花牌都亮入 flowers，`red-dragon` 加入 concealed tiles |
 
 #### 情境：所有可宣告者皆 pass 時推進牌局
 
