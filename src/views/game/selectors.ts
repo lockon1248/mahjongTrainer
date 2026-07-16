@@ -5,7 +5,8 @@ import {
   TILE_SUIT_ORDER,
   WIND_TILE_ORDER
 } from '@/ui/constants/tiles'
-import type { GameTableRelativePosition, GameTableSnapshotViewModel } from '@/views/game/types'
+import { formatTileLabel } from '@/ui/constants/tiles'
+import type { GameTableMeldViewModel, GameTableRelativePosition, GameTableSnapshotViewModel } from '@/views/game/types'
 
 const SEAT_ORDER: readonly Seat[] = ALL_SEATS
 
@@ -65,9 +66,48 @@ const getRevealedWinningTiles = (round: BaselineRoundState, seat: Seat): Baselin
   ])
 }
 
+const createVisibleMelds = (
+  round: BaselineRoundState,
+  seat: Seat,
+  humanSeat: Seat
+): GameTableMeldViewModel[] => {
+  const shouldRevealAllMelds = round.outcome.status === 'win' && round.outcome.result.winnerSeat === seat
+
+  return round.players[seat].melds.map((meld) => {
+    const shouldMaskConcealedKong = meld.type === 'kan-concealed'
+      && seat !== humanSeat
+      && !shouldRevealAllMelds
+
+    if (shouldMaskConcealedKong) {
+      return {
+        type: meld.type,
+        labels: Array.from({ length: meld.tiles.length }, () => '暗牌'),
+        isMasked: true
+      }
+    }
+
+    return {
+      type: meld.type,
+      labels: meld.tiles.map(formatTileLabel),
+      isMasked: false
+    }
+  })
+}
+
 export const createGameTableSnapshot = (
   round: BaselineRoundState,
-  humanSeat: Seat
+  humanSeat: Seat,
+  match?: {
+    config: {
+      initialChips: number
+      victoryMode: GameTableSnapshotViewModel['matchSummary']['victoryMode']
+      baseStake: number
+      taiValue: number
+    } | null
+    chipsBySeat: Record<Seat, number>
+    status: 'setup' | 'in-progress' | 'ended'
+    winnerSeat: Seat | null
+  }
 ): GameTableSnapshotViewModel => {
   return {
     humanSeat,
@@ -89,6 +129,16 @@ export const createGameTableSnapshot = (
     prevailingWind: round.table.prevailingWind,
     wallCount: round.table.wall.length,
     lastClaimResolution: round.lastClaimResolution,
+    matchSummary: match?.config == null
+      ? null
+      : {
+          initialChips: match.config.initialChips,
+          victoryMode: match.config.victoryMode,
+          baseStake: match.config.baseStake,
+          taiValue: match.config.taiValue,
+          status: match.status === 'ended' ? 'ended' : 'in-progress',
+          winnerSeat: match.winnerSeat
+        },
     totalDiscards: Object.values(round.table.discards).reduce((total, seatDiscards) => {
       return total + seatDiscards.length
     }, 0),
@@ -101,13 +151,10 @@ export const createGameTableSnapshot = (
         revealedWinningTiles: getRevealedWinningTiles(round, player.seat),
         flowerCount: player.flowers.length,
         meldCount: player.melds.length,
-        melds: player.melds.map(meld => ({
-          ...meld,
-          tiles: [...meld.tiles]
-        })),
+        melds: createVisibleMelds(round, player.seat, humanSeat),
         discardCount: round.table.discards[player.seat].length,
         discards: [...round.table.discards[player.seat]],
-        score: player.score,
+        score: match?.config == null ? player.score : match.chipsBySeat[player.seat],
         declaredReady: player.declaredReady
       }
     })

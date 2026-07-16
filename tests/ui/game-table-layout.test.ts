@@ -51,9 +51,7 @@ const snapshot: GameTableSnapshotViewModel = {
       melds: [
         {
           type: 'pon',
-          tiles: [wind('west'), wind('west'), wind('west')],
-          claimedTile: wind('west'),
-          claimedFromSeat: 'north'
+          labels: ['西風', '西風', '西風']
         }
       ],
       discardCount: 2,

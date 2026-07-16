@@ -43,6 +43,19 @@ describe('game table view', () => {
       }
     })
 
+    expect(wrapper.find('[data-testid="match-setup-modal"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="game-table-view"]').exists()).toBe(false)
+  })
+
+  it('renders the table only after match setup is submitted', async () => {
+    const wrapper = mount(GameView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
+
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
+
     expect(wrapper.find('[data-testid="game-table-view"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="table-summary"]').text()).toContain('東家')
     expect(wrapper.findAll('[data-testid="player-seat"]')).toHaveLength(4)
@@ -132,6 +145,182 @@ describe('game table view', () => {
     expect(tileLabels).toEqual(['三萬', '二筒', '七條', '東風', '紅中', '蘭'])
   })
 
+  it('masks AI concealed kong tiles while the round is in progress', () => {
+    const snapshot: GameTableSnapshotViewModel = {
+      humanSeat: 'east',
+      currentSeat: 'west',
+      phase: 'discard',
+      outcome: 'in-progress',
+      dealerSeat: 'east',
+      prevailingWind: 'east',
+      wallCount: 32,
+      totalDiscards: 6,
+      lastClaimResolution: null,
+      resultSummary: null,
+      players: [
+        {
+          seat: 'east',
+          relativePosition: 'bottom',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'south',
+          relativePosition: 'right',
+          concealedCount: 12,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 1,
+          melds: [
+            {
+              type: 'kan-concealed',
+              labels: ['暗牌', '暗牌', '暗牌', '暗牌'],
+              isMasked: true
+            }
+          ],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'west',
+          relativePosition: 'top',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'north',
+          relativePosition: 'left',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        }
+      ]
+    }
+
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="player-melds-south"]').text()).toContain('暗槓')
+    expect(wrapper.get('[data-testid="player-melds-south"]').text()).toContain('暗牌')
+    expect(wrapper.get('[data-testid="player-melds-south"]').text()).not.toContain('五筒')
+  })
+
+  it('keeps the human owner concealed kong tiles visible', () => {
+    const snapshot: GameTableSnapshotViewModel = {
+      humanSeat: 'east',
+      currentSeat: 'east',
+      phase: 'discard',
+      outcome: 'in-progress',
+      dealerSeat: 'east',
+      prevailingWind: 'east',
+      wallCount: 32,
+      totalDiscards: 6,
+      lastClaimResolution: null,
+      resultSummary: null,
+      players: [
+        {
+          seat: 'east',
+          relativePosition: 'bottom',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 1,
+          melds: [
+            {
+              type: 'kan-concealed',
+              labels: ['五筒', '五筒', '五筒', '五筒'],
+              isMasked: false
+            }
+          ],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'south',
+          relativePosition: 'right',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'west',
+          relativePosition: 'top',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        },
+        {
+          seat: 'north',
+          relativePosition: 'left',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 0,
+          declaredReady: false
+        }
+      ]
+    }
+
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('暗槓')
+    expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('五筒')
+    expect(wrapper.get('[data-testid="player-melds-east"]').text()).not.toContain('暗牌')
+  })
+
   it('does not expose undriven ready-state or placeholder score fields as product UI', () => {
     const snapshot: GameTableSnapshotViewModel = {
       humanSeat: 'east',
@@ -211,6 +400,97 @@ describe('game table view', () => {
 
     expect(wrapper.text()).not.toContain('聽牌')
     expect(wrapper.find('.player-score').exists()).toBe(false)
+  })
+
+  it('renders real match chips only when authoritative match summary exists', () => {
+    const snapshot: GameTableSnapshotViewModel = {
+      humanSeat: 'east',
+      currentSeat: 'east',
+      phase: 'discard',
+      outcome: 'in-progress',
+      dealerSeat: 'east',
+      prevailingWind: 'east',
+      wallCount: 40,
+      totalDiscards: 0,
+      lastClaimResolution: null,
+      resultSummary: null,
+      matchSummary: {
+        initialChips: 500,
+        victoryMode: 'bankruptcy',
+        baseStake: 30,
+        taiValue: 10,
+        status: 'in-progress',
+        winnerSeat: null
+      },
+      players: [
+        {
+          seat: 'east',
+          relativePosition: 'bottom',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 540,
+          declaredReady: false
+        },
+        {
+          seat: 'south',
+          relativePosition: 'right',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 460,
+          declaredReady: false
+        },
+        {
+          seat: 'west',
+          relativePosition: 'top',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 500,
+          declaredReady: false
+        },
+        {
+          seat: 'north',
+          relativePosition: 'left',
+          concealedCount: 13,
+          concealedTiles: [],
+          flowerCount: 0,
+          meldCount: 0,
+          melds: [],
+          discardCount: 0,
+          discards: [],
+          score: 500,
+          declaredReady: false
+        }
+      ]
+    }
+
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="match-summary-mode"]').text()).toContain('破產即止')
+    expect(wrapper.get('[data-testid="match-summary-stakes"]').text()).toContain('底 30 / 台 10')
+    expect(wrapper.get('[data-testid="player-score-east"]').text()).toContain('540')
+    expect(wrapper.get('[data-testid="player-score-south"]').text()).toContain('460')
   })
 
   it('renders the dealer badge on the dealer panel only', () => {

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { createBaselineRound, createBaselineWall, createNextRoundFromCompletedRound, createWinRoundResult } from '@/core'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 
@@ -107,5 +108,31 @@ describe('next round flow', () => {
     await wrapper.get('[data-testid="next-round-action"]').trigger('click')
 
     expect(wrapper.emitted('next-round')).toEqual([[]])
+  })
+
+  it('wraps the next round prevailing wind back to east after the north cycle completes', () => {
+    const completedRound = createBaselineRound({
+      wall: createBaselineWall(),
+      dealerSeat: 'west',
+      prevailingWind: 'north'
+    })
+    const nextRound = createNextRoundFromCompletedRound({
+      ...completedRound,
+      currentSeat: 'north',
+      phase: 'ended',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'north',
+          discarderSeat: 'south',
+          totalTai: 1
+        })
+      }
+    }, {
+      wall: createBaselineWall()
+    })
+
+    expect(nextRound.table.prevailingWind).toBe('east')
+    expect(nextRound.table.dealerSeat).toBe('east')
   })
 })

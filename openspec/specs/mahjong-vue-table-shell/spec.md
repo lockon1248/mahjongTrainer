@@ -1835,3 +1835,132 @@ tests:
   - tests/ui/interactive-turn-loop.test.ts
   - tests/core/ai-decision-core.test.ts
 -->
+
+---
+### Requirement: Concealed kong privacy in table snapshots
+
+The frontend table snapshot SHALL hide another seat's concealed kong tile identities during in-progress play, so the human viewer can see that a concealed kong exists without learning which tile was used.
+
+#### Scenario: Human viewer sees hidden tiles for AI concealed kong
+
+- **WHEN** an AI seat has a concealed kong and the round is still in progress
+- **THEN** the table snapshot shown to the human viewer MUST render that meld as hidden tiles or placeholders instead of concrete tile labels
+
+##### Example: south AI concealed kong is masked on the board
+
+- **GIVEN** `south` has a concealed kong of `red-dragon` and the human seat is `east`
+- **WHEN** the table view renders an in-progress round snapshot
+- **THEN** the `south` meld area MUST indicate a concealed kong exists, but MUST NOT show `red-dragon`
+
+#### Scenario: Owning human seat keeps access to its own concealed kong tiles
+
+- **WHEN** the human seat itself forms a concealed kong
+- **THEN** the human-facing snapshot MUST continue to show the real concealed kong tile identities for that seat
+
+##### Example: east human concealed kong stays visible to east
+
+- **GIVEN** `east` is the human seat and has a concealed kong of `5-dot`
+- **WHEN** the table view renders the human player's meld area
+- **THEN** the meld display MUST still show `5-dot` for `east`
+
+<!-- @trace
+source: taiwan-mahjong-concealed-kong-visibility
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/components/MatchSetupModal.vue
+  - src/views/game/GameView.vue
+  - src/views/game/types.ts
+  - src/views/game/constants.ts
+  - src/stores/gameSession.ts
+  - src/core/rules/roundFlow.ts
+  - src/views/game/selectors.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/ui/match-setup-modal.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-view.test.ts
+-->
+
+---
+### Requirement: Match setup modal uses real session state
+
+The frontend SHALL render a match setup modal driven by session state, so the user can configure initial chips and victory condition before the first round begins.
+
+#### Scenario: User can submit initial chips and victory mode from the modal
+
+- **WHEN** the local game view is opened before a match has started
+- **THEN** the frontend MUST show a setup modal that accepts an initial chip amount and exactly one supported victory condition choice
+
+##### Example: user configures bankruptcy mode
+
+- **GIVEN** the setup modal is visible
+- **WHEN** the user enters `500` as initial chips and selects bankruptcy victory
+- **THEN** submitting the modal MUST start the first round with those match settings
+
+
+<!-- @trace
+source: taiwan-mahjong-match-stakes-and-victory-setup
+updated: 2026-07-16
+code:
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/GameView.vue
+  - src/views/game/constants.ts
+  - src/views/game/types.ts
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/selectors.ts
+  - src/views/game/components/MatchSetupModal.vue
+tests:
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/match-setup-modal.test.ts
+-->
+
+---
+### Requirement: Table shell renders real match chip status
+
+The frontend SHALL render match chip status and match-ending summary from authoritative session state, and SHALL NOT expose placeholder chip UI before setup exists.
+
+#### Scenario: Chip status appears only after setup initializes a match
+
+- **WHEN** the user has completed match setup and the session has started
+- **THEN** the table shell MUST render chip totals and active match victory mode from real session state
+
+##### Example: configured chips appear on the board
+
+- **GIVEN** the user started a match with `1000` initial chips
+- **WHEN** the first round snapshot renders
+- **THEN** each seat chip display MUST come from the initialized match state instead of placeholder score text
+
+<!-- @trace
+source: taiwan-mahjong-match-stakes-and-victory-setup
+updated: 2026-07-16
+code:
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/GameView.vue
+  - src/views/game/constants.ts
+  - src/views/game/types.ts
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/selectors.ts
+  - src/views/game/components/MatchSetupModal.vue
+tests:
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/match-setup-modal.test.ts
+-->

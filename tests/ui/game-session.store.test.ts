@@ -131,12 +131,56 @@ describe('game session store', () => {
     store.startLocalRound()
 
     expect(store.isInitialized).toBe(true)
+    expect(store.needsMatchSetup).toBe(false)
     expect(store.round).not.toBeNull()
+    expect(store.match.config?.initialChips).toBe(1000)
+    expect(store.match.config?.victoryMode).toBe('bankruptcy')
+    expect(store.match.chipsBySeat).toEqual({
+      east: 1000,
+      south: 1000,
+      west: 1000,
+      north: 1000
+    })
     expect(store.error).toBeNull()
     expect(store.round?.currentSeat).toBe('east')
     expect(store.round?.phase).toBe('discard')
     expect(store.round?.players.east.concealedTiles).toHaveLength(17)
     expect(store.round?.players.south.concealedTiles).toHaveLength(16)
+  })
+
+  it('stays uninitialized before match setup is submitted', () => {
+    const store = useGameSessionStore()
+
+    expect(store.isInitialized).toBe(false)
+    expect(store.needsMatchSetup).toBe(true)
+    expect(store.round).toBeNull()
+    expect(store.match.config).toBeNull()
+  })
+
+  it('starts a match from explicit setup input', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({
+      initialChips: 500,
+      victoryMode: 'four-winds'
+    })
+
+    expect(store.error).toBeNull()
+    expect(store.match.config).toEqual({
+      initialChips: 500,
+      victoryMode: 'four-winds',
+      baseStake: 30,
+      taiValue: 10
+    })
+    expect(store.match.chipsBySeat).toEqual({
+      east: 500,
+      south: 500,
+      west: 500,
+      north: 500
+    })
+    expect(store.match.status).toBe('in-progress')
+    expect(store.needsMatchSetup).toBe(false)
+    expect(store.round?.phase).toBe('discard')
   })
 
   it('draws for the current seat through core and advances draw phase into discard phase', () => {
@@ -402,6 +446,115 @@ describe('game session store', () => {
     expect(store.round?.table.dealerSeat).toBe('west')
     expect(store.round?.phase).toBe('discard')
     expect(store.round?.currentSeat).toBe('west')
+  })
+
+  it('settles discard wins from fixed base and tai values', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({
+      initialChips: 500,
+      victoryMode: 'bankruptcy'
+    })
+
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west',
+          totalTai: 3
+        })
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.error).toBeNull()
+    expect(store.match.chipsBySeat).toEqual({
+      east: 500,
+      south: 560,
+      west: 440,
+      north: 500
+    })
+    expect(store.match.status).toBe('in-progress')
+  })
+
+  it('ends the match immediately when bankruptcy mode drives any seat to zero or below', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({
+      initialChips: 50,
+      victoryMode: 'bankruptcy'
+    })
+
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'east',
+          discarderSeat: 'north',
+          totalTai: 3
+        })
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.error).toBeNull()
+    expect(store.match.chipsBySeat.north).toBeLessThanOrEqual(0)
+    expect(store.match.status).toBe('ended')
+    expect(store.match.winnerSeat).toBe('east')
+    expect(store.round?.phase).toBe('ended')
+    expect(store.round?.table.dealerSeat).toBe('east')
+  })
+
+  it('ends a four-winds match only after north prevailing wind completes and declares the chip leader', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({
+      initialChips: 500,
+      victoryMode: 'four-winds'
+    })
+
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.match.chipsBySeat = {
+      east: 510,
+      south: 640,
+      west: 480,
+      north: 370
+    }
+    store.round = {
+      ...completedRound,
+      currentSeat: 'north',
+      phase: 'ended',
+      table: {
+        ...completedRound.table,
+        dealerSeat: 'west',
+        prevailingWind: 'north'
+      },
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'north',
+          discarderSeat: 'south',
+          totalTai: 1
+        })
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.error).toBeNull()
+    expect(store.match.status).toBe('ended')
+    expect(store.match.winnerSeat).toBe('south')
+    expect(store.round?.phase).toBe('ended')
+    expect(store.round?.table.prevailingWind).toBe('north')
   })
 
 

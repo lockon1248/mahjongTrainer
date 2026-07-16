@@ -5,16 +5,16 @@ repo workflow 要求兩件事同時成立：
 1. repo 內必須永遠有一份 active mainline board
 2. 只有完成實作、完成驗證、正式 archive 的 child change 才能被主線當成完成
 
-目前這份 board 已重新接手 active 主線，recent child changes 的 archive 已補齊，明槓補牌 bugfix 也已正式 archive。這份 board 必須回到最新真相：哪些 child change 已正式 archive、目前主線已經收斂到哪裡，以及下一份 change 會接哪個主線缺口。
+目前這份 board 已重新接手 active 主線，recent child changes 的 archive 已補齊，明槓補牌 bugfix 也已正式 archive。最新一輪主線需求中的 `taiwan-mahjong-concealed-kong-visibility` 與 `taiwan-mahjong-match-stakes-and-victory-setup` 也都已在 2026-07-16 完成實作、驗證與正式 archive。這份 board 必須把這兩份 child changes 回填到 completed，並清掉過時的 current / next planned mapping。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - 恢復一份 active mainline board
-- 讓 active board 如實反映目前唯一未完成 child change
-- 明確標示下一份 planned child change
-- 把 `taiwan-mahjong-exposed-kan-replacement-draw-fix` 回填到 completed，並清空目前 active child change
+- 讓 active board 如實反映目前已完成的最新 child changes
+- 清除已失效的 current active / next planned child change 狀態
+- 保持下一輪主線需求尚未定義前的 truthfulness
 
 **Non-Goals:**
 
@@ -30,7 +30,7 @@ repo workflow 要求兩件事同時成立：
 
 - `taiwan-mahjong-center-discard-highlight-rules`、`taiwan-mahjong-unocss-and-shared-enums`、`taiwan-mahjong-dealer-rotation-and-turn-pace`、`taiwan-mahjong-ai-turn-stability`、`taiwan-mahjong-ai-decision-quality` 都已在 2026-07-16 正式 archive
 - 玩家回報的明槓後少一張活牌 bug 已完成 root-cause 修正、驗證與正式 archive，需立即回填 completed mainline item
-- 下一份 child change 先保留為待定，不預先把未定需求假裝成主線完成
+- `taiwan-mahjong-concealed-kong-visibility` 與 `taiwan-mahjong-match-stakes-and-victory-setup` 都已完成 archive，主線不應再繼續把它們標示成 current active / next planned
 
 ### 已 archive 的 recent changes 要回填到 completed，不得繼續假裝待盤點
 
@@ -53,8 +53,9 @@ repo workflow 要求兩件事同時成立：
 - Observable behavior:
   - 已 archive 的近期 child changes 被回填到 completed mainline items。
   - board 明確揭露 `taiwan-mahjong-exposed-kan-replacement-draw-fix` 已完成並 archive。
-  - board 明確標示下一份 planned child change 仍待後續需求定義，不偷補功能名稱。
-  - active mainline board 不再錯誤顯示已 archive 的 change 為進行中。
+- board 將 `taiwan-mahjong-concealed-kong-visibility` 回填為 completed mainline item。
+- board 將 `taiwan-mahjong-match-stakes-and-victory-setup` 回填為 completed mainline item。
+- board 明確標示目前尚無新的 active child change，等待下一份主線需求定義。
 
 ### Task 3: 維持 successor handoff lifecycle
 
@@ -107,12 +108,17 @@ repo workflow 要求兩件事同時成立：
 10. 明槓補牌 bugfix
    - `taiwan-mahjong-exposed-kan-replacement-draw-fix`
 
-### 尚未開始
+### 目前進行中
 
-11. 下一個 child change 待定
-   - current active child change：none
-   - next planned child change：待使用者下一步需求
-   - completion condition：新的主線缺口被識別並開立對應 child change
+11. 暗槓資訊保密
+   - `taiwan-mahjong-concealed-kong-visibility`
+12. 開局籌碼與勝負條件設定
+   - `taiwan-mahjong-match-stakes-and-victory-setup`
+
+### 目前進行中
+
+- 目前 active child change：無
+- next planned child change：待下一份主線需求定義
 
 ## Completion Conditions
 
@@ -136,8 +142,10 @@ repo workflow 要求兩件事同時成立：
    - AI 自動推進具備穩定 phase continuity、約兩秒節奏與較佳出牌 / 宣告 heuristic，且三份 child changes 已正式 archive
 10. 明槓補牌 bugfix
    - `kan-exposed` 已完成槓後補牌、花牌連補與對應 core regression，並正式 archive
-11. 下一個 child change 待定
-   - 新的主線缺口已被識別並開立對應 child change
+11. 暗槓資訊保密
+   - 非擁有者看不到 AI 暗槓牌值，且 AI 也不會從 runtime context 讀到其他座位的暗槓牌值
+12. 開局籌碼與勝負條件設定
+   - 開局前可設定初始籌碼與勝利條件，並支援破產結束或四風圈結算的整場 closure
 
 ## Update Rules
 

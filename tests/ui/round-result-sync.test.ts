@@ -154,6 +154,13 @@ describe('round result sync', () => {
             return {
               ...player,
               concealedCount: 5,
+              meldCount: 1,
+              melds: [
+                {
+                  type: 'kan-concealed',
+                  labels: ['一萬', '一萬', '一萬', '一萬']
+                }
+              ],
               revealedWinningTiles: [
                 ...chars(1, 2, 3),
                 wind('east'),
@@ -183,6 +190,7 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('和牌手牌')
     expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('一萬')
     expect(wrapper.get('[data-testid="player-winning-tiles-south"]').text()).toContain('東風')
+    expect(wrapper.get('[data-testid="player-melds-south"]').text()).toContain('一萬')
   })
 
   it('renders discard-win scoring items for a discard win result', () => {

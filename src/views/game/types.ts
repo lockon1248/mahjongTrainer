@@ -1,6 +1,23 @@
-import type { ClaimResolution, Meld, RoundOutcome, RoundPhase, ScoringItem, Seat, Tile } from '@/core'
+import type { ClaimResolution, MeldType, RoundOutcome, RoundPhase, ScoringItem, Seat, Tile } from '@/core'
 
 export type GameTableRelativePosition = 'bottom' | 'right' | 'top' | 'left'
+
+export type GameTableMeldViewModel = {
+  type: MeldType
+  labels: string[]
+  isMasked?: boolean
+}
+
+export type MatchVictoryMode = 'bankruptcy' | 'four-winds'
+
+export type GameTableMatchSummaryViewModel = {
+  initialChips: number
+  victoryMode: MatchVictoryMode
+  baseStake: number
+  taiValue: number
+  status: 'in-progress' | 'ended'
+  winnerSeat: Seat | null
+}
 
 export type GameTablePlayerViewModel = {
   seat: Seat
@@ -10,7 +27,7 @@ export type GameTablePlayerViewModel = {
   revealedWinningTiles?: Tile[]
   flowerCount: number
   meldCount: number
-  melds: Meld[]
+  melds: GameTableMeldViewModel[]
   discardCount: number
   discards: Tile[]
   score: number
@@ -28,6 +45,7 @@ export type GameTableSnapshotViewModel = {
   wallCount: number
   totalDiscards: number
   lastClaimResolution: ClaimResolution | null
+  matchSummary?: GameTableMatchSummaryViewModel | null
   players: GameTablePlayerViewModel[]
 }
 

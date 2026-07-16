@@ -48,3 +48,42 @@ tests:
   - tests/ui/human-self-turn-actions.test.ts
   - tests/core/ai-decision-core.test.ts
 -->
+
+---
+### Requirement: Concealed kong privacy in AI runtime context
+
+AI runtime integrations SHALL mask another seat's concealed kong tile identities before constructing non-owning AI decision context, so AI agents cannot infer hidden tile values from runtime meld data.
+
+#### Scenario: Non-owning AI does not receive another seat's concealed kong tiles
+
+- **WHEN** the runtime builds an AI decision context for seat `south`, and seat `west` already has a `kan-concealed` meld
+- **THEN** the context for `south` MUST preserve that `west` has a concealed kong, but MUST NOT expose the actual tile identities inside that meld
+
+##### Example: west concealed kong stays hidden from south AI
+
+- **GIVEN** `west` has a concealed kong of `7-bamboo`
+- **WHEN** the runtime builds `south` AI context for discard or claim evaluation
+- **THEN** `south` MUST NOT receive `7-bamboo` meld tiles for `west`
+
+<!-- @trace
+source: taiwan-mahjong-concealed-kong-visibility
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/components/MatchSetupModal.vue
+  - src/views/game/GameView.vue
+  - src/views/game/types.ts
+  - src/views/game/constants.ts
+  - src/stores/gameSession.ts
+  - src/core/rules/roundFlow.ts
+  - src/views/game/selectors.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/core/ai-decision-core.test.ts
+  - tests/ui/match-setup-modal.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-view.test.ts
+-->

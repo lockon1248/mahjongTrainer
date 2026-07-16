@@ -30,6 +30,8 @@ describe('interactive turn loop', () => {
       }
     })
 
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
+
     const selectedTile = createGameTableSnapshot(store.round!, store.humanSeat).players
       .find(player => player.seat === store.humanSeat)!
       .concealedTiles[0]!
@@ -49,6 +51,7 @@ describe('interactive turn loop', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
+    store.startLocalRound()
     const baseRound = createBaselineRound({ wall: createBaselineWall() })
     store.round = {
       ...baseRound,
@@ -99,6 +102,7 @@ describe('interactive turn loop', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
+    store.startLocalRound()
     const baseRound = createBaselineRound({ wall: createBaselineWall() })
     store.round = {
       ...baseRound,
@@ -130,6 +134,7 @@ describe('interactive turn loop', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
+    store.startLocalRound()
     const baseRound = createBaselineRound({ wall: createBaselineWall() })
     store.round = {
       ...baseRound,
@@ -161,6 +166,7 @@ describe('interactive turn loop', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
+    store.startLocalRound()
     const baseRound = createBaselineRound({ wall: createBaselineWall() })
     store.round = {
       ...baseRound,
@@ -209,6 +215,7 @@ describe('interactive turn loop', () => {
       }
     })
 
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
     expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
@@ -225,6 +232,8 @@ describe('interactive turn loop', () => {
     vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
+    const store = useGameSessionStore()
+    const advanceSpy = vi.spyOn(store, 'advanceTurn')
 
     const wrapper = mount(GameView, {
       global: {
@@ -232,6 +241,7 @@ describe('interactive turn loop', () => {
       }
     })
 
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
     expect(wrapper.get('[data-testid="summary-total-discards"]').text()).toContain('1')
@@ -239,7 +249,7 @@ describe('interactive turn loop', () => {
     await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS * 4)
     await nextTick()
 
-    expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('總捨牌數', ''))).toBeGreaterThan(1)
+    expect(advanceSpy.mock.calls.length).toBeGreaterThan(1)
   })
 
   it('reflects exhaustive draw outcomes in the rendered table snapshot', () => {

@@ -4,16 +4,13 @@ import { storeToRefs } from 'pinia'
 import type { HumanClaimCandidate, HumanSelfTurnCandidate, Tile } from '@/core'
 import { AI_TURN_DELAY_MS } from '@/views/game/constants'
 import GameTableView from '@/views/game/components/GameTableView.vue'
+import MatchSetupModal from '@/views/game/components/MatchSetupModal.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
 import { attachGameE2EBridge } from '@/views/game/e2eBridge'
 
 const gameSessionStore = useGameSessionStore()
-const { error, isInitialized, round } = storeToRefs(gameSessionStore)
-
-if (!isInitialized.value && error.value == null) {
-  gameSessionStore.startLocalRound()
-}
+const { error, needsMatchSetup, round } = storeToRefs(gameSessionStore)
 
 attachGameE2EBridge(gameSessionStore)
 
@@ -21,7 +18,7 @@ const snapshot = computed(() => {
   if (round.value == null)
     return null
 
-  return createGameTableSnapshot(round.value, gameSessionStore.humanSeat)
+  return createGameTableSnapshot(round.value, gameSessionStore.humanSeat, gameSessionStore.match)
 })
 
 let autoAdvanceTimer: ReturnType<typeof window.setTimeout> | null = null
@@ -89,6 +86,10 @@ const handleHumanSelfTurnAction = (candidate: HumanSelfTurnCandidate) => {
 const handleNextRound = () => {
   gameSessionStore.startNextRound()
 }
+
+const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'bankruptcy' | 'four-winds' }) => {
+  gameSessionStore.startLocalRound(payload)
+}
 </script>
 
 <template>
@@ -102,8 +103,14 @@ const handleNextRound = () => {
       {{ error }}
     </p>
 
+    <MatchSetupModal
+      v-if="needsMatchSetup"
+      :default-initial-chips="1000"
+      @submit="handleMatchSetupSubmit"
+    />
+
     <GameTableView
-      v-else-if="snapshot != null"
+      v-if="snapshot != null"
       :snapshot="snapshot"
       :human-seat="gameSessionStore.humanSeat"
       :claim-candidates="gameSessionStore.availableHumanClaims"

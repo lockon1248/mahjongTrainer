@@ -70,6 +70,29 @@ describe('ai decision core', () => {
     })
   })
 
+  it('does not expose another seat concealed kong tiles in AI decision context', () => {
+    const round = createBaselineRound({ wall: buildWall() })
+    round.players.west.melds = [{
+      type: 'kan-concealed',
+      tiles: dots(5, 5, 5, 5),
+      claimedTile: null,
+      claimedFromSeat: null
+    }]
+
+    const context = createAiDecisionContext(round, {
+      seat: 'south'
+    })
+
+    expect(context.seat).toBe('south')
+    expect(context.melds).toEqual(round.players.south.melds)
+    expect(context.melds).not.toContainEqual({
+      type: 'kan-concealed',
+      tiles: dots(5, 5, 5, 5),
+      claimedTile: null,
+      claimedFromSeat: null
+    })
+  })
+
   it('chooses one legal discard tile from the concealed hand', () => {
     const decision = chooseAiDiscardDecision({
       seat: 'east',

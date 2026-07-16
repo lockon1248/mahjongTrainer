@@ -27,11 +27,40 @@ import {
 } from '@/core'
 
 const HUMAN_SEAT: Seat = 'east'
+const DEFAULT_MATCH_INITIAL_CHIPS = 1000
+const MATCH_BASE_STAKE = 30
+const MATCH_TAI_VALUE = 10
+
+type MatchVictoryMode = 'bankruptcy' | 'four-winds'
+
+type MatchConfig = {
+  initialChips: number
+  victoryMode: MatchVictoryMode
+  baseStake: number
+  taiValue: number
+}
+
+type MatchState = {
+  config: MatchConfig | null
+  chipsBySeat: Record<Seat, number>
+  status: 'setup' | 'in-progress' | 'ended'
+  winnerSeat: Seat | null
+  lastSettledRoundKey: string | null
+}
+
 export const useGameSessionStore = defineStore('game-session', () => {
   const round = shallowRef<BaselineRoundState | null>(null)
   const error = shallowRef<string | null>(null)
+  const match = shallowRef<MatchState>({
+    config: null,
+    chipsBySeat: createChipsBySeat(0),
+    status: 'setup',
+    winnerSeat: null,
+    lastSettledRoundKey: null
+  })
 
   const isInitialized = computed(() => round.value != null)
+  const needsMatchSetup = computed(() => match.value.config == null)
   const humanSeat = HUMAN_SEAT
   const availableHumanClaims = computed<HumanClaimCandidate[]>(() => {
     if (round.value == null)
@@ -46,8 +75,20 @@ export const useGameSessionStore = defineStore('game-session', () => {
     return getLegalSelfTurnCandidates(round.value, humanSeat)
   })
 
-  const startLocalRound = () => {
+  const startLocalRound = (input?: { initialChips?: number; victoryMode?: MatchVictoryMode }) => {
     try {
+      const config = createMatchConfig({
+        initialChips: input?.initialChips ?? DEFAULT_MATCH_INITIAL_CHIPS,
+        victoryMode: input?.victoryMode ?? 'bankruptcy'
+      })
+
+      match.value = {
+        config,
+        chipsBySeat: createChipsBySeat(config.initialChips),
+        status: 'in-progress',
+        winnerSeat: null,
+        lastSettledRoundKey: null
+      }
       round.value = createBaselineRound({
         wall: createBaselineWall()
       })
@@ -55,12 +96,27 @@ export const useGameSessionStore = defineStore('game-session', () => {
     }
     catch (caughtError) {
       round.value = null
+      match.value = {
+        config: null,
+        chipsBySeat: createChipsBySeat(0),
+        status: 'setup',
+        winnerSeat: null,
+        lastSettledRoundKey: null
+      }
       error.value = caughtError instanceof Error ? caughtError.message : 'unknown-error'
     }
   }
 
   const startNextRound = () => {
     const currentRound = requireRound()
+
+    if (match.value.status === 'ended')
+      return
+
+    applyMatchSettlement(currentRound)
+
+    if (match.value.status === 'ended')
+      return
 
     runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
       wall: createBaselineWall()
@@ -199,11 +255,92 @@ export const useGameSessionStore = defineStore('game-session', () => {
 
   const runRoundTransition = (apply: () => BaselineRoundState) => {
     try {
-      round.value = apply()
+      const previousRound = round.value
+      const nextRound = apply()
+      round.value = nextRound
+      reconcileMatchState(previousRound, nextRound)
       error.value = null
     }
     catch (caughtError) {
       error.value = caughtError instanceof Error ? caughtError.message : 'unknown-error'
+    }
+  }
+
+  const reconcileMatchState = (
+    previousRound: BaselineRoundState | null,
+    nextRound: BaselineRoundState
+  ) => {
+    if (match.value.config == null)
+      return
+
+    if (nextRound.phase === 'ended' && previousRound?.phase !== 'ended')
+      applyMatchSettlement(nextRound)
+  }
+
+  const applyMatchSettlement = (completedRound: BaselineRoundState) => {
+    const currentConfig = match.value.config
+
+    if (currentConfig == null)
+      return
+
+    if (completedRound.phase !== 'ended' || completedRound.outcome.status === 'in-progress')
+      return
+
+    const settlementKey = getRoundSettlementKey(completedRound)
+
+    if (match.value.lastSettledRoundKey === settlementKey)
+      return
+
+    if (completedRound.outcome.status === 'win') {
+      const amount = currentConfig.baseStake + ((completedRound.outcome.result.totalTai ?? 0) * currentConfig.taiValue)
+      const nextChips = { ...match.value.chipsBySeat }
+      const winnerSeat = completedRound.outcome.result.winnerSeat!
+      const discarderSeat = completedRound.outcome.result.discarderSeat
+
+      if (discarderSeat == null) {
+        for (const seat of ALL_SEATS) {
+          if (seat === winnerSeat)
+            continue
+
+          nextChips[seat] -= amount
+          nextChips[winnerSeat] += amount
+        }
+      }
+      else {
+        nextChips[discarderSeat] -= amount
+        nextChips[winnerSeat] += amount
+      }
+
+      match.value = {
+        ...match.value,
+        chipsBySeat: nextChips,
+        lastSettledRoundKey: settlementKey
+      }
+    }
+    else {
+      match.value = {
+        ...match.value,
+        lastSettledRoundKey: settlementKey
+      }
+    }
+
+    if (currentConfig.victoryMode === 'bankruptcy') {
+      if (Object.values(match.value.chipsBySeat).some(chips => chips <= 0)) {
+        match.value = {
+          ...match.value,
+          status: 'ended',
+          winnerSeat: getChipLeader(match.value.chipsBySeat)
+        }
+      }
+      return
+    }
+
+    if (didCompleteFourWindsMatch(completedRound)) {
+      match.value = {
+        ...match.value,
+        status: 'ended',
+        winnerSeat: getChipLeader(match.value.chipsBySeat)
+      }
     }
   }
 
@@ -266,8 +403,10 @@ export const useGameSessionStore = defineStore('game-session', () => {
 
   return {
     round,
+    match,
     error,
     isInitialized,
+    needsMatchSetup,
     humanSeat,
     availableHumanClaims,
     availableHumanSelfTurnActions,
@@ -281,3 +420,61 @@ export const useGameSessionStore = defineStore('game-session', () => {
     advanceTurn
   }
 })
+
+const createMatchConfig = (input: {
+  initialChips: number
+  victoryMode: MatchVictoryMode
+}): MatchConfig => {
+  return {
+    initialChips: input.initialChips,
+    victoryMode: input.victoryMode,
+    baseStake: MATCH_BASE_STAKE,
+    taiValue: MATCH_TAI_VALUE
+  }
+}
+
+const createChipsBySeat = (amount: number): Record<Seat, number> => ({
+  east: amount,
+  south: amount,
+  west: amount,
+  north: amount
+})
+
+const getChipLeader = (chipsBySeat: Record<Seat, number>): Seat => {
+  return ALL_SEATS.reduce((leader, seat) => {
+    return chipsBySeat[seat] > chipsBySeat[leader] ? seat : leader
+  }, 'east')
+}
+
+const didCompleteFourWindsMatch = (completedRound: BaselineRoundState): boolean => {
+  if (completedRound.table.prevailingWind !== 'north')
+    return false
+
+  const previewNextRound = createNextRoundFromCompletedRound(completedRound, {
+    wall: createBaselineWall()
+  })
+
+  return previewNextRound.table.prevailingWind === 'north'
+    ? false
+    : previewNextRound.table.prevailingWind === 'east'
+}
+
+const getRoundSettlementKey = (round: BaselineRoundState): string => {
+  if (round.outcome.status === 'draw') {
+    return [
+      'draw',
+      round.table.prevailingWind,
+      round.table.dealerSeat,
+      round.outcome.result.drawReason
+    ].join(':')
+  }
+
+  return [
+    'win',
+    round.table.prevailingWind,
+    round.table.dealerSeat,
+    round.outcome.result.winnerSeat,
+    round.outcome.result.discarderSeat ?? 'self-draw',
+    String(round.outcome.result.totalTai ?? 0)
+  ].join(':')
+}

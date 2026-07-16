@@ -80,6 +80,22 @@ const localRoundLabel = computed(() => {
   return `${formatWind(props.snapshot.prevailingWind)}${getSeatRoundLabel(props.snapshot.dealerSeat)}局`
 })
 
+const matchModeLabel = computed(() => {
+  if (props.snapshot.matchSummary == null)
+    return null
+
+  return props.snapshot.matchSummary.victoryMode === 'bankruptcy'
+    ? '破產即止'
+    : '四風圈結算'
+})
+
+const matchStakesLabel = computed(() => {
+  if (props.snapshot.matchSummary == null)
+    return null
+
+  return `底 ${props.snapshot.matchSummary.baseStake} / 台 ${props.snapshot.matchSummary.taiValue}`
+})
+
 const isPlayerActive = (player: GameTablePlayerViewModel): boolean => {
   if (props.snapshot.phase === 'claim-window')
     return player.seat === props.humanSeat && hasHumanClaimWindow.value
@@ -302,6 +318,21 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
     </header>
 
     <section
+      v-if="snapshot.matchSummary != null"
+      class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
+      data-testid="match-summary"
+    >
+      <div class="table-chip" data-testid="match-summary-mode">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">勝利條件</span>
+        <strong>{{ matchModeLabel }}</strong>
+      </div>
+      <div class="table-chip" data-testid="match-summary-stakes">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">結算</span>
+        <strong>{{ matchStakesLabel }}</strong>
+      </div>
+    </section>
+
+    <section
       v-if="snapshot.resultSummary != null"
       class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
       data-testid="round-result-summary"
@@ -366,6 +397,13 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
                 莊家
               </span>
               <span
+                v-if="snapshot.matchSummary != null"
+                class="player-score inline-flex items-center rounded-full border border-[rgba(248,242,231,0.2)] bg-[rgba(248,242,231,0.12)] px-[0.58rem] py-[0.18rem] text-[0.72rem] font-700 tracking-[0.04em] text-[#f8f2e7]"
+                :data-testid="`player-score-${player.seat}`"
+              >
+                籌碼 {{ player.score }}
+              </span>
+              <span
                 v-if="getPlayerActiveFlagLabel(player) != null"
                 class="inline-flex items-center rounded-[0.65rem] border border-[rgba(255,240,205,0.75)] bg-[linear-gradient(180deg,#f0713b,#c54d1e)] px-[0.72rem] py-[0.28rem] text-[0.76rem] font-800 tracking-[0.08em] text-[#fff7ea] shadow-[0_0.4rem_1rem_rgba(92,31,5,0.28)]"
                 :data-testid="`player-active-${player.seat}`"
@@ -413,11 +451,11 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
             <span class="text-[0.75rem] font-700 tracking-[0.08em] text-[#f1d48a]">{{ formatMeldType(meld.type) }}</span>
             <div class="flex flex-wrap gap-[0.45rem]">
               <span
-                v-for="(tile, tileIndex) in meld.tiles"
-                :key="`${player.seat}-meld-tile-${meldIndex}-${tile.suit}-${tile.rank}-${tileIndex}`"
+                v-for="(label, tileIndex) in meld.labels"
+                :key="`${player.seat}-meld-tile-${meldIndex}-${label}-${tileIndex}`"
                 class="rounded-[0.7rem] border border-[rgba(241,212,138,0.28)] bg-[rgba(241,212,138,0.12)] px-[0.52rem] py-[0.28rem] text-[0.9rem] text-[#fff2c6]"
               >
-                {{ formatTileLabel(tile) }}
+                {{ label }}
               </span>
             </div>
           </div>

@@ -79,6 +79,9 @@ export const createNextRoundFromCompletedRound = (
     : round.outcome.result.winnerSeat === round.table.dealerSeat
       ? round.table.dealerSeat
       : getNextSeat(round.outcome.result.winnerSeat!)
+  const nextPrevailingWind = shouldAdvancePrevailingWind(round, nextDealerSeat)
+    ? getNextSeat(round.table.prevailingWind)
+    : round.table.prevailingWind
 
   return createBaselineRound({
     wall: input.wall,
@@ -86,7 +89,7 @@ export const createNextRoundFromCompletedRound = (
       ...round.ruleConfig
     },
     dealerSeat: nextDealerSeat,
-    prevailingWind: round.table.prevailingWind
+    prevailingWind: nextPrevailingWind
   })
 }
 
@@ -638,6 +641,15 @@ const drawFromWallTail = (wall: Tile[]): Tile => {
     throw new Error('wall does not contain enough tiles')
 
   return tile
+}
+
+const shouldAdvancePrevailingWind = (
+  round: BaselineRoundState,
+  nextDealerSeat: Seat
+): boolean => {
+  return round.outcome.status === 'win'
+    && round.outcome.result.winnerSeat !== round.table.dealerSeat
+    && nextDealerSeat === 'east'
 }
 
 const isValidClaim = (round: BaselineRoundState, claim: PendingActionClaim): boolean => {
