@@ -39,4 +39,35 @@ describe('match setup modal', () => {
       }
     ]])
   })
+
+  it('does not submit when the initial chips are below 100', async () => {
+    const wrapper = mount(MatchSetupModal, {
+      props: {
+        defaultInitialChips: 1000
+      }
+    })
+
+    await wrapper.get('[data-testid="match-setup-initial-chips"]').setValue('10')
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
+
+    expect(wrapper.emitted('submit')).toBeUndefined()
+    expect(wrapper.get('[data-testid="match-setup-initial-chips"]').attributes('min')).toBe('100')
+    expect(wrapper.get('[data-testid="match-setup-error"]').text()).toContain('初始籌碼不可低於 100')
+  })
+
+  it('clears the validation message after the chips are corrected back to a legal value', async () => {
+    const wrapper = mount(MatchSetupModal, {
+      props: {
+        defaultInitialChips: 1000
+      }
+    })
+
+    await wrapper.get('[data-testid="match-setup-initial-chips"]').setValue('10')
+    await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
+    expect(wrapper.get('[data-testid="match-setup-error"]').text()).toContain('初始籌碼不可低於 100')
+
+    await wrapper.get('[data-testid="match-setup-initial-chips"]').setValue('100')
+
+    expect(wrapper.find('[data-testid="match-setup-error"]').exists()).toBe(false)
+  })
 })

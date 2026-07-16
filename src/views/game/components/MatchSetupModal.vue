@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { DEFAULT_MATCH_INITIAL_CHIPS, MIN_MATCH_INITIAL_CHIPS } from '@/views/game/matchSetup'
 
 const props = defineProps<{
   defaultInitialChips?: number
@@ -9,14 +10,26 @@ const emit = defineEmits<{
   submit: [payload: { initialChips: number; victoryMode: 'bankruptcy' | 'four-winds' }]
 }>()
 
-const initialChips = ref(String(props.defaultInitialChips ?? 1000))
+const initialChips = ref(String(props.defaultInitialChips ?? DEFAULT_MATCH_INITIAL_CHIPS))
 const victoryMode = ref<'bankruptcy' | 'four-winds'>('bankruptcy')
+const validationMessage = ref<string | null>(null)
+
+watch(initialChips, (value) => {
+  const parsed = Number(value)
+
+  if (Number.isFinite(parsed) && parsed >= MIN_MATCH_INITIAL_CHIPS)
+    validationMessage.value = null
+})
 
 const handleSubmit = () => {
   const parsed = Number(initialChips.value)
 
-  if (!Number.isFinite(parsed) || parsed <= 0)
+  if (!Number.isFinite(parsed) || parsed < MIN_MATCH_INITIAL_CHIPS) {
+    validationMessage.value = `初始籌碼不可低於 ${MIN_MATCH_INITIAL_CHIPS}`
     return
+  }
+
+  validationMessage.value = null
 
   emit('submit', {
     initialChips: parsed,
@@ -38,7 +51,7 @@ const handleSubmit = () => {
           data-testid="match-setup-initial-chips"
           inputmode="numeric"
           type="number"
-          min="1"
+          :min="MIN_MATCH_INITIAL_CHIPS"
         >
       </label>
 
@@ -68,6 +81,14 @@ const handleSubmit = () => {
         <span>底：30</span>
         <span>台：10</span>
       </div>
+
+      <p
+        v-if="validationMessage != null"
+        class="match-setup-error"
+        data-testid="match-setup-error"
+      >
+        {{ validationMessage }}
+      </p>
 
       <button
         class="action-button-pill cursor-pointer"
@@ -148,5 +169,14 @@ const handleSubmit = () => {
   gap: 1rem;
   color: #f1d48a;
   font-weight: 700;
+}
+
+.match-setup-error {
+  margin: 0;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 182, 182, 0.28);
+  background: rgba(155, 41, 41, 0.18);
+  padding: 0.75rem 0.9rem;
+  color: #ffd5d5;
 }
 </style>

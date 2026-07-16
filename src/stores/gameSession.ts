@@ -25,9 +25,9 @@ import {
   type Seat,
   type Tile
 } from '@/core'
+import { DEFAULT_MATCH_INITIAL_CHIPS, MIN_MATCH_INITIAL_CHIPS } from '@/views/game/matchSetup'
 
 const HUMAN_SEAT: Seat = 'east'
-const DEFAULT_MATCH_INITIAL_CHIPS = 1000
 const MATCH_BASE_STAKE = 30
 const MATCH_TAI_VALUE = 10
 
@@ -113,9 +113,9 @@ export const useGameSessionStore = defineStore('game-session', () => {
     if (match.value.status === 'ended')
       return
 
-    applyMatchSettlement(currentRound)
+    const didEndMatch = applyMatchSettlement(currentRound)
 
-    if (match.value.status === 'ended')
+    if (didEndMatch)
       return
 
     runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
@@ -277,19 +277,19 @@ export const useGameSessionStore = defineStore('game-session', () => {
       applyMatchSettlement(nextRound)
   }
 
-  const applyMatchSettlement = (completedRound: BaselineRoundState) => {
+  const applyMatchSettlement = (completedRound: BaselineRoundState): boolean => {
     const currentConfig = match.value.config
 
     if (currentConfig == null)
-      return
+      return false
 
     if (completedRound.phase !== 'ended' || completedRound.outcome.status === 'in-progress')
-      return
+      return false
 
     const settlementKey = getRoundSettlementKey(completedRound)
 
     if (match.value.lastSettledRoundKey === settlementKey)
-      return
+      return match.value.status === 'ended'
 
     if (completedRound.outcome.status === 'win') {
       const amount = currentConfig.baseStake + ((completedRound.outcome.result.totalTai ?? 0) * currentConfig.taiValue)
@@ -332,7 +332,7 @@ export const useGameSessionStore = defineStore('game-session', () => {
           winnerSeat: getChipLeader(match.value.chipsBySeat)
         }
       }
-      return
+      return match.value.status === 'ended'
     }
 
     if (didCompleteFourWindsMatch(completedRound)) {
@@ -342,6 +342,8 @@ export const useGameSessionStore = defineStore('game-session', () => {
         winnerSeat: getChipLeader(match.value.chipsBySeat)
       }
     }
+
+    return match.value.status === 'ended'
   }
 
   const collectAiClaims = (currentRound: BaselineRoundState): PendingActionClaim[] => {
@@ -425,6 +427,9 @@ const createMatchConfig = (input: {
   initialChips: number
   victoryMode: MatchVictoryMode
 }): MatchConfig => {
+  if (input.initialChips < MIN_MATCH_INITIAL_CHIPS)
+    throw new Error(`initial chips must be at least ${MIN_MATCH_INITIAL_CHIPS}`)
+
   return {
     initialChips: input.initialChips,
     victoryMode: input.victoryMode,
@@ -468,6 +473,9 @@ const getRoundSettlementKey = (round: BaselineRoundState): string => {
       round.outcome.result.drawReason
     ].join(':')
   }
+
+  if (round.outcome.status !== 'win')
+    return ['in-progress', round.table.prevailingWind, round.table.dealerSeat].join(':')
 
   return [
     'win',

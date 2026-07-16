@@ -114,6 +114,8 @@ repo workflow 要求兩件事同時成立：
    - `taiwan-mahjong-concealed-kong-visibility`
 12. 開局籌碼與勝負條件設定
    - `taiwan-mahjong-match-stakes-and-victory-setup`
+   - `taiwan-mahjong-match-setup-minimum-chips-guard`
+   - `taiwan-mahjong-match-setup-validation-feedback`
 
 ### 目前進行中
 
@@ -145,7 +147,7 @@ repo workflow 要求兩件事同時成立：
 11. 暗槓資訊保密
    - 非擁有者看不到 AI 暗槓牌值，且 AI 也不會從 runtime context 讀到其他座位的暗槓牌值
 12. 開局籌碼與勝負條件設定
-   - 開局前可設定初始籌碼與勝利條件，並支援破產結束或四風圈結算的整場 closure
+   - 開局前可設定初始籌碼與勝利條件，並支援破產結束或四風圈結算的整場 closure，且初始籌碼最低值已收斂為 `100`，不合法值會在 setup modal 內直接提示原因
 
 ## Update Rules
 

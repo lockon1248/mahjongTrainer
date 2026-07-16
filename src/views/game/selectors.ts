@@ -6,7 +6,12 @@ import {
   WIND_TILE_ORDER
 } from '@/ui/constants/tiles'
 import { formatTileLabel } from '@/ui/constants/tiles'
-import type { GameTableMeldViewModel, GameTableRelativePosition, GameTableSnapshotViewModel } from '@/views/game/types'
+import type {
+  GameTableMatchSummaryViewModel,
+  GameTableMeldViewModel,
+  GameTableRelativePosition,
+  GameTableSnapshotViewModel
+} from '@/views/game/types'
 
 const SEAT_ORDER: readonly Seat[] = ALL_SEATS
 
@@ -100,7 +105,7 @@ export const createGameTableSnapshot = (
   match?: {
     config: {
       initialChips: number
-      victoryMode: GameTableSnapshotViewModel['matchSummary']['victoryMode']
+      victoryMode: GameTableMatchSummaryViewModel['victoryMode']
       baseStake: number
       taiValue: number
     } | null

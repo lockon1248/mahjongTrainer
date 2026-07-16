@@ -1964,3 +1964,61 @@ tests:
   - tests/ui/next-round-flow.test.ts
   - tests/ui/match-setup-modal.test.ts
 -->
+
+---
+### Requirement: Match setup modal blocks chips below 100
+
+The frontend SHALL block setup submission when the initial chip input is below `100`, so the user cannot accidentally start an unsafe low-chip match from the UI.
+
+#### Scenario: Modal does not submit an unsafe chip value
+
+- **WHEN** the user enters an initial chip amount below `100`
+- **THEN** the setup modal MUST NOT emit a submit event
+
+##### Example: 10 chips cannot start a match
+
+- **GIVEN** the setup modal is visible
+- **WHEN** the user enters `10` as initial chips and clicks submit
+- **THEN** no submit event MUST be emitted
+
+<!-- @trace
+source: taiwan-mahjong-match-setup-minimum-chips-guard
+updated: 2026-07-16
+code:
+  - src/views/game/matchSetup.ts
+  - src/stores/gameSession.ts
+  - src/views/game/components/MatchSetupModal.vue
+  - src/views/game/constants.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/match-setup-modal.test.ts
+-->
+
+---
+### Requirement: Match setup modal explains why chips below 100 are blocked
+
+The frontend SHALL explain inside the setup modal why an initial chip amount below `100` cannot start a match, so the user does not get stuck without feedback.
+
+#### Scenario: Modal shows a clear validation message for unsafe chips
+
+- **WHEN** the user enters an initial chip amount below `100` and tries to submit
+- **THEN** the modal MUST keep blocking submit and MUST render a clear validation message that explains the minimum is `100`
+
+##### Example: 10 chips shows the blocking reason
+
+- **GIVEN** the setup modal is visible
+- **WHEN** the user enters `10` as initial chips and clicks submit
+- **THEN** the modal MUST show a message that initial chips cannot be lower than `100`
+
+<!-- @trace
+source: taiwan-mahjong-match-setup-validation-feedback
+updated: 2026-07-16
+code:
+  - src/stores/gameSession.ts
+  - src/views/game/components/MatchSetupModal.vue
+  - src/views/game/matchSetup.ts
+  - src/views/game/constants.ts
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/match-setup-modal.test.ts
+-->

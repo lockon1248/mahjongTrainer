@@ -1,1 +1,1 @@
-export const AI_TURN_DELAY_MS = 2000
+export const AI_TURN_DELAY_MS = 500

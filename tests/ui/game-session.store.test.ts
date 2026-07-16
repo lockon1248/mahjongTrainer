@@ -183,6 +183,21 @@ describe('game session store', () => {
     expect(store.round?.phase).toBe('discard')
   })
 
+  it('rejects initial chips below 100 and keeps the session unstarted', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({
+      initialChips: 10,
+      victoryMode: 'bankruptcy'
+    })
+
+    expect(store.error).toBe('initial chips must be at least 100')
+    expect(store.isInitialized).toBe(false)
+    expect(store.needsMatchSetup).toBe(true)
+    expect(store.round).toBeNull()
+    expect(store.match.config).toBeNull()
+  })
+
   it('draws for the current seat through core and advances draw phase into discard phase', () => {
     const store = useGameSessionStore()
     store.round = createClaimWindowRound(dragon('white'), 'east', {
@@ -486,7 +501,7 @@ describe('game session store', () => {
     const store = useGameSessionStore()
 
     store.startLocalRound({
-      initialChips: 50,
+      initialChips: 100,
       victoryMode: 'bankruptcy'
     })
 
@@ -499,7 +514,7 @@ describe('game session store', () => {
         result: createWinRoundResult({
           winnerSeat: 'east',
           discarderSeat: 'north',
-          totalTai: 3
+          totalTai: 8
         })
       }
     }
