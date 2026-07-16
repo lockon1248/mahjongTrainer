@@ -21,7 +21,7 @@ export const chooseAiDiscardDecision = (input: AiDiscardDecisionInput): AiDiscar
     if (left.score !== right.score)
       return left.score - right.score
 
-    return compareTile(left.tile, right.tile)
+    return compareDiscardTilePreference(left.tile, right.tile)
   })[0]
 
   if (!selected)
@@ -129,18 +129,41 @@ const getClaimScore = (candidate: AiClaimCandidate, concealedTiles: Tile[]): num
     return 0
 
   const consumedTiles = candidate.consumedTiles ?? []
-  const penalty = consumedTiles.reduce((total, tile) => total + getTileKeepScore(tile, concealedTiles), 0)
+  const remainingTiles = removeConsumedTiles(concealedTiles, consumedTiles)
+  const structureDelta = getHandProgressScore(remainingTiles) - getHandProgressScore(concealedTiles)
+  const disruptionPenalty = consumedTiles.reduce((total, tile) => total + getTileKeepScore(tile, concealedTiles), 0)
 
   switch (candidate.actionType) {
     case 'chi':
-      return 3 - penalty
+      return 6 + structureDelta - disruptionPenalty * 0.35
     case 'pon':
-      return 1 - penalty
+      return 12 + structureDelta - disruptionPenalty * 0.5 + getPonShapeBonus(candidate, concealedTiles)
     case 'kan-exposed':
-      return 0.5 - penalty
+      return 10 + structureDelta - disruptionPenalty * 0.5
     default:
       throw new Error(`Unsupported AI claim action: ${candidate.actionType}`)
   }
+}
+
+const getPonShapeBonus = (candidate: AiClaimCandidate, concealedTiles: Tile[]): number => {
+  if (candidate.actionType !== 'pon' || candidate.tile == null)
+    return 0
+
+  if (candidate.tile.suit === 'winds' || candidate.tile.suit === 'dragons' || candidate.tile.suit === 'flower')
+    return 4
+
+  if (typeof candidate.tile.rank !== 'number')
+    return 0
+
+  const triggerRank = candidate.tile.rank
+  const neighboringRanks = new Set(concealedTiles.flatMap((tile) => {
+    if (tile.suit !== candidate.tile?.suit || typeof tile.rank !== 'number')
+      return []
+
+    return Math.abs(tile.rank - triggerRank) === 1 ? [tile.rank] : []
+  }))
+
+  return neighboringRanks.size <= 1 ? 4 : 0
 }
 
 const getClaimTieBreaker = (candidate: AiClaimCandidate): number => {
@@ -185,6 +208,25 @@ const getTileKeepScore = (tile: Tile, concealedTiles: Tile[]): number => {
   return Math.max(duplicates, 0) * 2 + neighbors + gaps * 0.5
 }
 
+const getHandProgressScore = (concealedTiles: Tile[]): number => {
+  return concealedTiles.reduce((total, tile) => total + getTileKeepScore(tile, concealedTiles), 0)
+}
+
+const removeConsumedTiles = (concealedTiles: Tile[], consumedTiles: Tile[]): Tile[] => {
+  const remaining = [...concealedTiles]
+
+  for (const consumedTile of consumedTiles) {
+    const consumedIndex = remaining.findIndex(candidate => isSameTile(candidate, consumedTile))
+
+    if (consumedIndex === -1)
+      continue
+
+    remaining.splice(consumedIndex, 1)
+  }
+
+  return remaining
+}
+
 const getIgnoredUnresolvedRules = (ruleConfig: MahjongRuleConfig): string[] => {
   const ignored: string[] = []
 
@@ -208,6 +250,26 @@ const compareTile = (left: Tile, right: Tile): number => {
     return suitDelta
 
   return String(left.rank).localeCompare(String(right.rank), 'en')
+}
+
+const compareDiscardTilePreference = (left: Tile, right: Tile): number => {
+  const flexibilityDelta = getDiscardFlexibilityOrder(left) - getDiscardFlexibilityOrder(right)
+
+  if (flexibilityDelta !== 0)
+    return flexibilityDelta
+
+  return compareTile(left, right)
+}
+
+const getDiscardFlexibilityOrder = (tile: Tile): number => {
+  switch (tile.suit) {
+    case 'winds':
+    case 'dragons':
+    case 'flower':
+      return 0
+    default:
+      return 1
+  }
 }
 
 const isSameTile = (left: Tile, right: Tile): boolean => {

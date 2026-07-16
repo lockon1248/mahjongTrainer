@@ -1344,6 +1344,36 @@ tests:
   - tests/ui/game-table-view.test.ts
 -->
 
+
+<!-- @trace
+source: taiwan-mahjong-center-discard-highlight-rules
+updated: 2026-07-16
+code:
+  - src/views/game/e2eBridge.ts
+  - src/views/game/components/GameTableView.vue
+  - test-results/.last-run.json
+  - src/stores/gameSession.ts
+  - uno.config.ts
+  - vite.config.ts
+  - src/ui/constants/display.ts
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - package.json
+  - src/views/game/constants.ts
+  - src/views/game/types.ts
+  - src/main.ts
+  - src/views/game/GameView.vue
+  - AGENTS.md
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - e2e/game-table.smoke.spec.ts
+-->
+
 ---
 ### Requirement: AI winning proof reveal
 
@@ -1399,6 +1429,36 @@ tests:
   - tests/ui/game-table-view.test.ts
 -->
 
+
+<!-- @trace
+source: taiwan-mahjong-center-discard-highlight-rules
+updated: 2026-07-16
+code:
+  - src/views/game/e2eBridge.ts
+  - src/views/game/components/GameTableView.vue
+  - test-results/.last-run.json
+  - src/stores/gameSession.ts
+  - uno.config.ts
+  - vite.config.ts
+  - src/ui/constants/display.ts
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - package.json
+  - src/views/game/constants.ts
+  - src/views/game/types.ts
+  - src/main.ts
+  - src/views/game/GameView.vue
+  - AGENTS.md
+tests:
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - e2e/game-table.smoke.spec.ts
+-->
+
 ---
 ### Requirement: Table shell reuses shared presentation labels
 
@@ -1443,6 +1503,36 @@ tests:
   - e2e/game-table.smoke.spec.ts
 -->
 
+
+<!-- @trace
+source: taiwan-mahjong-unocss-and-shared-enums
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/constants.ts
+  - package.json
+  - uno.config.ts
+  - src/ui/constants/display.ts
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/e2eBridge.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - vite.config.ts
+  - AGENTS.md
+  - test-results/.last-run.json
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-table-layout.test.ts
+-->
+
 ---
 ### Requirement: Table shell styling remains composable under the shared utility layer
 
@@ -1484,4 +1574,264 @@ tests:
   - tests/ui/game-session.store.test.ts
   - tests/ui/game-table-view.test.ts
   - e2e/game-table.smoke.spec.ts
+-->
+
+<!-- @trace
+source: taiwan-mahjong-unocss-and-shared-enums
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/constants.ts
+  - package.json
+  - uno.config.ts
+  - src/ui/constants/display.ts
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/e2eBridge.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - vite.config.ts
+  - AGENTS.md
+  - test-results/.last-run.json
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-table-layout.test.ts
+-->
+
+---
+### Requirement: Dealer badge on all four player panels
+
+The table view SHALL render an explicit dealer badge on the current dealer's player panel so the user can identify the dealer without relying on summary text alone.
+
+#### Scenario: Current dealer panel shows a dealer badge
+
+- **WHEN** the game snapshot identifies one seat as `dealerSeat`
+- **THEN** the matching player panel MUST render a dealer badge, and all non-dealer panels MUST NOT render that badge
+
+##### Example: west dealer is visible on the west panel
+
+- **GIVEN** a snapshot with `dealerSeat = west`
+- **WHEN** the table view renders the four player panels
+- **THEN** only the `west` panel MUST show the dealer badge
+
+
+<!-- @trace
+source: taiwan-mahjong-dealer-rotation-and-turn-pace
+updated: 2026-07-16
+code:
+  - AGENTS.md
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - vite.config.ts
+  - src/views/game/constants.ts
+  - uno.config.ts
+  - test-results/.last-run.json
+  - src/views/game/e2eBridge.ts
+  - src/ui/constants/tiles.ts
+  - package.json
+  - src/views/game/components/GameTableView.vue
+  - src/stores/gameSession.ts
+  - src/ui/constants/display.ts
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+-->
+
+---
+### Requirement: Strong active turn highlight on the current player panel
+
+The table view SHALL render a strong panel-level highlight for the current acting seat so the user can tell at a glance which seat is currently drawing or discarding.
+
+#### Scenario: Active player panel follows the current seat
+
+- **WHEN** the snapshot `currentSeat` changes during normal round progression
+- **THEN** the corresponding player panel MUST render the active-turn highlight and the previously active panel MUST lose it
+
+##### Example: south active turn moves highlight to south
+
+- **GIVEN** a snapshot with `currentSeat = south` and `phase = discard`
+- **WHEN** the table view renders the player panels
+- **THEN** the `south` panel MUST render the active-turn highlight
+
+
+<!-- @trace
+source: taiwan-mahjong-dealer-rotation-and-turn-pace
+updated: 2026-07-16
+code:
+  - AGENTS.md
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - vite.config.ts
+  - src/views/game/constants.ts
+  - uno.config.ts
+  - test-results/.last-run.json
+  - src/views/game/e2eBridge.ts
+  - src/ui/constants/tiles.ts
+  - package.json
+  - src/views/game/components/GameTableView.vue
+  - src/stores/gameSession.ts
+  - src/ui/constants/display.ts
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+-->
+
+---
+### Requirement: AI auto-turn pacing remains human-readable
+
+The frontend session loop SHALL pace AI-driven turn advancement at an approximately two-second cadence so users can visually follow which seat is currently acting.
+
+#### Scenario: AI discard does not resolve instantaneously
+
+- **WHEN** the current acting seat is AI-controlled and the round is still in progress
+- **THEN** the frontend MUST delay the next visible auto-turn advancement by roughly two seconds instead of immediately chaining through the next action
+
+##### Example: south AI turn pauses before discarding
+
+- **GIVEN** a live round where `south` is the current acting seat and no human decision is pending
+- **WHEN** the session loop advances through the AI turn
+- **THEN** the visible next state MUST appear only after the configured pacing delay
+
+#### Scenario: Human claim windows are not skipped by AI pacing
+
+- **WHEN** an AI discard opens a human-legal `claim-window`
+- **THEN** the frontend MUST stop at that claim window and MUST NOT consume the pacing timer to auto-pass on behalf of the human
+
+##### Example: human win opportunity interrupts AI pacing
+
+- **GIVEN** an AI discard produces a `claim-window` where the human has a legal `win` candidate
+- **WHEN** the session loop reaches that state
+- **THEN** the UI MUST remain on the claim window until the human responds
+
+<!-- @trace
+source: taiwan-mahjong-dealer-rotation-and-turn-pace
+updated: 2026-07-16
+code:
+  - AGENTS.md
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - vite.config.ts
+  - src/views/game/constants.ts
+  - uno.config.ts
+  - test-results/.last-run.json
+  - src/views/game/e2eBridge.ts
+  - src/ui/constants/tiles.ts
+  - package.json
+  - src/views/game/components/GameTableView.vue
+  - src/stores/gameSession.ts
+  - src/ui/constants/display.ts
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+-->
+
+---
+### Requirement: AI auto-turn progression remains phase-stable
+
+當牌桌由 AI 自動推進回合時，前端 store 與 UI wiring 必須只沿著合法 phase continuity 前進，且不得在仍可繼續的 in-progress 狀態中無故停滯。
+
+#### Scenario: Delayed auto-advance continues until the round requires a stop
+
+- **WHEN** 一個 AI 驅動中的本機 round 仍處於 `in-progress`
+- **THEN** 自動推進 MUST 在合法延遲後繼續前進，直到遇到 `claim-window` 人類介入或 `ended` 停止條件
+
+##### Example: AI auto-turn does not stall after the first delayed step
+
+- **GIVEN** 一個尚未結束、且目前不需要人類介入的 AI 自動回合
+- **WHEN** 第一個延遲後的 `advanceTurn()` 已完成
+- **THEN** 系統 MUST 在後續仍可前進時繼續安排下一步，而 MUST NOT 永遠停在第一個延遲步驟後
+
+
+<!-- @trace
+source: taiwan-mahjong-ai-turn-stability
+updated: 2026-07-16
+code:
+  - src/core/ai/decision.ts
+  - src/views/game/constants.ts
+tests:
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/core/ai-decision-core.test.ts
+-->
+
+---
+### Requirement: AI auto-turn yields to human claim intervention
+
+當 `claim-window` 對人類座位存在合法候選時，AI 自動推進必須暫停並等待人類決定，而不是繼續略過該視窗。
+
+#### Scenario: Human claim opportunity stops AI auto-advance
+
+- **WHEN** AI 的上一個出牌開啟 `claim-window`，且人類座位存在合法宣告
+- **THEN** 自動推進 MUST 停留在該 `claim-window` 狀態直到人類提交選擇或牌局結束
+
+##### Example: claim-window with human win is not auto-skipped
+
+- **GIVEN** AI 捨牌後，人類座位可合法 `win`
+- **WHEN** UI / store 評估是否繼續排程自動推進
+- **THEN** 系統 MUST 保持在 `claim-window`，且 MUST NOT 自動切往下一家的 `draw`
+
+
+<!-- @trace
+source: taiwan-mahjong-ai-turn-stability
+updated: 2026-07-16
+code:
+  - src/core/ai/decision.ts
+  - src/views/game/constants.ts
+tests:
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/core/ai-decision-core.test.ts
+-->
+
+---
+### Requirement: AI auto-turn resets cleanly across ended and next-round transitions
+
+當本局結束後，AI 自動推進必須停止；當新的下一局開始時，系統必須以新 round state 重新建立自動推進，而不是沿用舊局殘留狀態。
+
+#### Scenario: New round resumes clean auto-turn after the previous round ended
+
+- **WHEN** 一個 ended round 經由下一局流程切換成新的 in-progress round
+- **THEN** 新局的 AI 自動推進 MUST 以新的 round snapshot 為準重新啟動，且 MUST NOT 殘留上一局的 ended 狀態或錯誤排程
+
+##### Example: next round does not inherit ended auto-turn state
+
+- **GIVEN** 一局已顯示結果並允許開始下一局
+- **WHEN** 玩家進入下一局
+- **THEN** 新 round MUST 回到可正常自動推進的 in-progress 狀態，且 MUST NOT 看起來仍停留在上一局結束狀態
+
+<!-- @trace
+source: taiwan-mahjong-ai-turn-stability
+updated: 2026-07-16
+code:
+  - src/core/ai/decision.ts
+  - src/views/game/constants.ts
+tests:
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/core/ai-decision-core.test.ts
 -->

@@ -5,15 +5,15 @@ repo workflow 要求兩件事同時成立：
 1. repo 內必須永遠有一份 active mainline board
 2. 只有完成實作、完成驗證、正式 archive 的 child change 才能被主線當成完成
 
-目前狀態同時破了兩條：舊 live board 已封存，但新 board 沒接手；另一方面，recent child changes 的關閉狀態不可信，因為我已經做過一次未經允許的 archive 並撤回。這次修復必須先回到「現在式真相」，而不是沿用先前全勾或誤封存的錯誤狀態。
+目前這份 board 已重新接手 active 主線，但 recent child changes 的狀態在前一輪曾發生誤封存與未驗證先勾選，因此必須先回到「現在式真相」：哪些 child change 已正式 archive、哪一份仍未完成、下一份 change 會接哪個主線缺口。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - 恢復一份 active mainline board
-- 先恢復一份 active mainline board
-- 明確標示目前 active child changes 仍待重新盤點
+- 讓 active board 如實反映目前唯一未完成 child change
+- 明確標示下一份 planned child change
 - 把已知驗證失敗的 `taiwan-mahjong-dealer-rotation-and-turn-pace` 保持未完成
 
 **Non-Goals:**
@@ -24,17 +24,18 @@ repo workflow 要求兩件事同時成立：
 
 ## Decisions
 
-### 先修正主線 truth，再談任何 closure
+### 先修正主線 truth，再談下一步
 
 這份 board 的第一責任是回答「現在做到哪裡」。因此它必須先如實反映：
 
-- `taiwan-mahjong-center-discard-highlight-rules` 仍是 active change，尚未取得 closure 共識
-- `taiwan-mahjong-unocss-and-shared-enums` 仍是 active change，尚未取得 closure 共識
+- `taiwan-mahjong-center-discard-highlight-rules` 已在 2026-07-16 正式 archive
+- `taiwan-mahjong-unocss-and-shared-enums` 已在 2026-07-16 正式 archive
 - `taiwan-mahjong-dealer-rotation-and-turn-pace` 因 `tests/ui/interactive-turn-loop.test.ts` 失敗，明確不能視為完成
+- 下一份 child change 先拆成 `taiwan-mahjong-ai-turn-stability` 與 `taiwan-mahjong-ai-decision-quality` 兩份，且只能作為 planned child changes，不能覆蓋仍未完成的 current active child change
 
-### recent changes 在重新盤點前不得回填為完成
+### 已 archive 的 recent changes 要回填到 completed，不得繼續假裝待盤點
 
-在重新盤點完成前，recent active changes 不得先被回填為完成。只有在你確認要關閉、且 workflow 與驗證都成立後，才可更新 completed 區塊。
+只要 child change 已完成實作、完成驗證並正式 archive，就必須同步回填到 completed 區塊；否則主線會繼續顯示過時真相。
 
 ### active board 保留一個未完成維護 task
 
@@ -51,8 +52,9 @@ repo workflow 要求兩件事同時成立：
 ### Task 2: 依 archive 與驗證結果回填真實狀態
 
 - Observable behavior:
-  - `taiwan-mahjong-center-discard-highlight-rules` 與 `taiwan-mahjong-unocss-and-shared-enums` 不再被誤寫成已完成。
-  - board 明確揭露目前同時存在多個 active child changes，屬待修復 workflow state。
+  - `taiwan-mahjong-center-discard-highlight-rules` 與 `taiwan-mahjong-unocss-and-shared-enums` 被回填到 completed mainline items。
+  - board 明確揭露目前唯一未完成的 child change 是 `taiwan-mahjong-dealer-rotation-and-turn-pace`。
+  - board 明確標示下一份 planned child changes 依序是 `taiwan-mahjong-ai-turn-stability`、`taiwan-mahjong-ai-decision-quality`。
   - `taiwan-mahjong-dealer-rotation-and-turn-pace` 的完成條件明確包含補齊失敗測試與重跑驗證。
 
 ### Task 3: 維持 successor handoff lifecycle
@@ -85,10 +87,11 @@ repo workflow 要求兩件事同時成立：
    - `taiwan-mahjong-mainline-regression-pass`
    - `taiwan-mahjong-playwright-e2e-foundation`
 5. UI 中文化與牌桌可讀性強化
-   - `taiwan-mahjong-ui-zh-tw-default`
-   - `taiwan-mahjong-table-layout-and-discards`
-   - `taiwan-mahjong-table-layout-verification-pass`
-   - `taiwan-mahjong-unocss-and-shared-enums`
+  - `taiwan-mahjong-ui-zh-tw-default`
+  - `taiwan-mahjong-table-layout-and-discards`
+  - `taiwan-mahjong-table-layout-verification-pass`
+  - `taiwan-mahjong-center-discard-highlight-rules`
+  - `taiwan-mahjong-unocss-and-shared-enums`
 6. 算台與特殊規則主線
    - `taiwan-mahjong-scoring-rules-and-tests`
    - `taiwan-mahjong-complete-scoring-catalog`
@@ -101,15 +104,16 @@ repo workflow 要求兩件事同時成立：
 
 ### 目前進行中
 
-9. active child changes 關閉狀態重新盤點
-   - current active child change：待修復（目前同時存在 `taiwan-mahjong-center-discard-highlight-rules`、`taiwan-mahjong-unocss-and-shared-enums`、`taiwan-mahjong-dealer-rotation-and-turn-pace`）
-   - next planned child change：待重新盤點後回填
-   - completion condition：recent active changes 的驗證狀態、勾選狀態與是否可關閉都被逐一確認
+9. 輪莊 / 節奏 change 收尾
+   - `taiwan-mahjong-dealer-rotation-and-turn-pace`
+   - completion condition：已補齊約兩秒 AI 節奏與對應驗證，並完成正式 archive
 
 ### 尚未開始
 
-10. 下一個 child change 待開立
-   - 待使用者下一步需求或主 spec 後續拆分回填
+10. 下一個 child change 待定
+   - current active child change：none
+   - next planned child change：待使用者下一步需求
+   - completion condition：新的主線缺口被識別並開立對應 child change
 
 ## Completion Conditions
 
@@ -129,8 +133,12 @@ repo workflow 要求兩件事同時成立：
    - 流局結果畫面到下一局的流程與 browser 回歸已固定
 8. UI 規則驅動真實性稽核
    - 假 UI 已盤點並移除未驅動欄位
-9. active child changes 關閉狀態重新盤點
-   - recent active changes 的完成與封存條件都已被重新確認
+9. 輪莊 / 節奏 change 收尾
+   - `taiwan-mahjong-dealer-rotation-and-turn-pace` 已完成實作、補齊驗證並正式 archive
+10. AI 自動推進穩定性強化
+   - AI 自動推進具備穩定的 phase continuity、claim-window 人類介入停頓與終局到下一局重置保護
+11. AI 決策品質強化
+   - AI 的出牌與宣告 heuristic 已補強到符合中階練習對局的基本品質要求
 
 ## Update Rules
 

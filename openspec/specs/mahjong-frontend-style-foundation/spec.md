@@ -49,6 +49,36 @@ tests:
   - e2e/game-table.smoke.spec.ts
 -->
 
+
+<!-- @trace
+source: taiwan-mahjong-unocss-and-shared-enums
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/constants.ts
+  - package.json
+  - uno.config.ts
+  - src/ui/constants/display.ts
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/e2eBridge.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - vite.config.ts
+  - AGENTS.md
+  - test-results/.last-run.json
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-table-layout.test.ts
+-->
+
 ---
 ### Requirement: Shared presentation constants authority
 
@@ -90,4 +120,33 @@ tests:
   - tests/ui/game-session.store.test.ts
   - tests/ui/game-table-view.test.ts
   - e2e/game-table.smoke.spec.ts
+-->
+
+<!-- @trace
+source: taiwan-mahjong-unocss-and-shared-enums
+updated: 2026-07-16
+code:
+  - src/views/game/components/GameTableView.vue
+  - src/views/game/constants.ts
+  - package.json
+  - uno.config.ts
+  - src/ui/constants/display.ts
+  - src/main.ts
+  - src/views/game/types.ts
+  - src/stores/gameSession.ts
+  - src/views/game/e2eBridge.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - src/ui/constants/tiles.ts
+  - vite.config.ts
+  - AGENTS.md
+  - test-results/.last-run.json
+tests:
+  - e2e/game-table.smoke.spec.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-table-layout.test.ts
 -->

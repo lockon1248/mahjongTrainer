@@ -97,6 +97,25 @@ describe('ai decision core', () => {
     })
   })
 
+  it('prefers discarding an equally weak honor tile before breaking a suit tile with future flexibility', () => {
+    const decision = chooseAiDiscardDecision({
+      seat: 'east',
+      concealedTiles: [
+        chars(1)[0]!,
+        chars(9)[0]!,
+        ...dots(4, 5, 6),
+        ...bamboos(7, 8, 9),
+        wind('east'),
+        dragon('white')
+      ],
+      melds: [],
+      flowers: [],
+      ruleConfig: createBaselineRuleConfig()
+    })
+
+    expect(decision.tile).toEqual(wind('east'))
+  })
+
   it('prioritizes win over lower-priority claim actions', () => {
     const candidates: AiClaimCandidate[] = [
       {
@@ -184,6 +203,36 @@ describe('ai decision core', () => {
     })
 
     expect(decision.actionType).toBe('pass')
+  })
+
+  it('chooses pon over pass when the meld clearly advances a weak pair into a made set', () => {
+    const candidates: AiClaimCandidate[] = [
+      {
+        actionType: 'pon',
+        tile: chars(4)[0]!,
+        consumedTiles: chars(4, 4)
+      },
+      {
+        actionType: 'pass',
+        tile: chars(4)[0]!
+      }
+    ]
+
+    const decision = chooseAiClaimDecision({
+      seat: 'west',
+      concealedTiles: [
+        ...chars(4, 4, 5, 6),
+        ...dots(1, 2),
+        ...bamboos(7, 8)
+      ],
+      melds: [],
+      flowers: [],
+      triggeringTile: chars(4)[0]!,
+      candidates,
+      ruleConfig: createBaselineRuleConfig()
+    })
+
+    expect(decision.actionType).toBe('pon')
   })
 
   it('prioritizes self-draw win over lower-priority AI self-turn actions', () => {

@@ -125,6 +125,79 @@ describe('interactive turn loop', () => {
     expect(nextRoundSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('does not keep auto-advancing after the round has already ended', async () => {
+    vi.useFakeTimers()
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useGameSessionStore()
+    const baseRound = createBaselineRound({ wall: createBaselineWall() })
+    store.round = {
+      ...baseRound,
+      phase: 'ended',
+      currentSeat: 'south',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west'
+        })
+      }
+    }
+    const advanceSpy = vi.spyOn(store, 'advanceTurn')
+
+    mount(GameView, {
+      global: {
+        plugins: [pinia]
+      }
+    })
+
+    await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS * 2)
+
+    expect(advanceSpy).not.toHaveBeenCalled()
+  })
+
+  it('resumes delayed AI auto-advancement after next round starts on an AI dealer', async () => {
+    vi.useFakeTimers()
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useGameSessionStore()
+    const baseRound = createBaselineRound({ wall: createBaselineWall() })
+    store.round = {
+      ...baseRound,
+      currentSeat: 'south',
+      phase: 'ended',
+      table: {
+        ...baseRound.table,
+        dealerSeat: 'east'
+      },
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west'
+        })
+      }
+    }
+    const advanceSpy = vi.spyOn(store, 'advanceTurn')
+
+    const wrapper = mount(GameView, {
+      global: {
+        plugins: [pinia]
+      }
+    })
+
+    await wrapper.get('[data-testid="next-round-action"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('西家')
+    expect(advanceSpy).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS - 1)
+    expect(advanceSpy).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(advanceSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('renders turn progress only after the delayed AI advancement fires', async () => {
     vi.useFakeTimers()
     const pinia = createPinia()
