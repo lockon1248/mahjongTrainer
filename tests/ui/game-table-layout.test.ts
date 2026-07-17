@@ -2,7 +2,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { Tile } from '@/core'
-import type { GameTableSnapshotViewModel } from '@/views/game/types'
+import type { GameTableMeldViewModel, GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
@@ -150,6 +150,47 @@ describe('game table layout', () => {
 
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('西風')
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('碰')
+  })
+
+  it('renders each exposed meld as a compact inline group instead of a full-width stacked card', () => {
+    const compactMelds: GameTableMeldViewModel[] = [
+      {
+        type: 'pon',
+        labels: ['西風', '西風', '西風']
+      },
+      {
+        type: 'pon',
+        labels: ['八筒', '八筒', '八筒']
+      }
+    ]
+
+    const players: GameTablePlayerViewModel[] = snapshot.players.map(player => {
+      if (player.seat !== 'east') {
+        return player
+      }
+
+      return {
+        ...player,
+        meldCount: compactMelds.length,
+        melds: compactMelds
+      }
+    })
+
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...snapshot,
+          players
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="player-melds-east"]').classes()).toContain('player-meld-list--compact')
+    expect(wrapper.get('[data-testid="player-meld-east-0"]').classes()).toContain('player-meld-chip')
+    expect(wrapper.get('[data-testid="player-meld-east-1"]').classes()).toContain('player-meld-chip')
   })
 
   it('highlights only the current latest discard tile in the center pools', () => {

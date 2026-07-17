@@ -410,14 +410,53 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
               >
                 {{ getPlayerActiveFlagLabel(player) }}
               </span>
+              <span
+                v-if="getPlayerStatus(player) != null"
+                :class="getPlayerStatusBadgeClasses(player)"
+                :data-testid="`player-status-${player.seat}`"
+              >
+                {{ getPlayerStatus(player) }}
+              </span>
+              <div
+                v-if="player.seat === humanSeat && (snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1 || isHumanTurn && selfTurnCandidates.length > 0 || snapshot.outcome !== 'in-progress')"
+                class="flex flex-wrap items-center gap-2"
+                :data-testid="`player-action-row-${player.seat}`"
+              >
+                <template v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1">
+                  <button
+                    v-for="(candidate, candidateIndex) in visibleClaimCandidates"
+                    :key="`${candidate.actionType}-${candidateIndex}`"
+                    class="action-button-pill cursor-pointer"
+                    data-testid="human-claim-action"
+                    type="button"
+                    @click="emit('claim', candidate)"
+                  >
+                    {{ formatClaimLabel(candidate) }}
+                  </button>
+                </template>
+                <template v-if="isHumanTurn && selfTurnCandidates.length > 0">
+                  <button
+                    v-for="(candidate, candidateIndex) in selfTurnCandidates"
+                    :key="`${candidate.actionType}-${candidateIndex}`"
+                    class="action-button-pill cursor-pointer"
+                    data-testid="human-self-turn-action"
+                    type="button"
+                    @click="emit('self-turn-action', candidate)"
+                  >
+                    {{ formatSelfTurnLabel(candidate) }}
+                  </button>
+                </template>
+                <button
+                  v-if="snapshot.outcome !== 'in-progress'"
+                  class="action-button-pill cursor-pointer"
+                  data-testid="next-round-action"
+                  type="button"
+                  @click="emit('next-round')"
+                >
+                  下一局
+                </button>
+              </div>
             </div>
-            <span
-              v-if="getPlayerStatus(player) != null"
-              :class="getPlayerStatusBadgeClasses(player)"
-              :data-testid="`player-status-${player.seat}`"
-            >
-              {{ getPlayerStatus(player) }}
-            </span>
           </div>
         </div>
         <dl class="player-stat-grid">
@@ -440,16 +479,17 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </dl>
         <div
           v-if="player.melds.length > 0"
-          class="mt-4 grid gap-[0.6rem]"
+          class="player-meld-list--compact mt-4 flex flex-wrap items-start gap-[0.75rem]"
           :data-testid="`player-melds-${player.seat}`"
         >
           <div
             v-for="(meld, meldIndex) in player.melds"
             :key="`${player.seat}-meld-${meld.type}-${meldIndex}`"
-            class="player-meld-card"
+            class="player-meld-card player-meld-chip"
+            :data-testid="`player-meld-${player.seat}-${meldIndex}`"
           >
             <span class="text-[0.75rem] font-700 tracking-[0.08em] text-[#f1d48a]">{{ formatMeldType(meld.type) }}</span>
-            <div class="flex flex-wrap gap-[0.45rem]">
+            <div class="flex flex-wrap items-center gap-[0.45rem]">
               <span
                 v-for="(label, tileIndex) in meld.labels"
                 :key="`${player.seat}-meld-tile-${meldIndex}-${label}-${tileIndex}`"
@@ -530,52 +570,6 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </div>
       </section>
     </div>
-    <div
-      v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1"
-      class="flex flex-wrap gap-3"
-      data-testid="human-claim-actions"
-    >
-      <button
-        v-for="(candidate, candidateIndex) in visibleClaimCandidates"
-        :key="`${candidate.actionType}-${candidateIndex}`"
-        class="action-button-pill cursor-pointer"
-        data-testid="human-claim-action"
-        type="button"
-        @click="emit('claim', candidate)"
-      >
-        {{ formatClaimLabel(candidate) }}
-      </button>
-    </div>
-    <div
-      v-if="isHumanTurn && selfTurnCandidates.length > 0"
-      class="flex flex-wrap gap-3"
-      data-testid="human-self-turn-actions"
-    >
-      <button
-        v-for="(candidate, candidateIndex) in selfTurnCandidates"
-        :key="`${candidate.actionType}-${candidateIndex}`"
-        class="action-button-pill cursor-pointer"
-        data-testid="human-self-turn-action"
-        type="button"
-        @click="emit('self-turn-action', candidate)"
-      >
-        {{ formatSelfTurnLabel(candidate) }}
-      </button>
-    </div>
-    <div
-      v-if="snapshot.outcome !== 'in-progress'"
-      class="flex flex-wrap gap-3"
-      data-testid="next-round-actions"
-    >
-      <button
-        class="action-button-pill cursor-pointer"
-        data-testid="next-round-action"
-        type="button"
-        @click="emit('next-round')"
-      >
-        下一局
-      </button>
-    </div>
   </section>
 </template>
 
@@ -609,6 +603,19 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 
 .table-center {
   grid-area: center;
+}
+
+.player-meld-list--compact {
+  align-content: flex-start;
+}
+
+.player-meld-chip {
+  width: fit-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 @media (max-width: 1080px) {

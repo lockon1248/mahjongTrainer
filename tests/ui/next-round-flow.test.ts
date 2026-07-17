@@ -95,6 +95,20 @@ describe('next round flow', () => {
     expect(wrapper.get('[data-testid="next-round-action"]').text()).toContain('下一局')
   })
 
+  it('renders the next-round action inside the human action row instead of a separate footer row', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: winningSnapshot,
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.find('[data-testid="next-round-actions"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).toContain('下一局')
+  })
+
   it('emits the next-round intent back to the parent', async () => {
     const wrapper = mount(GameTableView, {
       props: {
