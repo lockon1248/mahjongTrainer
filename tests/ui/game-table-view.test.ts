@@ -499,7 +499,7 @@ describe('game table view', () => {
     })
 
     expect(wrapper.get('[data-testid="match-summary-mode"]').text()).toContain('破產即止')
-    expect(wrapper.get('[data-testid="match-summary-stakes"]').text()).toContain('底 30 / 台 10')
+    expect(wrapper.find('[data-testid="match-summary-stakes"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="player-score-east"]').text()).toContain('540')
     expect(wrapper.get('[data-testid="player-score-south"]').text()).toContain('460')
   })
@@ -665,5 +665,9 @@ describe('game table view', () => {
     })
 
     expect(wrapper.get('[data-testid="summary-local-round"]').text()).toContain('東風北局')
+    expect(wrapper.find('[data-testid="summary-current-seat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="summary-last-claim"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="summary-outcome"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="summary-total-discards"]').exists()).toBe(false)
   })
 })

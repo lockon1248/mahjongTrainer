@@ -1,7 +1,26 @@
 import { createBaselineRuleConfig, getScoringRuleConfig, type MahjongRuleConfig } from '@/core/config'
-import { createScoringItem } from '@/core/scoring/catalog'
+import { createDealerContinuationScoringItem, createScoringItem } from '@/core/scoring/catalog'
 import { ALL_SEATS } from '@/core/types/seat'
 import type { ScoringPatternResult, SettlementResult, StandardWinInput } from '@/core/scoring/types'
+
+export const createSettlementScoringItems = (
+  input: StandardWinInput,
+  matchedPatterns: ScoringPatternResult[]
+) => {
+  const scoringItems = matchedPatterns
+    .filter(patternId => patternId !== 'dealer-continuation')
+    .map(createScoringItem)
+  const continuationCount = input.winContext?.dealerContinuationCount ?? 0
+
+  if (
+    continuationCount > 0
+    && input.winContext?.dealerSeat === input.winningSeat
+  ) {
+    scoringItems.push(createDealerContinuationScoringItem(continuationCount))
+  }
+
+  return scoringItems
+}
 
 export const buildSettlementResult = (
   input: StandardWinInput,
@@ -14,7 +33,7 @@ export const buildSettlementResult = (
 
   const scoringRuleConfig = getScoringRuleConfig(ruleConfig ?? createBaselineRuleConfig())
   const isSelfDraw = input.discarderSeat == null
-  const scoringItems = matchedPatterns.map(createScoringItem)
+  const scoringItems = createSettlementScoringItems(input, matchedPatterns)
   const totalTai = scoringItems.reduce((total, item) => total + item.tai, 0)
 
   if (

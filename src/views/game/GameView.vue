@@ -160,6 +160,10 @@ const handleNextRound = () => {
   gameSessionStore.startNextRound()
 }
 
+const handleRestartMatch = () => {
+  gameSessionStore.resetMatch()
+}
+
 const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'bankruptcy' | 'four-winds' }) => {
   gameSessionStore.startLocalRound(payload)
 }
@@ -200,6 +204,7 @@ const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'b
               @claim="handleHumanClaim"
               @self-turn-action="handleHumanSelfTurnAction"
               @next-round="handleNextRound"
+              @restart-match="handleRestartMatch"
             />
           </div>
         </div>
@@ -277,7 +282,7 @@ const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'b
 
 .game-stage-content {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.5rem;
   min-height: 100%;
 }
 
@@ -288,7 +293,7 @@ const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'b
 
 .game-kicker {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #8a6d42;

@@ -1,8 +1,7 @@
 import type { MahjongRuleConfig } from '@/core/config'
-import { createScoringItem } from '@/core/scoring/catalog'
 import { decomposeStandardHand } from '@/core/scoring/decomposition'
 import { evaluateScoringPatterns } from '@/core/scoring/patterns'
-import { buildSettlementResult } from '@/core/scoring/settlement'
+import { buildSettlementResult, createSettlementScoringItems } from '@/core/scoring/settlement'
 import type { StandardWinInput, WinningEvaluationResult } from '@/core/scoring/types'
 
 export const validateStandardWin = (input: StandardWinInput, ruleConfig?: MahjongRuleConfig): WinningEvaluationResult => {
@@ -20,8 +19,7 @@ export const validateStandardWin = (input: StandardWinInput, ruleConfig?: Mahjon
 
   const matchedPatterns = evaluateScoringPatterns(input, breakdown, ruleConfig)
   const settlement = buildSettlementResult(input, matchedPatterns, ruleConfig)
-  const totalTai = matchedPatterns
-    .map(createScoringItem)
+  const totalTai = createSettlementScoringItems(input, matchedPatterns)
     .reduce((total, item) => total + item.tai, 0)
 
   return {

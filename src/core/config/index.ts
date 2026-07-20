@@ -31,7 +31,8 @@ export const createBaselineRuleConfig = (): MahjongRuleConfig => {
     },
     postDraw: {
       dealerContinuation: {
-        status: 'unresolved'
+        status: 'configured',
+        value: true
       },
       readyHandCheck: {
         status: 'unresolved'

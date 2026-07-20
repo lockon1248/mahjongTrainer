@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import type { HumanClaimCandidate, HumanSelfTurnCandidate, ScoringItem, Seat, Tile } from '@/core'
 import {
   CLAIM_TYPE_LABELS,
   formatDrawReasonLabel,
-  formatOutcomeLabel,
   formatPhaseLabel,
   formatScoringItemLabel,
   formatSeatLabel,
   formatWindLabel,
   MELD_TYPE_LABELS,
-  RESULT_TYPE_LABELS,
   SELF_TURN_ACTION_LABELS
 } from '@/ui/constants/display'
 import { formatTileLabel } from '@/ui/constants/tiles'
 import type { GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 
 const SEAT_ORDER: readonly Seat[] = ['east', 'south', 'west', 'north']
+const SETTLEMENT_DIALOG_DELAY_MS = 1500
 
 const props = defineProps<{
   snapshot: GameTableSnapshotViewModel
@@ -30,6 +29,7 @@ const emit = defineEmits<{
   claim: [candidate: HumanClaimCandidate]
   'self-turn-action': [candidate: HumanSelfTurnCandidate]
   'next-round': []
+  'restart-match': []
 }>()
 
 const isHumanTurn = computed(() => {
@@ -40,10 +40,6 @@ const isHumanTurn = computed(() => {
 
 const hasHumanClaimWindow = computed(() => {
   return props.snapshot.phase === 'claim-window' && visibleClaimCandidates.value.length > 1
-})
-
-const lastClaimLabel = computed(() => {
-  return formatClaimType(props.snapshot.lastClaimResolution?.type ?? 'pass')
 })
 
 const visibleClaimCandidates = computed(() => {
@@ -72,10 +68,6 @@ const discardPools = computed<GameTablePlayerViewModel[]>(() => {
   })
 })
 
-const currentSeatSummaryLabel = computed(() => {
-  return props.snapshot.phase === 'claim-window' ? '剛出牌' : '目前操作'
-})
-
 const localRoundLabel = computed(() => {
   return `${formatWind(props.snapshot.prevailingWind)}${getSeatRoundLabel(props.snapshot.dealerSeat)}局`
 })
@@ -89,12 +81,47 @@ const matchModeLabel = computed(() => {
     : '四風圈結算'
 })
 
-const matchStakesLabel = computed(() => {
-  if (props.snapshot.matchSummary == null)
-    return null
+const isMatchEnded = computed(() => props.snapshot.matchSummary?.status === 'ended')
+const isSettlementDialogReady = shallowRef(false)
 
-  return `底 ${props.snapshot.matchSummary.baseStake} / 台 ${props.snapshot.matchSummary.taiValue}`
-})
+let settlementDialogTimer: ReturnType<typeof setTimeout> | null = null
+
+const clearSettlementDialogTimer = (): void => {
+  if (settlementDialogTimer == null)
+    return
+
+  clearTimeout(settlementDialogTimer)
+  settlementDialogTimer = null
+}
+
+watch(
+  () => props.snapshot.resultSummary,
+  (resultSummary) => {
+    clearSettlementDialogTimer()
+    isSettlementDialogReady.value = false
+
+    if (resultSummary == null)
+      return
+
+    settlementDialogTimer = setTimeout(() => {
+      settlementDialogTimer = null
+      isSettlementDialogReady.value = true
+    }, SETTLEMENT_DIALOG_DELAY_MS)
+  },
+  { immediate: true }
+)
+
+onUnmounted(clearSettlementDialogTimer)
+
+const formatChipDelta = (delta: number): string => {
+  if (delta > 0)
+    return `+${delta}`
+
+  if (delta === 0)
+    return '±0'
+
+  return String(delta)
+}
 
 const isPlayerActive = (player: GameTablePlayerViewModel): boolean => {
   if (props.snapshot.phase === 'claim-window')
@@ -179,10 +206,6 @@ const formatPhase = (phase: GameTableSnapshotViewModel['phase']): string => {
   return formatPhaseLabel(phase)
 }
 
-const formatOutcome = (outcome: GameTableSnapshotViewModel['outcome']): string => {
-  return formatOutcomeLabel(outcome)
-}
-
 const formatClaimType = (type: 'pass' | 'chi' | 'pon' | 'kan-exposed' | 'win'): string => {
   return CLAIM_TYPE_LABELS[type] ?? '未知宣告'
 }
@@ -193,10 +216,6 @@ const formatSelfTurnActionType = (actionType: HumanSelfTurnCandidate['actionType
 
 const formatMeldType = (type: GameTablePlayerViewModel['melds'][number]['type']): string => {
   return MELD_TYPE_LABELS[type]
-}
-
-const formatResultType = (type: NonNullable<GameTableSnapshotViewModel['resultSummary']>['type']): string => {
-  return RESULT_TYPE_LABELS[type]
 }
 
 const formatDrawReason = (reason: string | null): string => {
@@ -278,7 +297,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 
 <template>
   <section class="game-table-layout grid gap-6" data-testid="game-table-view">
-    <header class="table-summary-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]" data-testid="table-summary">
+    <header class="table-summary-grid grid gap-2 [grid-template-columns:repeat(6,minmax(0,1fr))]" data-testid="table-summary">
       <div class="table-chip" data-testid="summary-local-round">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">局次</span>
         <strong>{{ localRoundLabel }}</strong>
@@ -291,87 +310,111 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">圈風</span>
         <strong>{{ formatWind(snapshot.prevailingWind) }}</strong>
       </div>
-      <div class="table-chip" data-testid="summary-current-seat">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">{{ currentSeatSummaryLabel }}</span>
-        <strong>{{ formatSeat(snapshot.currentSeat) }}</strong>
-      </div>
       <div class="table-chip" data-testid="summary-phase">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">階段</span>
         <strong>{{ formatPhase(snapshot.phase) }}</strong>
-      </div>
-      <div class="table-chip" data-testid="summary-last-claim">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">上次宣告</span>
-        <strong>{{ lastClaimLabel }}</strong>
-      </div>
-      <div class="table-chip" data-testid="summary-outcome">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">本局狀態</span>
-        <strong>{{ formatOutcome(snapshot.outcome) }}</strong>
       </div>
       <div class="table-chip" data-testid="summary-wall">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">剩餘牌牆</span>
         <strong>{{ snapshot.wallCount }}</strong>
       </div>
-      <div class="table-chip" data-testid="summary-total-discards">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">總捨牌數</span>
-        <strong>{{ snapshot.totalDiscards }}</strong>
+      <div v-if="snapshot.matchSummary != null" class="table-chip" data-testid="match-summary-mode">
+        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">勝利條件</span>
+        <strong>{{ matchModeLabel }}</strong>
       </div>
     </header>
 
     <section
-      v-if="snapshot.matchSummary != null"
-      class="match-summary-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
-      data-testid="match-summary"
-    >
-      <div class="table-chip" data-testid="match-summary-mode">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">勝利條件</span>
-        <strong>{{ matchModeLabel }}</strong>
-      </div>
-      <div class="table-chip" data-testid="match-summary-stakes">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">結算</span>
-        <strong>{{ matchStakesLabel }}</strong>
-      </div>
-    </section>
-
-    <section
       v-if="snapshot.resultSummary != null"
-      class="round-result-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
+      class="round-result-grid flex flex-wrap items-stretch gap-2"
       data-testid="round-result-summary"
     >
-      <div class="table-chip" data-testid="result-type">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">結果</span>
-        <strong>{{ formatResultType(snapshot.resultSummary.type) }}</strong>
-      </div>
-      <div class="table-chip" data-testid="result-ended">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">是否結束</span>
-        <strong>{{ snapshot.resultSummary.ended ? '是' : '否' }}</strong>
-      </div>
-      <div class="table-chip" data-testid="result-winner">
+      <div v-if="snapshot.resultSummary.type === 'win'" class="table-chip result-chip" data-testid="result-winner">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">和牌者</span>
         <strong>{{ snapshot.resultSummary.winnerSeat == null ? '無' : formatSeat(snapshot.resultSummary.winnerSeat) }}</strong>
       </div>
-      <div class="table-chip" data-testid="result-discarder">
+      <div v-if="snapshot.resultSummary.type === 'win' && snapshot.resultSummary.discarderSeat != null" class="table-chip result-chip" data-testid="result-discarder">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">放槍者</span>
         <strong>{{ snapshot.resultSummary.discarderSeat == null ? '無' : formatSeat(snapshot.resultSummary.discarderSeat) }}</strong>
       </div>
-      <div class="table-chip" data-testid="result-total-tai">
+      <div v-if="snapshot.resultSummary.type === 'win'" class="table-chip result-chip" data-testid="result-total-tai">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">總台數</span>
         <strong>{{ snapshot.resultSummary.totalTai ?? '無' }}</strong>
       </div>
-      <div class="table-chip" data-testid="result-scoring-items">
-        <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">台型明細</span>
-        <strong>
-          {{
-            snapshot.resultSummary.scoringItems.length === 0
-              ? '無'
-              : snapshot.resultSummary.scoringItems.map(formatScoringItem).join('、')
-          }}
-        </strong>
-      </div>
-      <div class="table-chip" data-testid="result-draw-reason">
+      <div v-if="snapshot.resultSummary.type === 'draw'" class="table-chip result-chip" data-testid="result-draw-reason">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">流局原因</span>
         <strong>{{ formatDrawReason(snapshot.resultSummary.drawReason) }}</strong>
       </div>
     </section>
+
+    <Teleport to="body">
+      <div
+        v-if="snapshot.resultSummary != null && isSettlementDialogReady"
+        class="scoring-dialog-backdrop"
+        data-testid="round-settlement-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="round-settlement-title"
+      >
+        <section class="scoring-dialog-panel">
+          <header class="scoring-dialog-header">
+            <h2 id="round-settlement-title">本局結算</h2>
+          </header>
+          <div v-if="snapshot.resultSummary.type === 'win'" class="scoring-dialog-total">
+            <span>總台數</span>
+            <strong>{{ snapshot.resultSummary.totalTai ?? 0 }}</strong>
+          </div>
+          <div v-if="snapshot.resultSummary.type === 'win'" class="scoring-dialog-items" data-testid="result-scoring-items">
+            <h3>臺型明細</h3>
+            <p
+              v-for="item in snapshot.resultSummary.scoringItems"
+              :key="`${item.patternId}-${item.label}-${item.tai}`"
+            >
+              {{ formatScoringItem(item) }}
+            </p>
+            <p v-if="snapshot.resultSummary.scoringItems.length === 0">無</p>
+          </div>
+          <div v-else class="scoring-dialog-total" data-testid="settlement-draw-reason">
+            <span>流局原因</span>
+            <strong>{{ formatDrawReason(snapshot.resultSummary.drawReason) }}</strong>
+          </div>
+          <section class="scoring-dialog-items" data-testid="round-chip-settlements">
+            <h3>籌碼結算</h3>
+            <p
+              v-for="settlement in snapshot.resultSummary.chipSettlements"
+              :key="`round-settlement-${settlement.seat}`"
+              :data-testid="`round-chip-settlement-${settlement.seat}`"
+            >
+              <strong>{{ formatSeat(settlement.seat) }}</strong>
+              <span>本局 {{ formatChipDelta(settlement.delta) }}</span>
+              <span>結算後 {{ settlement.chipsAfter }}</span>
+            </p>
+          </section>
+          <div v-if="isMatchEnded" class="scoring-dialog-total" data-testid="match-winner">
+            <span>總冠軍</span>
+            <strong>{{ snapshot.matchSummary?.winnerSeat == null ? '無' : formatSeat(snapshot.matchSummary.winnerSeat) }}</strong>
+          </div>
+          <button
+            v-if="isMatchEnded"
+            class="action-button-pill mt-4 cursor-pointer"
+            data-testid="restart-match-action"
+            type="button"
+            @click="emit('restart-match')"
+          >
+            重新開始
+          </button>
+          <button
+            v-else
+            class="action-button-pill mt-4 cursor-pointer"
+            data-testid="next-round-action"
+            type="button"
+            @click="emit('next-round')"
+          >
+            下一局
+          </button>
+        </section>
+      </div>
+    </Teleport>
 
     <div class="mahjong-table mahjong-table--wide mahjong-table--compact mahjong-table--rebalanced" data-testid="mahjong-table">
       <article
@@ -449,15 +492,6 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
                     {{ formatSelfTurnLabel(candidate) }}
                   </button>
                 </template>
-                <button
-                  v-if="snapshot.outcome !== 'in-progress'"
-                  class="action-button-pill cursor-pointer"
-                  data-testid="next-round-action"
-                  type="button"
-                  @click="emit('next-round')"
-                >
-                  下一局
-                </button>
               </div>
             </div>
           </div>
@@ -524,7 +558,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         <div
           v-if="player.seat === humanSeat"
           :class="[
-            'mt-2.5 flex flex-wrap gap-[0.35rem]',
+            'mt-2.5 flex flex-wrap gap-[0.45rem]',
             {
               'human-concealed-tiles--bottom-rebalanced mt-[1rem]': player.relativePosition === 'bottom'
             }
@@ -534,7 +568,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
           <button
             v-for="(tile, tileIndex) in player.concealedTiles"
             :key="`${player.seat}-${tile.suit}-${tile.rank}-${tileIndex}`"
-            class="cursor-pointer rounded-[0.72rem] border border-[rgba(248,242,231,0.18)] bg-[rgba(248,242,231,0.1)] px-[0.5rem] py-[0.28rem] text-[0.82rem] text-inherit disabled:cursor-default disabled:opacity-56"
+            class="min-h-[2.25rem] cursor-pointer rounded-[0.72rem] border border-[rgba(248,242,231,0.18)] bg-[rgba(248,242,231,0.1)] px-[0.72rem] py-[0.42rem] text-[1rem] text-inherit disabled:cursor-default disabled:opacity-56"
             data-testid="human-discard-tile"
             type="button"
             :disabled="!isHumanTurn"
@@ -586,10 +620,10 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
   min-width: 0;
   min-height: 0;
   align-content: start;
+  gap: 0.65rem;
 }
 
 .table-summary-grid,
-.match-summary-grid,
 .round-result-grid {
   min-width: 0;
   align-content: start;
@@ -597,11 +631,80 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 
 .table-chip {
   min-width: 0;
+  padding: 0.55rem 0.7rem;
 }
 
 .table-chip strong {
   display: block;
   overflow-wrap: anywhere;
+  font-size: 0.96rem;
+}
+
+.result-chip {
+  flex: 1 1 8rem;
+}
+
+.scoring-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(16, 32, 27, 0.62);
+}
+
+.scoring-dialog-panel {
+  width: min(34rem, 100%);
+  max-height: min(36rem, calc(100dvh - 2rem));
+  overflow: auto;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  background: #f8f2e7;
+  color: #17382e;
+  box-shadow: 0 1.5rem 4rem rgba(10, 28, 23, 0.35);
+}
+
+.scoring-dialog-header,
+.scoring-dialog-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.scoring-dialog-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.scoring-dialog-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.scoring-dialog-total {
+  margin-top: 1rem;
+  border-radius: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: rgba(35, 80, 65, 0.1);
+}
+
+.scoring-dialog-items {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.scoring-dialog-items p {
+  margin: 0;
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  background: rgba(35, 80, 65, 0.08);
 }
 
 .mahjong-table {

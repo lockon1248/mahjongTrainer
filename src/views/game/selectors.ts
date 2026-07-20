@@ -112,6 +112,10 @@ export const createGameTableSnapshot = (
     chipsBySeat: Record<Seat, number>
     status: 'setup' | 'in-progress' | 'ended'
     winnerSeat: Seat | null
+    lastRoundSettlement: {
+      chipDeltaBySeat: Record<Seat, number>
+      chipsAfterBySeat: Record<Seat, number>
+    } | null
   }
 ): GameTableSnapshotViewModel => {
   return {
@@ -128,7 +132,14 @@ export const createGameTableSnapshot = (
           discarderSeat: round.outcome.result.discarderSeat,
           totalTai: round.outcome.result.totalTai,
           drawReason: round.outcome.result.drawReason ?? null,
-          scoringItems: [...round.outcome.result.scoringItems]
+          scoringItems: [...round.outcome.result.scoringItems],
+          chipSettlements: match?.lastRoundSettlement == null
+            ? []
+            : ALL_SEATS.map(seat => ({
+                seat,
+                delta: match.lastRoundSettlement!.chipDeltaBySeat[seat],
+                chipsAfter: match.lastRoundSettlement!.chipsAfterBySeat[seat]
+              }))
         },
     dealerSeat: round.table.dealerSeat,
     prevailingWind: round.table.prevailingWind,

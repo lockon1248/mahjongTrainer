@@ -45,6 +45,6 @@ export const createDrawRoundResult = (input?: {
     totalTai: null,
     scoringItems: [],
     drawReason: 'wall-exhausted',
-    unresolved: input?.unresolved ?? ['dealer-continuation', 'ready-hand-check', 'ready-hand-payment']
+    unresolved: input?.unresolved ?? ['ready-hand-check', 'ready-hand-payment']
   }
 }

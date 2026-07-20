@@ -1,6 +1,5 @@
 import {
   createBaselineRound,
-  createDrawRoundResult,
   createPendingActionWindow,
   createBaselineRuleConfig,
   createWinRoundResult,
@@ -17,6 +16,7 @@ type GameSessionStore = ReturnType<typeof useGameSessionStore>
 type GameE2EBridge = {
   seedPonClaimScenario: () => void
   seedDiscardWinScenario: () => void
+  seedZeroTaiDiscardWinScenario: () => void
   seedBigThreeDragonsClaimScenario: () => void
   seedDrawNextRoundScenario: () => void
   seedClassicFlowerProfileWinScenario: () => void
@@ -45,7 +45,7 @@ const dragon = (rank: 'red' | 'green' | 'white'): Tile => {
   return { suit: 'dragons', rank }
 }
 
-const buildWall = (): Tile[] => {
+const buildWall = (length = 90): Tile[] => {
   const pool: Tile[] = [
     ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
     ...dots(1, 2, 3, 4, 5, 6, 7, 8, 9),
@@ -59,7 +59,7 @@ const buildWall = (): Tile[] => {
     dragon('white')
   ]
 
-  return Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
+  return Array.from({ length }, (_, index) => pool[index % pool.length]!)
 }
 
 const createClaimWindowRound = (
@@ -158,6 +158,28 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
       })
       store.error = null
     },
+    seedZeroTaiDiscardWinScenario() {
+      const round = createClaimWindowRound(dragon('red'), 'south', {
+        east: [
+          ...chars(1, 2, 3),
+          ...chars(4, 5, 6),
+          ...bamboos(1, 2, 3),
+          wind('east'),
+          wind('east'),
+          wind('east'),
+          dragon('red')
+        ]
+      })
+      round.table.dealerSeat = 'south'
+      round.players.east.melds = [{
+        type: 'pon',
+        tiles: dots(9, 9, 9),
+        claimedTile: dots(9)[0]!,
+        claimedFromSeat: 'north'
+      }]
+      store.round = round
+      store.error = null
+    },
     seedBigThreeDragonsClaimScenario() {
       store.round = createClaimWindowRound(dragon('white'), 'south', {
         east: [
@@ -178,14 +200,15 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
     },
     seedDrawNextRoundScenario() {
       const round = createBaselineRound({ wall: buildWall() })
-      store.round = {
-        ...round,
-        phase: 'ended',
-        outcome: {
-          status: 'draw',
-          result: createDrawRoundResult()
-        }
-      }
+      const triggeringTile = dragon('red')
+      round.table.wall = []
+      round.players.east.concealedTiles = [triggeringTile, ...chars(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)]
+      round.players.south.concealedTiles = chars(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+      round.players.west.concealedTiles = chars(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
+      round.players.north.concealedTiles = chars(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)
+      store.round = round
+      store.discard(triggeringTile)
+      store.resolveClaims()
       store.error = null
     },
     seedClassicFlowerProfileWinScenario() {

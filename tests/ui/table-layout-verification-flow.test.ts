@@ -128,8 +128,8 @@ describe('table layout verification flow', () => {
 
     await claimButtons.find(button => button.text().includes('碰牌'))!.trigger('click')
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
     expect(wrapper.get('[data-testid="summary-phase"]').text()).toContain('出牌')
+    expect(wrapper.get('[data-testid="player-active-east"]').text()).toContain('目前出牌')
     expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('輪到你')
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('碰')
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('西風')

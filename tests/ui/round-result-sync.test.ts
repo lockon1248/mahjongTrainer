@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
 import type { Tile } from '@/core'
@@ -75,6 +76,13 @@ const basePlayers: GameTableSnapshotViewModel['players'] = [
   }
 ]
 
+const baseChipSettlements = [
+  { seat: 'east', delta: 0, chipsAfter: 100 },
+  { seat: 'south', delta: 30, chipsAfter: 130 },
+  { seat: 'west', delta: -30, chipsAfter: 70 },
+  { seat: 'north', delta: 0, chipsAfter: 100 }
+] as const
+
 const inProgressSnapshot: GameTableSnapshotViewModel = {
   humanSeat: 'east',
   currentSeat: 'east',
@@ -89,7 +97,17 @@ const inProgressSnapshot: GameTableSnapshotViewModel = {
   players: [...basePlayers]
 }
 
+const advanceSettlementDelay = async (): Promise<void> => {
+  await vi.advanceTimersByTimeAsync(1500)
+  await nextTick()
+}
+
 describe('round result sync', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
+  })
+
   it('does not render a result summary while the round is still in progress', () => {
     const wrapper = mount(GameTableView, {
       props: {
@@ -103,7 +121,65 @@ describe('round result sync', () => {
     expect(wrapper.find('[data-testid="round-result-summary"]').exists()).toBe(false)
   })
 
-  it('renders winner, discarder and total tai for a win result', () => {
+  it.each([
+    {
+      outcome: 'win' as const,
+      resultSummary: {
+        type: 'win' as const,
+        ended: true,
+        winnerSeat: 'south' as const,
+        discarderSeat: 'west' as const,
+        totalTai: 3,
+        drawReason: null,
+        scoringItems: [scoringItem('self-draw', '自摸', 2, '自摸完成和牌')],
+        chipSettlements: [...baseChipSettlements]
+      }
+    },
+    {
+      outcome: 'draw' as const,
+      resultSummary: {
+        type: 'draw' as const,
+        ended: true,
+        winnerSeat: null,
+        discarderSeat: null,
+        totalTai: null,
+        drawReason: 'wall-exhausted',
+        scoringItems: [],
+        chipSettlements: baseChipSettlements.map(item => ({
+          ...item,
+          delta: 0,
+          chipsAfter: 100
+        }))
+      }
+    }
+  ])('waits 1.5 seconds before showing the $outcome settlement dialog', async ({ outcome, resultSummary }) => {
+    vi.useFakeTimers()
+    mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...inProgressSnapshot,
+          phase: 'ended',
+          outcome,
+          resultSummary
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1499)
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1)
+    await nextTick()
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')).not.toBeNull()
+  })
+
+  it('renders winner, discarder and total tai for a win result', async () => {
+    vi.useFakeTimers()
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: {
@@ -120,7 +196,8 @@ describe('round result sync', () => {
             scoringItems: [
               scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
               scoringItem('self-draw', '自摸', 2, '自摸完成和牌')
-            ]
+            ],
+            chipSettlements: [...baseChipSettlements]
           }
         },
         humanSeat: 'east',
@@ -129,13 +206,21 @@ describe('round result sync', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('和牌')
-    expect(wrapper.get('[data-testid="result-ended"]').text()).toContain('是')
+    expect(wrapper.find('[data-testid="result-type"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="result-ended"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('西家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('3')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家 1 台')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('自摸 2 台')
+    expect(wrapper.find('[data-testid="result-scoring-trigger"]').exists()).toBe(false)
+    await advanceSettlementDelay()
+    const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
+    expect(settlement?.textContent).toContain('本局結算')
+    expect(settlement?.textContent).toContain('莊家 1 台')
+    expect(settlement?.textContent).toContain('自摸 2 台')
+    expect(settlement?.textContent).toContain('南家')
+    expect(settlement?.textContent).toContain('本局 +30')
+    expect(settlement?.textContent).toContain('結算後 130')
+    expect(settlement?.querySelector('[data-testid="next-round-action"]')).not.toBeNull()
   })
 
   it('reveals the winning AI hand on the winner panel after a round ends', () => {
@@ -178,7 +263,8 @@ describe('round result sync', () => {
             scoringItems: [
               scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
               scoringItem('self-draw', '自摸', 2, '自摸完成和牌')
-            ]
+            ],
+            chipSettlements: [...baseChipSettlements]
           }
         },
         humanSeat: 'east',
@@ -193,7 +279,8 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="player-melds-south"]').text()).toContain('一萬')
   })
 
-  it('renders discard-win scoring items for a discard win result', () => {
+  it('renders discard-win scoring items for a discard win result', async () => {
+    vi.useFakeTimers()
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: {
@@ -209,7 +296,8 @@ describe('round result sync', () => {
             drawReason: null,
             scoringItems: [
               scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家')
-            ]
+            ],
+            chipSettlements: [...baseChipSettlements]
           }
         },
         humanSeat: 'east',
@@ -221,10 +309,13 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-winner"]').text()).toContain('東家')
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('1')
-    expect(wrapper.get('[data-testid="result-scoring-items"]').text()).toContain('莊家 1 台')
+    await advanceSettlementDelay()
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')?.textContent).toContain('莊家 1 台')
+    expect(wrapper.find('[data-testid="result-scoring-trigger"]').exists()).toBe(false)
   })
 
-  it('renders the draw reason for a draw result', () => {
+  it('renders the draw reason for a draw result', async () => {
+    vi.useFakeTimers()
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: {
@@ -238,7 +329,12 @@ describe('round result sync', () => {
             discarderSeat: null,
             totalTai: null,
             drawReason: 'wall-exhausted',
-            scoringItems: []
+            scoringItems: [],
+            chipSettlements: baseChipSettlements.map(item => ({
+              ...item,
+              delta: 0,
+              chipsAfter: 100
+            }))
           }
         },
         humanSeat: 'east',
@@ -247,7 +343,75 @@ describe('round result sync', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="result-type"]').text()).toContain('流局')
+    expect(wrapper.find('[data-testid="result-type"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="result-draw-reason"]').text()).toContain('牌牆耗盡')
+    await advanceSettlementDelay()
+    const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
+    expect(settlement?.textContent).toContain('牌牆耗盡')
+    expect(settlement?.textContent).not.toContain('總台數')
+    expect(settlement?.querySelector('[data-testid="result-scoring-items"]')).toBeNull()
+    expect(settlement?.textContent).toContain('本局 ±0')
+  })
+
+  it('shows final match settlement after win scoring closes and hides the dead next-round action', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...inProgressSnapshot,
+          phase: 'ended',
+          outcome: 'win',
+          matchSummary: {
+            initialChips: 100,
+            victoryMode: 'bankruptcy',
+            baseStake: 30,
+            taiValue: 10,
+            status: 'ended',
+            winnerSeat: 'east'
+          },
+          players: basePlayers.map((player, index) => ({
+            ...player,
+            score: [230, 100, 100, -30][index]!
+          })),
+          resultSummary: {
+            type: 'win',
+            ended: true,
+            winnerSeat: 'east',
+            discarderSeat: 'north',
+            totalTai: 10,
+            drawReason: null,
+            scoringItems: [
+              scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家')
+            ],
+            chipSettlements: [
+              { seat: 'east', delta: 130, chipsAfter: 230 },
+              { seat: 'south', delta: 0, chipsAfter: 100 },
+              { seat: 'west', delta: 0, chipsAfter: 100 },
+              { seat: 'north', delta: -130, chipsAfter: -30 }
+            ]
+          }
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(document.body.querySelector('[data-testid="scoring-dialog"]')).toBeNull()
+    expect(document.body.querySelector('[data-testid="match-settlement-dialog"]')).toBeNull()
+    expect(wrapper.find('[data-testid="next-round-action"]').exists()).toBe(false)
+
+    await advanceSettlementDelay()
+    const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
+    expect(settlement?.textContent).toContain('本局結算')
+    expect(settlement?.textContent).toContain('總冠軍')
+    expect(settlement?.textContent).toContain('東家')
+    expect(settlement?.textContent).toContain('230')
+    expect(settlement?.textContent).toContain('-30')
+    expect(settlement?.querySelector('[data-testid="next-round-action"]')).toBeNull()
+
+    document.body.querySelector<HTMLButtonElement>('[data-testid="restart-match-action"]')?.click()
+    await nextTick()
+    expect(wrapper.emitted('restart-match')).toHaveLength(1)
   })
 })

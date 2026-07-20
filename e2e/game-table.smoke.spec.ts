@@ -3,8 +3,10 @@ import { test, expect, type Page } from '@playwright/test'
 test.describe('牌桌 smoke e2e', () => {
   test.setTimeout(90_000)
 
-  const completeMatchSetup = async (page: Page) => {
+  const completeMatchSetup = async (page: Page, initialChips?: number) => {
     await expect(page.getByTestId('match-setup-modal')).toBeVisible()
+    if (initialChips != null)
+      await page.getByTestId('match-setup-initial-chips').fill(String(initialChips))
     await page.getByTestId('match-setup-submit').click()
     await expect(page.getByTestId('match-setup-modal')).toHaveCount(0)
   }
@@ -37,6 +39,26 @@ test.describe('牌桌 smoke e2e', () => {
 
     expect(viewport.scrollHeight).toBeLessThanOrEqual(viewport.innerHeight + 1)
     expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.innerWidth + 1)
+  }
+
+  const expectFullyInsideViewport = async (page: Page, testId: string) => {
+    const metrics = await page.getByTestId(testId).evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+
+      return {
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        left: rect.left,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight
+      }
+    })
+
+    expect(metrics.top).toBeGreaterThanOrEqual(0)
+    expect(metrics.left).toBeGreaterThanOrEqual(0)
+    expect(metrics.right).toBeLessThanOrEqual(metrics.innerWidth)
+    expect(metrics.bottom).toBeLessThanOrEqual(metrics.innerHeight)
   }
 
   const expectExpandedStageArea = async (page: Page) => {
@@ -76,7 +98,7 @@ test.describe('牌桌 smoke e2e', () => {
     if (scale == null)
       return
 
-    expect(scale).toBeGreaterThan(0.68)
+    expect(scale).toBe(1)
   }
 
   const expectBalancedDesktopStage = async (page: Page) => {
@@ -111,8 +133,7 @@ test.describe('牌桌 smoke e2e', () => {
     if (metrics.scale == null)
       return
 
-    expect(metrics.scale).toBeLessThanOrEqual(1)
-    expect(metrics.scale).toBeGreaterThan(0.85)
+    expect(metrics.scale).toBe(1)
     expect(metrics.centerWidth / metrics.tableWidth).toBeGreaterThan(0.45)
     expect(metrics.bottomHeight / metrics.tableHeight).toBeLessThan(0.34)
   }
@@ -123,6 +144,7 @@ test.describe('牌桌 smoke e2e', () => {
         __MAHJONG_E2E__?: {
           seedPonClaimScenario: () => void
           seedDiscardWinScenario: () => void
+          seedZeroTaiDiscardWinScenario: () => void
           seedBigThreeDragonsClaimScenario: () => void
           seedDrawNextRoundScenario: () => void
           seedClassicFlowerProfileWinScenario: () => void
@@ -134,6 +156,7 @@ test.describe('牌桌 smoke e2e', () => {
 
       return typeof bridge?.seedPonClaimScenario === 'function'
         && typeof bridge?.seedDiscardWinScenario === 'function'
+        && typeof bridge?.seedZeroTaiDiscardWinScenario === 'function'
         && typeof bridge?.seedBigThreeDragonsClaimScenario === 'function'
         && typeof bridge?.seedDrawNextRoundScenario === 'function'
         && typeof bridge?.seedClassicFlowerProfileWinScenario === 'function'
@@ -152,7 +175,7 @@ test.describe('牌桌 smoke e2e', () => {
     await page.getByRole('link', { name: '開始牌局' }).click()
 
     await expect(page).toHaveURL(/\/game$/)
-    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await expect(page.getByTestId('game-view')).toBeVisible()
     await completeMatchSetup(page)
     await expect(page.getByTestId('summary-dealer')).toContainText('東家')
     await expect(page.getByTestId('player-dealer-east')).toContainText('莊家')
@@ -162,10 +185,50 @@ test.describe('牌桌 smoke e2e', () => {
     await expectViewportLocked(page)
   })
 
+  test('窄螢幕保留整桌等比縮放且不產生主頁捲軸', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.goto('/game')
+    await completeMatchSetup(page)
+
+    const scale = await page.getByTestId('game-stage-scaler').evaluate((element) => {
+      const match = getComputedStyle(element).transform.match(/matrix\(([^,]+)/)
+      return match == null ? null : Number(match[1])
+    })
+
+    expect(scale).not.toBeNull()
+    expect(scale).toBeLessThan(1)
+    await expectViewportLocked(page)
+  })
+
+  test('寬但矮的桌機仍完整顯示真人手牌與操作列', async ({ page }) => {
+    await page.setViewportSize({ width: 1489, height: 658 })
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+    await completeMatchSetup(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & { __MAHJONG_E2E__: { seedDiscardWinScenario: () => void } }).__MAHJONG_E2E__.seedDiscardWinScenario()
+    })
+
+    await expect(page.getByTestId('player-action-row-east')).toBeVisible()
+    const humanTileMetrics = await page.getByTestId('human-discard-tile').first().evaluate((element) => {
+      return {
+        fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+        minHeight: Number.parseFloat(getComputedStyle(element).minHeight)
+      }
+    })
+
+    expect(humanTileMetrics.fontSize).toBeGreaterThanOrEqual(16)
+    expect(humanTileMetrics.minHeight).toBeGreaterThanOrEqual(36)
+    await expectFullyInsideViewport(page, 'human-concealed-tiles')
+    await expectFullyInsideViewport(page, 'player-action-row-east')
+    await expectViewportLocked(page)
+  })
+
   test('真人可以從 fresh round 出牌並看到中央牌池更新', async ({ page }) => {
     await page.goto('/game')
 
-    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await expect(page.getByTestId('game-view')).toBeVisible()
     await completeMatchSetup(page)
     await expect(page.getByTestId('human-discard-tile')).toHaveCount(17)
 
@@ -173,44 +236,38 @@ test.describe('牌桌 smoke e2e', () => {
 
     await expect(page.getByTestId('discard-tile-east-0')).toBeVisible()
     await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
-    await expect(page.getByTestId('summary-total-discards')).not.toContainText('0')
-    await expect(page.getByTestId('summary-last-claim')).toBeVisible()
+    await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
   })
 
   test('AI 不會在真人出牌後瞬間跳步，而是保留可讀的延遲節奏', async ({ page }) => {
     await page.goto('/game')
 
-    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await expect(page.getByTestId('game-view')).toBeVisible()
     await completeMatchSetup(page)
     await page.getByTestId('human-discard-tile').first().click()
 
-    await expect(page.getByTestId('summary-current-seat')).toContainText('東家')
+    await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
+    await expect(page.getByTestId('discard-pool-south')).toContainText('0 張')
 
     await page.waitForTimeout(600)
-    await expect(page.getByTestId('summary-current-seat')).toContainText('東家')
-
-    await expect.poll(async () => {
-      return page.getByTestId('summary-current-seat').textContent()
-    }, {
-      timeout: 3000
-    }).not.toContain('東家')
+    await expect(page.getByTestId('discard-pool-south')).toContainText('0 張')
   })
 
   test('真人出牌後 AI 會持續接續推進，不會停在下家卡死', async ({ page }) => {
     await page.goto('/game')
 
-    await expect(page.getByRole('heading', { name: '麻將牌局' })).toBeVisible()
+    await expect(page.getByTestId('game-view')).toBeVisible()
     await completeMatchSetup(page)
     await page.getByTestId('human-discard-tile').first().click()
 
-    await expect(page.getByTestId('summary-total-discards')).toContainText('1')
-
     await expect.poll(async () => {
-      const text = await page.getByTestId('summary-total-discards').textContent()
-      return Number((text ?? '').replace('總捨牌數', '').trim())
+      const discardCount = await page.locator('[data-testid^="discard-tile-"]').count()
+      const humanClaimCount = await page.getByTestId('human-claim-action').count()
+
+      return discardCount > 1 || humanClaimCount > 1
     }, {
       timeout: 9000
-    }).toBeGreaterThan(1)
+    }).toBe(true)
   })
 
   test('人類宣告碰牌後，副露、暗手與中央捨牌池會同步更新', async ({ page }) => {
@@ -234,6 +291,7 @@ test.describe('牌桌 smoke e2e', () => {
   })
 
   test('人類榮和後，結果摘要會顯示台型明細與總台數', async ({ page }) => {
+    await page.setViewportSize({ width: 2048, height: 962 })
     await page.goto('/game?e2e=1')
     await waitForBridge(page)
     await completeMatchSetup(page)
@@ -246,11 +304,42 @@ test.describe('牌桌 smoke e2e', () => {
     await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
-    await expect(page.getByTestId('result-type')).toContainText('和牌')
     await expect(page.getByTestId('result-total-tai')).toContainText('2')
+    await expect(page.getByTestId('round-settlement-dialog')).toHaveCount(0)
+    await expect(page.getByTestId('human-concealed-tiles')).toBeVisible()
+    await expect(page.getByTestId('round-settlement-dialog')).toBeVisible()
     await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
     await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
+    await expectFullyInsideViewport(page, 'human-concealed-tiles')
+    await expectFullyInsideViewport(page, 'player-action-row-east')
+    await expect(page.getByTestId('result-scoring-trigger')).toHaveCount(0)
+    await expectCompactedStageScale(page)
     await expectViewportLocked(page)
+  })
+
+  test('零台放槍仍會顯示底注籌碼分配', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+    await completeMatchSetup(page, 100)
+
+    await page.evaluate(() => {
+      ;(window as Window & { __MAHJONG_E2E__: { seedZeroTaiDiscardWinScenario: () => void } }).__MAHJONG_E2E__.seedZeroTaiDiscardWinScenario()
+    })
+
+    await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
+
+    await expect(page.getByTestId('round-settlement-dialog')).toBeVisible()
+    await expect(page.getByTestId('result-total-tai')).toContainText('0')
+    await expect(page.getByTestId('round-chip-settlement-east')).toContainText('本局 +30')
+    await expect(page.getByTestId('round-chip-settlement-east')).toContainText('結算後 130')
+    await expect(page.getByTestId('round-chip-settlement-south')).toContainText('本局 -30')
+    await expect(page.getByTestId('round-chip-settlement-south')).toContainText('結算後 70')
+    await expect(page.getByTestId('round-chip-settlement-west')).toContainText('本局 ±0')
+    await expect(page.getByTestId('round-chip-settlement-north')).toContainText('本局 ±0')
+    await expect(page.getByTestId('next-round-action')).toBeVisible()
+
+    await page.getByTestId('next-round-action').click()
+    await expect(page.getByTestId('round-settlement-dialog')).toHaveCount(0)
   })
 
   test('特殊胡型場景會在瀏覽器中顯示大三元台數', async ({ page }) => {
@@ -270,6 +359,33 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('result-scoring-items')).toContainText('大三元')
     await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
     await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
+  })
+
+  test('破產終局會在臺型後顯示整場結算並可重新開始', async ({ page }) => {
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+    await completeMatchSetup(page, 100)
+
+    await page.evaluate(() => {
+      ;(window as Window & { __MAHJONG_E2E__: { seedBigThreeDragonsClaimScenario: () => void } }).__MAHJONG_E2E__.seedBigThreeDragonsClaimScenario()
+    })
+
+    await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
+
+    await expect(page.getByTestId('round-settlement-dialog')).toBeVisible()
+    await expect(page.getByTestId('scoring-dialog')).toHaveCount(0)
+    await expect(page.getByTestId('next-round-action')).toHaveCount(0)
+    await expect(page.getByTestId('match-winner')).toContainText('東家')
+    await expect(page.getByTestId('round-chip-settlement-east')).toContainText('結算後 230')
+    await expect(page.getByTestId('round-chip-settlement-south')).toContainText('結算後 -30')
+    await expect(page.getByTestId('round-chip-settlement-west')).toContainText('結算後 100')
+    await expect(page.getByTestId('round-chip-settlement-north')).toContainText('結算後 100')
+
+    await page.getByTestId('restart-match-action').click()
+
+    await expect(page.getByTestId('round-settlement-dialog')).toHaveCount(0)
+    await expect(page.getByTestId('game-table-view')).toHaveCount(0)
+    await expect(page.getByTestId('match-setup-modal')).toBeVisible()
   })
 
   test('同一手牌在不同 scoring profile 下會顯示不同台型摘要', async ({ page }) => {
@@ -323,7 +439,13 @@ test.describe('牌桌 smoke e2e', () => {
     })
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
-    await expect(page.getByTestId('result-type')).toContainText('流局')
+    await expect(page.getByTestId('result-draw-reason')).toContainText('牌牆耗盡')
+    await expect(page.getByTestId('round-settlement-dialog')).toHaveCount(0)
+    await expect(page.getByTestId('round-settlement-dialog')).toBeVisible()
+    await expect(page.getByTestId('round-chip-settlement-east')).toContainText('本局 ±0')
+    await expect(page.getByTestId('round-chip-settlement-south')).toContainText('本局 ±0')
+    await expect(page.getByTestId('round-chip-settlement-west')).toContainText('本局 ±0')
+    await expect(page.getByTestId('round-chip-settlement-north')).toContainText('本局 ±0')
     await expect(page.getByTestId('next-round-action')).toBeVisible()
 
     await page.getByTestId('next-round-action').click()
@@ -331,7 +453,6 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('game-error')).toHaveCount(0)
     await expect(page.getByTestId('round-result-summary')).toHaveCount(0)
     await expect(page.getByTestId('next-round-action')).toHaveCount(0)
-    await expect(page.getByTestId('summary-outcome')).toContainText('對局中')
     await expect(page.getByTestId('summary-dealer')).toContainText('東家')
     await expect(page.getByTestId('player-dealer-east')).toContainText('莊家')
     await expect(page.getByTestId('human-discard-tile')).toHaveCount(17)
@@ -358,7 +479,7 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('summary-dealer')).toContainText('西家')
     await expect(page.getByTestId('player-dealer-west')).toContainText('莊家')
     await expect(page.getByTestId('player-active-west')).toContainText('目前出牌')
-    await expect(page.getByTestId('summary-current-seat')).toContainText('西家')
+    await expect(page.getByTestId('player-active-west')).toContainText('目前出牌')
   })
 
   test('AI 和牌後會在得勝牌區亮出自己的和牌手牌', async ({ page }) => {

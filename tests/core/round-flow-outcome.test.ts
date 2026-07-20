@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createBaselineRuleConfig,
   createBaselineRound,
+  createDrawRoundResult,
   evaluateExhaustiveDraw,
   mergeRuleConfig,
   type Tile
@@ -30,6 +31,13 @@ const buildWall = (): Tile[] => {
 }
 
 describe('round flow exhaustive draw outcome', () => {
+  it('does not advertise settled dealer continuation in the default draw result', () => {
+    expect(createDrawRoundResult().unresolved).toEqual([
+      'ready-hand-check',
+      'ready-hand-payment'
+    ])
+  })
+
   it('returns an exhaustive draw outcome when no further normal draw is possible', () => {
     const round = createBaselineRound({ wall: buildWall() })
     const exhausted = {
@@ -53,7 +61,7 @@ describe('round flow exhaustive draw outcome', () => {
         totalTai: null,
         scoringItems: [],
         drawReason: 'wall-exhausted',
-        unresolved: ['dealer-continuation', 'ready-hand-check', 'ready-hand-payment']
+        unresolved: ['ready-hand-check', 'ready-hand-payment']
       }
     })
     expect(result.phase).toBe('ended')
@@ -74,7 +82,6 @@ describe('round flow exhaustive draw outcome', () => {
       throw new Error('expected draw outcome')
 
     expect(result.outcome.result.unresolved).toEqual([
-      'dealer-continuation',
       'ready-hand-check',
       'ready-hand-payment'
     ])

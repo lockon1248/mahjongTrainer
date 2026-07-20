@@ -12,6 +12,7 @@ import {
   type Tile
 } from '@/core'
 import { useGameSessionStore } from '@/stores/gameSession'
+import { createGameTableSnapshot } from '@/views/game/selectors'
 
 const illegalDiscardTile: Tile = { suit: 'flower', rank: 'spring' }
 
@@ -497,6 +498,117 @@ describe('game session store', () => {
     expect(store.match.status).toBe('in-progress')
   })
 
+  it('records zero-tai discard-win deltas and post-settlement balances', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({ initialChips: 100, victoryMode: 'bankruptcy' })
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    const settledRound: BaselineRoundState = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'south',
+          discarderSeat: 'west',
+          totalTai: 0
+        })
+      }
+    }
+    store.round = settledRound
+
+    store.startNextRound()
+
+    expect(store.match.lastRoundSettlement).toEqual({
+      chipDeltaBySeat: {
+        east: 0,
+        south: 30,
+        west: -30,
+        north: 0
+      },
+      chipsAfterBySeat: {
+        east: 100,
+        south: 130,
+        west: 70,
+        north: 100
+      }
+    })
+    expect(createGameTableSnapshot(settledRound, 'east', store.match).resultSummary?.chipSettlements).toEqual([
+      { seat: 'east', delta: 0, chipsAfter: 100 },
+      { seat: 'south', delta: 30, chipsAfter: 130 },
+      { seat: 'west', delta: -30, chipsAfter: 70 },
+      { seat: 'north', delta: 0, chipsAfter: 100 }
+    ])
+  })
+
+  it('records zero-tai self-draw payments from all three opponents', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({ initialChips: 100, victoryMode: 'bankruptcy' })
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'win',
+        result: createWinRoundResult({
+          winnerSeat: 'east',
+          discarderSeat: null,
+          totalTai: 0
+        })
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.match.lastRoundSettlement).toEqual({
+      chipDeltaBySeat: {
+        east: 90,
+        south: -30,
+        west: -30,
+        north: -30
+      },
+      chipsAfterBySeat: {
+        east: 190,
+        south: 70,
+        west: 70,
+        north: 70
+      }
+    })
+  })
+
+  it('records unchanged balances and zero deltas after a draw', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({ initialChips: 100, victoryMode: 'bankruptcy' })
+    const completedRound = createBaselineRound({ wall: buildWall() })
+    store.round = {
+      ...completedRound,
+      phase: 'ended',
+      outcome: {
+        status: 'draw',
+        result: createDrawRoundResult()
+      }
+    }
+
+    store.startNextRound()
+
+    expect(store.match.lastRoundSettlement).toEqual({
+      chipDeltaBySeat: {
+        east: 0,
+        south: 0,
+        west: 0,
+        north: 0
+      },
+      chipsAfterBySeat: {
+        east: 100,
+        south: 100,
+        west: 100,
+        north: 100
+      }
+    })
+  })
+
   it('ends the match immediately when bankruptcy mode drives any seat to zero or below', () => {
     const store = useGameSessionStore()
 
@@ -527,6 +639,33 @@ describe('game session store', () => {
     expect(store.match.winnerSeat).toBe('east')
     expect(store.round?.phase).toBe('ended')
     expect(store.round?.table.dealerSeat).toBe('east')
+  })
+
+  it('resets an ended match to the existing setup state', () => {
+    const store = useGameSessionStore()
+
+    store.startLocalRound({ initialChips: 100, victoryMode: 'bankruptcy' })
+    store.match.status = 'ended'
+    store.match.winnerSeat = 'south'
+
+    store.resetMatch()
+
+    expect(store.round).toBeNull()
+    expect(store.error).toBeNull()
+    expect(store.needsMatchSetup).toBe(true)
+    expect(store.match).toEqual({
+      config: null,
+      chipsBySeat: {
+        east: 0,
+        south: 0,
+        west: 0,
+        north: 0
+      },
+      status: 'setup',
+      winnerSeat: null,
+      lastSettledRoundKey: null,
+      lastRoundSettlement: null
+    })
   })
 
   it('ends a four-winds match only after north prevailing wind completes and declares the chip leader', () => {

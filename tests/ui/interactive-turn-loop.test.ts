@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { createBaselineRound, createBaselineWall, createWinRoundResult, evaluateExhaustiveDraw } from '@/core'
@@ -14,6 +14,11 @@ describe('interactive turn loop', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.useRealTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
   })
 
   it('schedules AI advancement after a human discard instead of pushing immediately', async () => {
@@ -99,6 +104,7 @@ describe('interactive turn loop', () => {
   })
 
   it('forwards a next-round click into the store without rewriting round state in the component', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useGameSessionStore()
@@ -124,7 +130,10 @@ describe('interactive turn loop', () => {
       }
     })
 
-    await wrapper.get('[data-testid="next-round-action"]').trigger('click')
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
+    document.body.querySelector<HTMLButtonElement>('[data-testid="next-round-action"]')?.click()
+    await nextTick()
 
     expect(nextRoundSpy).toHaveBeenCalledTimes(1)
   })
@@ -192,9 +201,12 @@ describe('interactive turn loop', () => {
       }
     })
 
-    await wrapper.get('[data-testid="next-round-action"]').trigger('click')
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
+    document.body.querySelector<HTMLButtonElement>('[data-testid="next-round-action"]')?.click()
+    await nextTick()
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('西家')
+    expect(wrapper.get('[data-testid="player-active-west"]').text()).toContain('目前出牌')
     expect(advanceSpy).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS - 1)
@@ -218,14 +230,13 @@ describe('interactive turn loop', () => {
     await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
+    expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('剛出牌')
 
     await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS)
     await nextTick()
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).not.toContain('東家')
+    expect(wrapper.get('[data-testid="player-status-east"]').text()).not.toContain('剛出牌')
     expect(wrapper.get('[data-testid="summary-phase"]').text()).toMatch(/(摸牌|出牌|宣告|本局結束)/)
-    expect(Number(wrapper.get('[data-testid="summary-total-discards"]').text().replace('總捨牌數', ''))).toBeGreaterThanOrEqual(1)
   })
 
   it('keeps scheduling later AI steps instead of stalling after the first delayed step', async () => {
@@ -244,7 +255,7 @@ describe('interactive turn loop', () => {
     await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
-    expect(wrapper.get('[data-testid="summary-total-discards"]').text()).toContain('1')
+    expect(wrapper.findAll('[data-testid^="discard-tile-"]').length).toBeGreaterThanOrEqual(1)
 
     await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS * 4)
     await nextTick()
@@ -273,6 +284,6 @@ describe('interactive turn loop', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="summary-outcome"]').text()).toContain('流局')
+    expect(wrapper.get('[data-testid="result-draw-reason"]').text()).toContain('牌牆耗盡')
   })
 })

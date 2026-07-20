@@ -15,7 +15,7 @@ export const evaluateScoringPatterns = (
   const patterns: ScoringPatternResult[] = []
   const scoringRuleConfig = getScoringRuleConfig(ruleConfig ?? createBaselineRuleConfig())
 
-  if (input.winningSeat === 'east') {
+  if (input.winningSeat === (input.winContext?.dealerSeat ?? 'east')) {
     patterns.push('dealer-win')
   }
 

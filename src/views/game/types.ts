@@ -57,4 +57,9 @@ export type GameTableResultSummaryViewModel = {
   totalTai: number | null
   drawReason: string | null
   scoringItems: ScoringItem[]
+  chipSettlements: Array<{
+    seat: Seat
+    delta: number
+    chipsAfter: number
+  }>
 }

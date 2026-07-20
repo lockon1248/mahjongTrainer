@@ -26,6 +26,7 @@ describe('core domain model', () => {
   it('creates an initial table state with east dealer and prevailing wind', () => {
     expect(createInitialTableState()).toEqual({
       dealerSeat: 'east',
+      dealerContinuationCount: 0,
       prevailingWind: 'east',
       wall: [],
       discards: {

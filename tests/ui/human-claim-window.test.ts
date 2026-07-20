@@ -167,9 +167,8 @@ describe('human claim window', () => {
       selfTurnCandidates: []
     })
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('東家')
     expect(wrapper.get('[data-testid="summary-phase"]').text()).toContain('出牌')
-    expect(wrapper.get('[data-testid="summary-last-claim"]').text()).toContain('吃牌')
+    expect(wrapper.get('[data-testid="player-active-east"]').text()).toContain('目前出牌')
   })
 
   it('clarifies claim-window ownership and shows strong seat flags on the table', () => {
@@ -182,8 +181,6 @@ describe('human claim window', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('剛出牌')
-    expect(wrapper.get('[data-testid="summary-current-seat"]').text()).toContain('北家')
     expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('請宣告')
     expect(wrapper.get('[data-testid="player-status-north"]').text()).toContain('剛出牌')
     expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')

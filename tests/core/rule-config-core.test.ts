@@ -25,7 +25,8 @@ describe('rule config core', () => {
       },
       postDraw: {
         dealerContinuation: {
-          status: 'unresolved'
+          status: 'configured',
+          value: true
         },
         readyHandCheck: {
           status: 'unresolved'
@@ -93,7 +94,8 @@ describe('rule config core', () => {
         },
         postDraw: {
           dealerContinuation: {
-            status: 'unresolved'
+            status: 'configured',
+            value: true
           },
           readyHandCheck: {
             status: 'unresolved'

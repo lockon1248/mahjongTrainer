@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import type { Tile } from '@/core'
 import type { GameTableMeldViewModel, GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
@@ -102,6 +103,10 @@ const snapshot: GameTableSnapshotViewModel = {
 }
 
 describe('game table layout', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('anchors the human player at the bottom and arranges the other seats around the table', () => {
     const wrapper = mount(GameTableView, {
       props: {
@@ -251,7 +256,8 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-seat="south"]').classes()).not.toContain('player-panel--active')
   })
 
-  it('keeps result summary and expanded player sections inside the stage-friendly table layout', () => {
+  it('keeps result summary and expanded player sections inside the stage-friendly table layout', async () => {
+    vi.useFakeTimers()
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: {
@@ -274,6 +280,12 @@ describe('game table layout', () => {
                 name: '門清',
                 tai: 3
               }
+            ],
+            chipSettlements: [
+              { seat: 'east', delta: 80, chipsAfter: 1080 },
+              { seat: 'south', delta: -80, chipsAfter: 920 },
+              { seat: 'west', delta: 0, chipsAfter: 1000 },
+              { seat: 'north', delta: 0, chipsAfter: 1000 }
             ]
           },
           players: snapshot.players.map(player => {
@@ -312,7 +324,10 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-seat="east"]').get('dl').classes()).toContain('player-stat-grid--balanced')
     expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--bottom-rebalanced')
     expect(wrapper.get('[data-testid="round-result-summary"]').classes()).toContain('round-result-grid')
-    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).toContain('下一局')
+    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).not.toContain('下一局')
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')?.textContent).toContain('下一局')
     expect(wrapper.get('[data-testid="player-melds-east"]').classes()).toContain('player-meld-list--compact')
   })
 })

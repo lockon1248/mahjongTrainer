@@ -42,6 +42,52 @@ const scoringItem = (
 ) => ({ patternId, label, tai, reason })
 
 describe('scoring settlement', () => {
+  it.each([
+    { count: 1, totalTai: 2 },
+    { count: 2, totalTai: 3 }
+  ])('adds one cumulative dealer continuation item for count $count', ({ count, totalTai }) => {
+    const input: StandardWinInput = {
+      concealedTiles: [],
+      melds: [],
+      flowers: [],
+      winningTile: null,
+      winningSeat: 'south',
+      discarderSeat: 'west',
+      winContext: {
+        dealerSeat: 'south',
+        dealerContinuationCount: count
+      }
+    }
+
+    expect(buildSettlementResult(input, ['dealer-win'])).toMatchObject({
+      scoringItems: [
+        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
+        scoringItem('dealer-continuation', `連莊 ${count} 台`, count, `莊家連續坐莊 ${count} 次`)
+      ],
+      totalTai
+    })
+  })
+
+  it('does not add continuation tai to a non-dealer win', () => {
+    const input: StandardWinInput = {
+      concealedTiles: [],
+      melds: [],
+      flowers: [],
+      winningTile: null,
+      winningSeat: 'west',
+      discarderSeat: 'north',
+      winContext: {
+        dealerSeat: 'south',
+        dealerContinuationCount: 2
+      }
+    }
+
+    expect(buildSettlementResult(input, [])).toMatchObject({
+      scoringItems: [],
+      totalTai: 0
+    })
+  })
+
   it('builds a self-draw settlement result with matched scoring items and totalTai', () => {
     const input: StandardWinInput = {
       concealedTiles: [

@@ -1,5 +1,5 @@
 import { computed, shallowRef } from 'vue'
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import {
   chooseAiClaimDecision,
   chooseAiDiscardDecision,
@@ -40,12 +40,18 @@ type MatchConfig = {
   taiValue: number
 }
 
+export type RoundChipSettlement = {
+  chipDeltaBySeat: Record<Seat, number>
+  chipsAfterBySeat: Record<Seat, number>
+}
+
 type MatchState = {
   config: MatchConfig | null
   chipsBySeat: Record<Seat, number>
   status: 'setup' | 'in-progress' | 'ended'
   winnerSeat: Seat | null
   lastSettledRoundKey: string | null
+  lastRoundSettlement: RoundChipSettlement | null
 }
 
 export const useGameSessionStore = defineStore('game-session', () => {
@@ -56,7 +62,8 @@ export const useGameSessionStore = defineStore('game-session', () => {
     chipsBySeat: createChipsBySeat(0),
     status: 'setup',
     winnerSeat: null,
-    lastSettledRoundKey: null
+    lastSettledRoundKey: null,
+    lastRoundSettlement: null
   })
 
   const isInitialized = computed(() => round.value != null)
@@ -87,7 +94,8 @@ export const useGameSessionStore = defineStore('game-session', () => {
         chipsBySeat: createChipsBySeat(config.initialChips),
         status: 'in-progress',
         winnerSeat: null,
-        lastSettledRoundKey: null
+        lastSettledRoundKey: null,
+        lastRoundSettlement: null
       }
       round.value = createBaselineRound({
         wall: createBaselineWall()
@@ -101,7 +109,8 @@ export const useGameSessionStore = defineStore('game-session', () => {
         chipsBySeat: createChipsBySeat(0),
         status: 'setup',
         winnerSeat: null,
-        lastSettledRoundKey: null
+        lastSettledRoundKey: null,
+        lastRoundSettlement: null
       }
       error.value = caughtError instanceof Error ? caughtError.message : 'unknown-error'
     }
@@ -121,6 +130,19 @@ export const useGameSessionStore = defineStore('game-session', () => {
     runRoundTransition(() => createNextRoundFromCompletedRound(currentRound, {
       wall: createBaselineWall()
     }))
+  }
+
+  const resetMatch = () => {
+    round.value = null
+    error.value = null
+    match.value = {
+      config: null,
+      chipsBySeat: createChipsBySeat(0),
+      status: 'setup',
+      winnerSeat: null,
+      lastSettledRoundKey: null,
+      lastRoundSettlement: null
+    }
   }
 
   const drawCurrentSeat = () => {
@@ -294,6 +316,7 @@ export const useGameSessionStore = defineStore('game-session', () => {
     if (completedRound.outcome.status === 'win') {
       const amount = currentConfig.baseStake + ((completedRound.outcome.result.totalTai ?? 0) * currentConfig.taiValue)
       const nextChips = { ...match.value.chipsBySeat }
+      const chipDeltaBySeat = createChipsBySeat(0)
       const winnerSeat = completedRound.outcome.result.winnerSeat!
       const discarderSeat = completedRound.outcome.result.discarderSeat
 
@@ -304,23 +327,35 @@ export const useGameSessionStore = defineStore('game-session', () => {
 
           nextChips[seat] -= amount
           nextChips[winnerSeat] += amount
+          chipDeltaBySeat[seat] -= amount
+          chipDeltaBySeat[winnerSeat] += amount
         }
       }
       else {
         nextChips[discarderSeat] -= amount
         nextChips[winnerSeat] += amount
+        chipDeltaBySeat[discarderSeat] -= amount
+        chipDeltaBySeat[winnerSeat] += amount
       }
 
       match.value = {
         ...match.value,
         chipsBySeat: nextChips,
-        lastSettledRoundKey: settlementKey
+        lastSettledRoundKey: settlementKey,
+        lastRoundSettlement: {
+          chipDeltaBySeat,
+          chipsAfterBySeat: { ...nextChips }
+        }
       }
     }
     else {
       match.value = {
         ...match.value,
-        lastSettledRoundKey: settlementKey
+        lastSettledRoundKey: settlementKey,
+        lastRoundSettlement: {
+          chipDeltaBySeat: createChipsBySeat(0),
+          chipsAfterBySeat: { ...match.value.chipsBySeat }
+        }
       }
     }
 
@@ -413,6 +448,7 @@ export const useGameSessionStore = defineStore('game-session', () => {
     availableHumanClaims,
     availableHumanSelfTurnActions,
     startLocalRound,
+    resetMatch,
     startNextRound,
     drawCurrentSeat,
     discard,
@@ -422,6 +458,9 @@ export const useGameSessionStore = defineStore('game-session', () => {
     advanceTurn
   }
 })
+
+if (import.meta.hot)
+  import.meta.hot.accept(acceptHMRUpdate(useGameSessionStore, import.meta.hot))
 
 const createMatchConfig = (input: {
   initialChips: number

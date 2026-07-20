@@ -1,6 +1,8 @@
 import type { ScoringItem, SupportedPatternId } from '@/core/scoring/types'
 
-const PATTERN_DETAILS: Record<SupportedPatternId, Omit<ScoringItem, 'patternId'>> = {
+type StaticPatternId = Exclude<SupportedPatternId, 'dealer-continuation'>
+
+const PATTERN_DETAILS: Record<StaticPatternId, Omit<ScoringItem, 'patternId'>> = {
   'dealer-win': {
     label: '莊家',
     tai: 1,
@@ -63,13 +65,20 @@ const PATTERN_DETAILS: Record<SupportedPatternId, Omit<ScoringItem, 'patternId'>
   }
 }
 
-export const createScoringItem = (patternId: SupportedPatternId): ScoringItem => {
+export const createScoringItem = (patternId: StaticPatternId): ScoringItem => {
   return {
     patternId,
     ...PATTERN_DETAILS[patternId]
   }
 }
 
-export const getPatternTai = (patternId: SupportedPatternId): number => {
+export const createDealerContinuationScoringItem = (count: number): ScoringItem => ({
+  patternId: 'dealer-continuation',
+  label: `連莊 ${count} 台`,
+  tai: count,
+  reason: `莊家連續坐莊 ${count} 次`
+})
+
+export const getPatternTai = (patternId: StaticPatternId): number => {
   return PATTERN_DETAILS[patternId].tai
 }

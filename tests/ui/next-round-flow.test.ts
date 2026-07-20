@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { createBaselineRound, createBaselineWall, createNextRoundFromCompletedRound, createWinRoundResult } from '@/core'
 import type { GameTableSnapshotViewModel } from '@/views/game/types'
 import GameTableView from '@/views/game/components/GameTableView.vue'
@@ -15,6 +16,21 @@ const winningSnapshot: GameTableSnapshotViewModel = {
   wallCount: 0,
   totalDiscards: 30,
   lastClaimResolution: null,
+  resultSummary: {
+    type: 'win',
+    ended: true,
+    winnerSeat: 'south',
+    discarderSeat: 'west',
+    totalTai: 0,
+    drawReason: null,
+    scoringItems: [],
+    chipSettlements: [
+      { seat: 'east', delta: 0, chipsAfter: 100 },
+      { seat: 'south', delta: 30, chipsAfter: 130 },
+      { seat: 'west', delta: -30, chipsAfter: 70 },
+      { seat: 'north', delta: 0, chipsAfter: 100 }
+    ]
+  },
   players: [
     {
       seat: 'east',
@@ -72,13 +88,23 @@ const winningSnapshot: GameTableSnapshotViewModel = {
 }
 
 describe('next round flow', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
+  })
+
   it('renders the next-round entry only after the round ends', async () => {
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: {
           ...winningSnapshot,
           phase: 'discard',
-          outcome: 'in-progress'
+          outcome: 'in-progress',
+          resultSummary: null
         },
         humanSeat: 'east',
         claimCandidates: [],
@@ -91,11 +117,13 @@ describe('next round flow', () => {
     await wrapper.setProps({
       snapshot: winningSnapshot
     })
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
 
-    expect(wrapper.get('[data-testid="next-round-action"]').text()).toContain('下一局')
+    expect(document.body.querySelector('[data-testid="next-round-action"]')?.textContent).toContain('下一局')
   })
 
-  it('renders the next-round action inside the human action row instead of a separate footer row', () => {
+  it('renders the next-round action inside the settlement dialog instead of the human action row', async () => {
     const wrapper = mount(GameTableView, {
       props: {
         snapshot: winningSnapshot,
@@ -106,7 +134,10 @@ describe('next round flow', () => {
     })
 
     expect(wrapper.find('[data-testid="next-round-actions"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).toContain('下一局')
+    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).not.toContain('下一局')
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
+    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')?.textContent).toContain('下一局')
   })
 
   it('emits the next-round intent back to the parent', async () => {
@@ -119,7 +150,10 @@ describe('next round flow', () => {
       }
     })
 
-    await wrapper.get('[data-testid="next-round-action"]').trigger('click')
+    await vi.advanceTimersByTimeAsync(1500)
+    await nextTick()
+    document.body.querySelector<HTMLButtonElement>('[data-testid="next-round-action"]')?.click()
+    await nextTick()
 
     expect(wrapper.emitted('next-round')).toEqual([[]])
   })

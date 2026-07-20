@@ -1,0 +1,71 @@
+<style>
+  .layout-preview { background:#f3ecdc; border-radius:14px; padding:14px; min-height:250px; color:#18372d; }
+  .status-row { display:flex; gap:6px; margin-bottom:8px; }
+  .status-chip { background:#fffaf0; border-radius:7px; padding:5px 8px; font-size:11px; flex:1; }
+  .table-area { background:#18513f; border-radius:10px; padding:10px; color:#f7f1df; min-height:125px; font-size:12px; }
+  .players { display:grid; grid-template-columns:1fr 1.3fr 1fr; gap:6px; align-items:center; }
+  .player { background:#27624f; border-radius:7px; padding:9px; min-height:42px; }
+  .result-bar { margin-top:7px; background:#fffaf0; border-radius:8px; padding:7px 9px; display:flex; justify-content:space-between; align-items:center; font-size:12px; }
+  .modal-demo { margin:8px auto 0; width:72%; background:white; color:#213a32; border:1px solid #c9bfae; border-radius:10px; padding:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+  .modal-title { display:flex; justify-content:space-between; font-weight:700; margin-bottom:7px; }
+  .detail-line { background:#f5efe3; border-radius:6px; padding:5px 7px; margin-top:4px; font-size:11px; }
+  .tiny-button { background:#d8eadf; border-radius:999px; padding:5px 9px; font-size:11px; }
+  .single-bar { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; background:#fffaf0; border-radius:8px; padding:7px; margin-bottom:8px; font-size:10px; }
+  .swap-result { background:#fffaf0; border-radius:9px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; font-size:12px; }
+</style>
+
+<h2>結算畫面要採用哪一種資訊密度？</h2>
+<p class="subtitle">三個方案都會移除：總捨牌數、結算、是否結束、結果、上次宣告、目前操作；和牌後自動顯示台型彈窗。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="layout-preview">
+        <div class="status-row">
+          <div class="status-chip">局次<br><b>東風東局</b></div>
+          <div class="status-chip">莊家<br><b>東家</b></div>
+          <div class="status-chip">圈風<br><b>東風</b></div>
+          <div class="status-chip">目前座位<br><b>東家</b></div>
+          <div class="status-chip">剩餘牌<br><b>25</b></div>
+        </div>
+        <div class="status-row">
+          <div class="status-chip">勝利條件　<b>破產即止</b></div>
+          <div class="status-chip">底注　<b>底 30 / 台 10</b></div>
+        </div>
+        <div class="table-area">
+          <div class="players"><div class="player">北家</div><div class="player">西家　牌桌中央</div><div class="player">南家</div></div>
+          <div class="result-bar"><span><b>東家和牌・1 台</b></span><span class="tiny-button">查看台型</span></div>
+          <div class="modal-demo"><div class="modal-title"><span>台型明細</span><span>×</span></div><div class="detail-line">莊家　1 台</div><div class="detail-line">總計　1 台</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A．雙列精簡摘要＋舞台外彈窗（建議）</h3><p>保留現有資訊分組，只刪除低價值欄位；改動最小，結算增加內容時不再壓縮牌桌。</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="layout-preview">
+        <div class="single-bar"><span>東風東局</span><span>莊 東</span><span>圈 東</span><span>目前 東</span><span>餘 25</span><span>破產即止</span><span>30 / 10</span></div>
+        <div class="table-area">
+          <div class="players"><div class="player">北家</div><div class="player">西家　牌桌中央</div><div class="player">南家</div></div>
+          <div class="result-bar"><span><b>東家和牌・1 台</b></span><span class="tiny-button">查看台型</span></div>
+          <div class="modal-demo"><div class="modal-title"><span>台型明細</span><span>×</span></div><div class="detail-line">莊家　1 台</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B．單列狀態列＋舞台外彈窗</h3><p>垂直空間最省、牌桌最大，但資訊密度最高，平板寬度較容易擁擠。</p></div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="layout-preview">
+        <div class="swap-result"><span><b>東家和牌</b>　西家放槍　1 台</span><span class="tiny-button">查看台型</span></div>
+        <div class="table-area">
+          <div class="players"><div class="player">北家</div><div class="player">西家　牌桌中央</div><div class="player">南家</div></div>
+          <div class="modal-demo"><div class="modal-title"><span>台型明細</span><span>×</span></div><div class="detail-line">莊家　1 台</div><div class="detail-line">總計　1 台</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>C．結算時摘要列切換成結果列</h3><p>結算狀態最聚焦，但會讓同一位置在牌局中與結算時改變內容，資訊連續性較弱。</p></div>
+  </div>
+</div>

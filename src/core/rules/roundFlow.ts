@@ -25,6 +25,7 @@ export const createBaselineRound = (input: {
   wall: Tile[]
   ruleConfig?: MahjongRuleConfig
   dealerSeat?: Seat
+  dealerContinuationCount?: number
   prevailingWind?: Seat
 }): BaselineRoundState => {
   let remainingWall = [...input.wall]
@@ -53,6 +54,7 @@ export const createBaselineRound = (input: {
     table: {
       ...createInitialTableState({
         dealerSeat,
+        dealerContinuationCount: input.dealerContinuationCount,
         prevailingWind
       }),
       wall: remainingWall
@@ -82,6 +84,9 @@ export const createNextRoundFromCompletedRound = (
   const nextPrevailingWind = shouldAdvancePrevailingWind(round, nextDealerSeat)
     ? getNextSeat(round.table.prevailingWind)
     : round.table.prevailingWind
+  const dealerContinuationCount = nextDealerSeat === round.table.dealerSeat
+    ? round.table.dealerContinuationCount + 1
+    : 0
 
   return createBaselineRound({
     wall: input.wall,
@@ -89,6 +94,7 @@ export const createNextRoundFromCompletedRound = (
       ...round.ruleConfig
     },
     dealerSeat: nextDealerSeat,
+    dealerContinuationCount,
     prevailingWind: nextPrevailingWind
   })
 }
@@ -198,7 +204,11 @@ export const resolveClaimWindow = (
       flowers: round.players[winningClaim.seat].flowers,
       winningTile: pendingActionWindow.triggeringTile,
       winningSeat: winningClaim.seat,
-      discarderSeat: pendingActionWindow.triggeringSeat
+      discarderSeat: pendingActionWindow.triggeringSeat,
+      winContext: {
+        dealerSeat: round.table.dealerSeat,
+        dealerContinuationCount: round.table.dealerContinuationCount
+      }
     }, round.ruleConfig)
 
     if (!scoring.isWinning || scoring.settlement == null)
@@ -324,7 +334,7 @@ export const getLegalClaimCandidates = (
 
   const candidatesByAction = new Map<HumanClaimActionType, HumanClaimCandidate[]>()
 
-  if (isWinningClaim(player, triggeringTile, seat, triggeringSeat, round.ruleConfig)) {
+  if (isWinningClaim(player, triggeringTile, seat, triggeringSeat, round)) {
     candidatesByAction.set('win', [{
       actionType: 'win',
       tile: triggeringTile,
@@ -380,8 +390,12 @@ export const getLegalSelfTurnCandidates = (
     melds: player.melds,
     flowers: player.flowers,
     winningTile: null,
-    winningSeat: seat
-  }).isWinning) {
+    winningSeat: seat,
+    winContext: {
+      dealerSeat: round.table.dealerSeat,
+      dealerContinuationCount: round.table.dealerContinuationCount
+    }
+  }, round.ruleConfig).isWinning) {
     candidates.push({
       actionType: 'win-self-draw',
       tile: null,
@@ -447,7 +461,9 @@ export const applyHumanSelfTurnAction = (
       winningSeat: action.seat,
       discarderSeat: null,
       winContext: {
-        isHeavenWin: isHeavenWinRound(round, action.seat)
+        isHeavenWin: isHeavenWinRound(round, action.seat),
+        dealerSeat: round.table.dealerSeat,
+        dealerContinuationCount: round.table.dealerContinuationCount
       }
     }, round.ruleConfig)
 
@@ -795,7 +811,7 @@ const isWinningClaim = (
   triggeringTile: Tile,
   seat: Seat,
   discarderSeat: Seat,
-  ruleConfig: MahjongRuleConfig
+  round: BaselineRoundState
 ): boolean => {
   return validateStandardWin({
     concealedTiles: player.concealedTiles,
@@ -803,8 +819,12 @@ const isWinningClaim = (
     flowers: player.flowers,
     winningTile: triggeringTile,
     winningSeat: seat,
-    discarderSeat
-  }, ruleConfig).isWinning
+    discarderSeat,
+    winContext: {
+      dealerSeat: round.table.dealerSeat,
+      dealerContinuationCount: round.table.dealerContinuationCount
+    }
+  }, round.ruleConfig).isWinning
 }
 
 const isHeavenWinRound = (round: BaselineRoundState, seat: Seat): boolean => {

@@ -8,6 +8,7 @@ export type BreakdownGroupSource = 'concealed' | 'meld'
 export type SettlementType = 'self-draw' | 'discard-win'
 export type SupportedPatternId =
   | 'dealer-win'
+  | 'dealer-continuation'
   | 'self-draw'
   | 'heaven-win'
   | 'big-three-dragons'
@@ -40,6 +41,8 @@ export type StandardWinInput = {
   discarderSeat?: Seat | null
   winContext?: {
     isHeavenWin?: boolean
+    dealerSeat?: Seat
+    dealerContinuationCount?: number
   }
 }
 
