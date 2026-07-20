@@ -348,3 +348,67 @@ tests:
   - tests/ui/round-result-sync.test.ts
   - tests/core/rule-config-core.test.ts
 -->
+
+---
+### Requirement: Dealer continuation adds cumulative tai
+
+Scoring core SHALL add one structured `dealer-continuation` scoring item when the winning seat is the dealer and the authoritative continuation count is greater than zero. The item's tai SHALL equal the continuation count and SHALL be included in `totalTai` in addition to the existing one-tai dealer item.
+
+#### Scenario: First continuation adds one tai
+
+- **WHEN** the dealer wins with continuation count 1
+- **THEN** settlement MUST include `莊家 1 台` and `連莊 1 台`
+
+#### Scenario: Second continuation adds two tai
+
+- **WHEN** the dealer wins with continuation count 2
+- **THEN** settlement MUST include one `連莊 2 台` item and add 2 to `totalTai`
+
+#### Scenario: Non-dealer receives no continuation tai
+
+- **WHEN** a non-dealer wins
+- **THEN** settlement MUST NOT include a dealer-continuation scoring item
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->

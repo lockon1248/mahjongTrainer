@@ -3,8 +3,10 @@ import {
   createBaselineRuleConfig,
   createBaselineRound,
   createPendingActionWindow,
+  createReachableClaimWindowScenario,
   discardTile,
   drawForCurrentSeat,
+  getLegalClaimCandidates,
   mergeRuleConfig,
   resolveClaimWindow,
   type BaselineRoundState,
@@ -144,8 +146,11 @@ describe('round flow claim resolution', () => {
 
   it('prefers a win claim over lower priority claims', () => {
     const discardedTile = dragon('red')
-    const pendingRound = createClaimWindowRound(discardedTile, 'south', {
-      east: [
+    const pendingRound = createReachableClaimWindowScenario({
+      triggeringTile: discardedTile,
+      triggeringSeat: 'south',
+      hands: {
+        east: [
         ...chars(1, 2, 3),
         ...dots(1, 2, 3, 9, 9, 9),
         ...bamboos(1, 2, 3),
@@ -153,22 +158,17 @@ describe('round flow claim resolution', () => {
         wind('east'),
         wind('east'),
         dragon('red')
-      ],
-      south: [
-        ...chars(1, 2, 3),
-        ...dots(4, 5, 6, 7, 8, 9),
-        ...bamboos(4, 5, 6),
-        wind('south'),
-        wind('south'),
-        dragon('red'),
-        dragon('green'),
-        dragon('white')
-      ]
+        ],
+        west: [dragon('red'), dragon('red')]
+      }
     })
     const claims: PendingActionClaim[] = [
       { seat: 'east', actionType: 'win', tile: discardedTile },
       { seat: 'west', actionType: 'pon', tile: discardedTile, consumedTiles: [dragon('red'), dragon('red')] }
     ]
+
+    expect(getLegalClaimCandidates(pendingRound, 'east').map(candidate => candidate.actionType)).toContain('win')
+    expect(getLegalClaimCandidates(pendingRound, 'west').map(candidate => candidate.actionType)).toContain('pon')
 
     const resolved = resolveClaimWindow(pendingRound, claims)
 
@@ -187,9 +187,8 @@ describe('round flow claim resolution', () => {
       type: 'win',
       winnerSeat: 'east',
       discarderSeat: 'south',
-      totalTai: 2,
+      totalTai: 1,
       scoringItems: [
-        scoringItem('dealer-win', '莊家', 1, '胡牌者為莊家'),
         scoringItem('concealed-hand', '門清', 1, '沒有吃也沒有碰，手牌皆為自摸整理')
       ],
       drawReason: null,

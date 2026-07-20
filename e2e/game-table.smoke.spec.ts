@@ -626,7 +626,7 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
     await expect(page.getByTestId('player-winning-tiles-south')).toContainText('和牌手牌')
     await expect(page.getByTestId('player-winning-tiles-south')).toContainText('一萬')
-    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('四筒')
+    await expect(page.getByTestId('player-winning-tiles-south')).toContainText('一筒')
     await expect(page.getByTestId('player-winning-tiles-south')).toContainText('東風')
   })
 })

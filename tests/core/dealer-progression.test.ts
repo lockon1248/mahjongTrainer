@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createBaselineRound,
+  createReachableExhaustiveDrawScenario,
   discardTile,
   createWinRoundResult,
   createNextRoundFromCompletedRound,
@@ -100,12 +101,7 @@ describe('dealer progression', () => {
   })
 
   it('keeps the same dealer and creates the next round after a draw outcome', () => {
-    const round = createBaselineRound({ wall: buildWall(65) })
-    const claimWindow = discardTile(round, {
-      seat: 'east',
-      tile: round.players.east.concealedTiles[0]!
-    })
-    const drawnRound = resolveClaimWindow(claimWindow, [])
+    const drawnRound = createReachableExhaustiveDrawScenario()
 
     expect(drawnRound.outcome.status).toBe('draw')
     if (drawnRound.outcome.status !== 'draw')

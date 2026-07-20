@@ -2,11 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   createBaselineRound,
-  createDrawRoundResult,
-  createPendingActionWindow,
-  createWinRoundResult,
-  type BaselineRoundState,
-  type Seat,
+  createReachableClaimWindowScenario,
+  createReachableExhaustiveDrawScenario,
   type Tile
 } from '@/core'
 import { useGameSessionStore } from '@/stores/gameSession'
@@ -49,51 +46,6 @@ const buildWall = (): Tile[] => {
   return Array.from({ length: 90 }, (_, index) => pool[index % pool.length]!)
 }
 
-const createClaimWindowRound = (
-  triggeringTile: Tile,
-  triggeringSeat: Seat,
-  seatTiles: Partial<Record<Seat, Tile[]>>
-): BaselineRoundState => {
-  const round = createBaselineRound({ wall: buildWall() })
-
-  return {
-    ...round,
-    currentSeat: triggeringSeat,
-    phase: 'claim-window',
-    table: {
-      ...round.table,
-      discardSequence: [triggeringTile],
-      discards: {
-        ...round.table.discards,
-        [triggeringSeat]: [triggeringTile]
-      }
-    },
-    pendingActionWindow: {
-      ...createPendingActionWindow(),
-      triggeringSeat,
-      triggeringTile
-    },
-    players: {
-      east: {
-        ...round.players.east,
-        concealedTiles: seatTiles.east ?? round.players.east.concealedTiles
-      },
-      south: {
-        ...round.players.south,
-        concealedTiles: seatTiles.south ?? round.players.south.concealedTiles
-      },
-      west: {
-        ...round.players.west,
-        concealedTiles: seatTiles.west ?? round.players.west.concealedTiles
-      },
-      north: {
-        ...round.players.north,
-        concealedTiles: seatTiles.north ?? round.players.north.concealedTiles
-      }
-    }
-  }
-}
-
 describe('mainline playable flow', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -117,8 +69,10 @@ describe('mainline playable flow', () => {
 
   it('covers a terminal win path and syncs the result summary into the snapshot', () => {
     const store = useGameSessionStore()
-    store.round = createClaimWindowRound(dragon('red'), 'west', {
-      east: [
+    store.round = createReachableClaimWindowScenario({
+      triggeringTile: dragon('red'),
+      triggeringSeat: 'west',
+      hands: { east: [
         ...chars(1, 2, 3),
         ...dots(1, 2, 3, 9, 9, 9),
         ...bamboos(1, 2, 3),
@@ -126,7 +80,7 @@ describe('mainline playable flow', () => {
         wind('east'),
         wind('east'),
         dragon('red')
-      ]
+      ] }
     })
 
     store.submitHumanClaim('win')
@@ -143,15 +97,7 @@ describe('mainline playable flow', () => {
 
   it('covers a draw terminal path and syncs the draw summary into the snapshot', () => {
     const store = useGameSessionStore()
-    const round = createBaselineRound({ wall: buildWall() })
-    store.round = {
-      ...round,
-      phase: 'ended',
-      outcome: {
-        status: 'draw',
-        result: createDrawRoundResult()
-      }
-    }
+    store.round = createReachableExhaustiveDrawScenario()
 
     const snapshot = createGameTableSnapshot(store.round, 'east')
 

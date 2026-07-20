@@ -3,7 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import {
   createBaselineRound,
   createDrawRoundResult,
-  createPendingActionWindow,
+  createReachableClaimWindowScenario,
+  createReachableExhaustiveDrawScenario,
   createWinRoundResult,
   getLegalClaimCandidates,
   getLegalSelfTurnCandidates,
@@ -60,44 +61,11 @@ const createClaimWindowRound = (
   triggeringSeat: Seat,
   seatTiles: Partial<Record<Seat, Tile[]>>
 ): BaselineRoundState => {
-  const round = createBaselineRound({ wall: buildWall() })
-
-  return {
-    ...round,
-    currentSeat: triggeringSeat,
-    phase: 'claim-window',
-    table: {
-      ...round.table,
-      discardSequence: [triggeringTile],
-      discards: {
-        ...round.table.discards,
-        [triggeringSeat]: [triggeringTile]
-      }
-    },
-    pendingActionWindow: {
-      ...createPendingActionWindow(),
-      triggeringSeat,
-      triggeringTile
-    },
-    players: {
-      east: {
-        ...round.players.east,
-        concealedTiles: seatTiles.east ?? round.players.east.concealedTiles
-      },
-      south: {
-        ...round.players.south,
-        concealedTiles: seatTiles.south ?? round.players.south.concealedTiles
-      },
-      west: {
-        ...round.players.west,
-        concealedTiles: seatTiles.west ?? round.players.west.concealedTiles
-      },
-      north: {
-        ...round.players.north,
-        concealedTiles: seatTiles.north ?? round.players.north.concealedTiles
-      }
-    }
-  }
+  return createReachableClaimWindowScenario({
+    triggeringTile,
+    triggeringSeat,
+    hands: seatTiles
+  })
 }
 
 const createSelfTurnRound = (input: {
@@ -217,7 +185,7 @@ describe('game session store', () => {
     expect(store.error).toBeNull()
     expect(store.round?.currentSeat).toBe('south')
     expect(store.round?.phase).toBe('discard')
-    expect(store.round?.players.south.concealedTiles).toHaveLength(3)
+    expect(store.round?.players.south.concealedTiles).toHaveLength(17)
   })
 
   it('applies a human discard through core and opens a claim window', () => {
@@ -255,19 +223,17 @@ describe('game session store', () => {
 
   it('advances only one AI step per call so UI pacing can schedule readable progression', () => {
     const store = useGameSessionStore()
-    const baseRound = createClaimWindowRound(dragon('white'), 'east', {
-      east: [chars(1)[0]!, dots(1)[0]!],
-      south: [chars(2)[0]!, dots(2)[0]!],
-      west: [chars(4)[0]!, dots(4)[0]!],
-      north: [chars(5)[0]!, dots(5)[0]!]
-    })
-    store.round = {
-      ...baseRound,
-      table: {
-        ...baseRound.table,
-        wall: []
+    store.round = createReachableClaimWindowScenario({
+      triggeringTile: dragon('white'),
+      triggeringSeat: 'east',
+      emptyWallAfterDeal: true,
+      hands: {
+        east: [chars(1)[0]!, dots(1)[0]!],
+        south: [chars(2)[0]!, dots(2)[0]!],
+        west: [chars(4)[0]!, dots(4)[0]!],
+        north: [chars(5)[0]!, dots(5)[0]!]
       }
-    }
+    })
 
     store.advanceTurn()
 
@@ -293,18 +259,7 @@ describe('game session store', () => {
   it('surfaces exhaustive draw outcomes when the wall is exhausted during turn advancement', () => {
     const store = useGameSessionStore()
 
-    store.startLocalRound()
-    store.round = {
-      ...store.round!,
-      table: {
-        ...store.round!.table,
-        wall: []
-      },
-      phase: 'draw',
-      currentSeat: 'south'
-    }
-
-    store.advanceTurn()
+    store.round = createReachableExhaustiveDrawScenario()
 
     expect(store.error).toBeNull()
     expect(store.round?.phase).toBe('ended')

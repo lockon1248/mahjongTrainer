@@ -192,3 +192,57 @@ tests:
   - tests/ui/game-session.store.test.ts
   - tests/ui/match-setup-modal.test.ts
 -->
+
+---
+### Requirement: Ended match can restart through existing setup
+
+The match session SHALL provide an explicit reset action that clears the completed match and round and returns the session to its existing setup state without inventing a new default match.
+
+#### Scenario: Restart returns to setup
+
+- **WHEN** the user activates `重新開始` from an ended match settlement
+- **THEN** the session MUST clear the completed round, expose setup state, and require the existing setup submission before a new round begins
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->

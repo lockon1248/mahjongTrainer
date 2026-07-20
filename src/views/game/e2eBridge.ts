@@ -3,6 +3,8 @@ import {
   createBaselineWall,
   createPendingActionWindow,
   createBaselineRuleConfig,
+  createReachableExhaustiveDrawClaimWindowScenario,
+  createReachableSelfDrawOpportunityScenario,
   createWinRoundResult,
   discardTile,
   drawForCurrentSeat,
@@ -205,15 +207,7 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
       store.error = null
     },
     seedDrawNextRoundScenario() {
-      const round = createBaselineRound({ wall: buildWall() })
-      const triggeringTile = dragon('red')
-      round.table.wall = []
-      round.players.east.concealedTiles = [triggeringTile, ...chars(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)]
-      round.players.south.concealedTiles = chars(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
-      round.players.west.concealedTiles = chars(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
-      round.players.north.concealedTiles = chars(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)
-      store.round = round
-      store.discard(triggeringTile)
+      store.round = createReachableExhaustiveDrawClaimWindowScenario()
       store.resolveClaims()
       store.error = null
     },
@@ -317,36 +311,8 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
       store.error = null
     },
     seedAiWinRevealScenario() {
-      const round = createBaselineRound({ wall: buildWall() })
-      store.round = {
-        ...round,
-        currentSeat: 'south',
-        phase: 'ended',
-        players: {
-          ...round.players,
-          south: {
-            ...round.players.south,
-            concealedTiles: [
-              ...chars(1, 2, 3),
-              ...dots(4, 5, 6),
-              ...bamboos(7, 8, 9),
-              wind('east'),
-              wind('east'),
-              wind('east'),
-              dragon('red'),
-              dragon('red')
-            ]
-          }
-        },
-        outcome: {
-          status: 'win',
-          result: createWinRoundResult({
-            winnerSeat: 'south',
-            discarderSeat: null,
-            totalTai: 3
-          })
-        }
-      }
+      store.round = createReachableSelfDrawOpportunityScenario({ winnerSeat: 'south' })
+      store.advanceTurn()
       store.error = null
     }
   }

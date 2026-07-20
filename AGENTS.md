@@ -240,7 +240,7 @@ Required behavior:
 2. mark the completed mainline task as done
 3. set the next active or planned child change explicitly
 4. if archive is done but mainline progress is not updated, the work is not considered properly closed
-5. if a child change has reached `all_done`, the assistant must archive it before starting the next child change
+5. if a child change has reached `all_done` and explicit closure authority exists, the assistant must archive it before starting the next child change
 6. the assistant must not treat `all_done but unarchived` as closed work
 7. unless the user explicitly says otherwise, the required closing order is:
    - finish implementation and verification
@@ -248,7 +248,7 @@ Required behavior:
    - archive the child change
    - update the mainline change
    - only then start the next child change or next mainline task
-8. if the assistant notices a completed but unarchived child change, it must repair that workflow state first before opening new implementation work
+8. if the assistant notices a completed but unarchived child change, it must obtain or apply explicit closure authority before opening new implementation work
 
 ## 15A. Mainline Task Discipline Rule
 
@@ -258,25 +258,29 @@ Required behavior:
 
 1. `current active child change`、`next planned child change`、`planned`、`in-progress` 這類欄位屬於狀態資訊，不得寫成可勾選 task
 2. 不得因為 child change 已建立 proposal / design / tasks，就把對應主線 task 打勾
+3. 主線 task 只能在其對應 child change 已完成實作、完成驗證、正式 archive 後打勾
+4. 若下一個 child change 尚未定義，只能維持為狀態欄位或待規劃資訊，不得把「建立下一個 child change」當成主線進度完成
+5. 若 assistant 發現自己把狀態欄位寫成 task，必須先修正 mainline change，再繼續後續 implementation workflow
+
 ## 15B. Mainline Board Lifecycle Rule
 
-本 repo 必須永遠有一份 active 主線 board，但 active 主線 board 不得處於
-「task 已全部完成卻仍不封存」的矛盾狀態。
+只有使用者明確建立且尚未完成的 versioned mainline 才必須有 active board；
+active board 不得處於「task 已全部完成卻仍不封存」的矛盾狀態。
 
 Required behavior:
 
 1. 若目前主線 board 的建立、回填、交接 task 已完成，則它不得繼續以
    completed-but-still-active 狀態存在
-2. 必須改用 successor handoff：
+2. 同一條尚未完成的 versioned mainline 需要交接時，必須改用 successor handoff：
    - 建立新的 active 主線 board change
    - 將最新主線狀態移轉到新 board
    - 讓新 board 接手 current mainline board 身分
    - 封存前一份主線 board
-3. active 主線 board 必須保留一個未完成的維護或交接 task，直到下一份
+3. 已明確建立的 active 主線 board 必須保留一個未完成的維護或交接 task，直到下一份
    successor board 接手為止
 4. 不得再出現「主線 board 任務全勾完，但因為它是 current board 所以不封存」
    的例外狀態
-## 15C. MVP Mainline Finalization Rule
+## 15C. Post-MVP Mainline Finalization Rule
 
 本 repo 必須明確區分「MVP 主線」與「MVP 完成後的增量 / 維護主線」。
 
@@ -316,11 +320,7 @@ Required behavior:
    - 顯示值是否真的被對應規則驅動
    - 沒有實作的規則是否被 UI 假裝已存在
 5. 對任何狀態型 UI 的修正，至少要補一個能保護語意正確性的 UI test 或 E2E
-3. 主線 task 只能在其對應 child change 已完成實作、完成驗證、正式 archive 後打勾
-4. 若下一個 child change 尚未定義，只能維持為狀態欄位或待規劃資訊，不得把「建立下一個 child change」當成主線進度完成
-5. 若 assistant 發現自己把狀態欄位寫成 task，必須先修正 mainline change，再繼續後續 implementation workflow
-
-## 15B. Per-Change Verification Rule
+## 17. Per-Change Verification Rule
 
 每一個 change 在視為完成前，都必須跑過與該 change 行為範圍相對應的驗證，不得只靠 artifact 完成、主線更新或 archive 流程視為已完成。
 
@@ -338,7 +338,7 @@ Required behavior:
 10. 只有在 browser E2E 被基建缺口或環境限制明確阻擋時，才可暫時退回等效整合測試，且必須記錄阻擋原因
 11. assistant 不得因為非瀏覽器測試比較便宜、比較快、比較容易過，就主動選擇較弱驗證路徑取代可合理落地的 browser E2E
 
-## 16. Spec Drift Prevention Rule
+## 18. Spec Drift Prevention Rule
 
 When the requested work is product implementation progress, the assistant must not drift into low-value spec maintenance.
 
@@ -347,7 +347,7 @@ Drift examples include:
 - polishing `Purpose` / wording that does not unblock the next implementation step
 - rewriting spec text without changing progress visibility
 
-## 17. Harness Engineering Rule
+## 19. Harness Engineering Rule
 
 When fixing bugs, regressions, or mismatches between tests and real play,
 the assistant must use a Harness Engineering workflow instead of relying
@@ -395,7 +395,7 @@ Stop condition:
    interactive flow has been rechecked
 - creating side documents when the repo already has the needed `openspec` artifacts
 
-## 17. Default UI Language Rule
+## 20. Default UI Language Rule
 
 For this repo, product-facing UI language must default to Traditional Chinese.
 
@@ -412,7 +412,7 @@ Required behavior:
 2. if progress visibility is broken, fix the mainline change before creating more side artifacts
 3. if work no longer clearly advances a mainline task, stop and return to the mainline change
 
-## 18. Audit Mode Discipline Rule
+## 21. Audit Mode Discipline Rule
 
 當使用者要求「檢視」、「盤點」、「review spec 對照」、「告訴我哪裡沒做到卻打勾」、
 「為什麼沒有照 spec 做」或其他明顯屬於稽核 / 對帳 / 問責語意的工作時，
@@ -430,7 +430,7 @@ Required behavior:
 5. 若 spec、實作、測試三者互相矛盾，必須先明確指出矛盾，不得自行挑一邊當真相
 6. 稽核模式的任務完成前，不得順手幫使用者做 closure、封存、mainline sync 或額外 workflow 整理
 
-## 19. No Inference on Product Semantics Rule
+## 22. No Inference on Product Semantics Rule
 
 當需求涉及 UI 顏色語意、狀態文案、互動含義、規則顯示意義、結果解讀方式時，
 assistant 不得自行補完產品語意。
@@ -445,7 +445,7 @@ Required behavior:
    - 這個顯示目前實際代表什麼
    - spec / 使用者要求它應該代表什麼
 
-## 20. No Premature Closure Rule
+## 23. No Premature Closure Rule
 
 assistant 不得因為看到 task 全勾、局部測試通過、或 change 看起來接近完成，
 就自行推進封存、mainline 回填、workflow 收尾或完成宣告。
@@ -456,3 +456,17 @@ Required behavior:
 2. 若使用者當前要求是稽核、檢討、找問題、對 spec，assistant 不得在同一輪自行做 closure 動作
 3. 只有在使用者明確要求「修」、「整理 workflow」、「封存」、「回填主線」時，才可進入 closure / repair mode
 4. 若 assistant 已經誤進 closure mode，必須先停止、承認偏題、撤回不當動作，再回到原始任務
+
+## 24. Repair and Closure Authority Rule
+
+The authoritative workflow transition is:
+
+`audit (read-only) → explicit repair authority → propose/apply → layer verification → explicit closure authority → archive/mainline sync`
+
+Required behavior:
+
+1. audit、review、盤點、對帳與問責只授權唯讀證據整理
+2. 修正、實作與套用授權修改及分層驗證，但不自動授權 archive 或 mainline sync
+3. 封存、整理 workflow、回填主線或明確要求完成整份 workflow 才授權 closure
+4. 已驗證但未取得 closure authority 的 change 必須維持 active 或 parked，且不得先開下一個 change
+5. 獨立 post-MVP maintenance change 不得被包裝成已封存 MVP current mainline 的延續

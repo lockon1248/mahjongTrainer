@@ -742,40 +742,61 @@ tests:
 ---
 ### Requirement: Round result summary rendering
 
-牌桌 UI 在本局結束時，必須顯示結果摘要；在本局尚未結束時，不得渲染該摘要。
+The table UI SHALL render a compact terminal result row only after the round has ended. A win row SHALL render the authoritative winner, discarder when present, and total tai. A draw row SHALL render the authoritative draw reason. The row MUST NOT render result type, ended status, or a separate scoring trigger.
 
 #### Scenario: Only completed rounds render the result summary
 
-- **WHEN** 牌局 outcome 為 `in-progress`
-- **THEN** 畫面不得顯示結果摘要
+- **WHEN** the round outcome is `in-progress`
+- **THEN** the UI MUST NOT render a terminal result row or settlement dialog
 
-##### Example: draw result shows draw reason
+##### Example: Draw result shows only required result information
 
-- **GIVEN** 一個 `draw` outcome，且 `drawReason = wall-exhausted`
-- **WHEN** table view 渲染結果區
-- **THEN** 畫面必須顯示該流局原因
+- **GIVEN** a `draw` outcome with `drawReason = wall-exhausted`
+- **WHEN** the table view renders the terminal result
+- **THEN** the UI MUST show the draw reason, MUST NOT show result type or ended status, and MUST open the unified settlement dialog
+
 
 <!-- @trace
-source: taiwan-mahjong-ui-round-result-sync
-updated: 2026-07-14
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
 code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
   - src/views/game/GameView.vue
-  - src/core/rules/types.ts
   - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
   - src/stores/gameSession.ts
   - src/views/game/types.ts
-  - AGENTS.md
-  - src/core/types/table.ts
+  - src/core/config/index.ts
   - src/views/game/components/GameTableView.vue
-  - src/core/rules/roundFlow.ts
+  - src/core/scoring/patterns.ts
 tests:
-  - tests/ui/game-session.store.test.ts
+  - tests/core/rule-config-core.test.ts
   - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
   - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
   - tests/ui/round-result-sync.test.ts
-  - tests/core/human-self-turn-actions.test.ts
-  - tests/ui/human-claim-window.test.ts
   - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
   - tests/ui/human-self-turn-actions.test.ts
 -->
 
@@ -953,46 +974,63 @@ tests:
 ---
 ### Requirement: 中央桌面完整顯示四家捨牌池
 
-牌桌 SHALL 在中央桌面同時顯示四家的捨牌池，而不是只顯示捨牌數量。
+The table UI SHALL render one shared central discard pool containing every currently visible unclaimed discard in authoritative chronological order. It MUST NOT render seat headings, per-seat discard counts, or seat markers on discard tiles. The pool SHALL use a fixed-height grid that fits up to 72 visible discards without internal scrolling or increasing the scaled stage height.
 
-#### Scenario: 四家捨牌池都可在中央區讀取
+#### Scenario: Mixed-seat discards render as one chronological sequence
 
-- **WHEN** 牌局快照中有一位以上玩家已經捨牌
-- **THEN** 牌桌 MUST 在中央桌面渲染每一家的捨牌內容，並保留座位歸屬
+- **GIVEN** the authoritative discard sequence is [`1-character`, `5-dot`, `red-dragon`]
+- **WHEN** the table renders the central discard pool
+- **THEN** it MUST show those three tiles from left to right in that order without seat labels or separate seat pools
 
-##### Example: 混合捨牌張數仍可讀取
+#### Scenario: Late-round discard accumulation does not shrink the table
 
-| Seat | Discard tiles |
-| ---- | ------------- |
-| east | `1-character`, `2-character` |
-| south | `5-dot` |
-| west | none |
-| north | `red-dragon`, `east-wind`, `plum` |
-
-- **WHEN** 牌桌渲染這個快照
-- **THEN** 中央區域 MUST 顯示四個捨牌池，包含 `west` 的空捨牌池，而不是把資訊折疊成數字統計
+- **GIVEN** a reachable round at a fixed desktop viewport progresses from an empty discard sequence to 72 visible tiles
+- **WHEN** the fixed central grid renders both states
+- **THEN** the stage scale MUST remain unchanged and the pool MUST NOT expose an internal scrollbar
 
 
 <!-- @trace
-source: taiwan-mahjong-table-layout-and-discards
-updated: 2026-07-14
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
 code:
-  - AGENTS.md
-  - src/views/game/types.ts
-  - src/core/rules/roundFlow.ts
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
   - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
   - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
 tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
   - tests/ui/game-session.store.test.ts
-  - tests/core/round-flow-claims.test.ts
   - tests/ui/game-table-view.test.ts
-  - tests/ui/game-table-layout.test.ts
-  - tests/ui/human-self-turn-actions.test.ts
   - tests/ui/interactive-turn-loop.test.ts
-  - tests/ui/human-claim-window.test.ts
-  - tests/ui/repro-next-round-state.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
   - tests/ui/round-result-sync.test.ts
   - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
 -->
 
 ---
@@ -1037,85 +1075,118 @@ tests:
 ---
 ### Requirement: 副露區與捨牌池必須反映裁決後牌局狀態
 
-當 `claim-window` 裁決接受 `chi`、`pon`、`kan-exposed` 時，牌桌 SHALL 顯示宣告者的新副露，且 claimed tile MUST 不再留在觸發者的中央捨牌池中。
+When claim resolution accepts `chi`, `pon`, or `kan-exposed`, the table SHALL render the claimant's new meld and MUST NOT retain the claimed triggering tile in the shared chronological discard pool.
 
-#### Scenario: 碰牌後副露與捨牌池同步
+#### Scenario: Accepted pon removes the final shared discard
 
-- **WHEN** 某位玩家對他家捨牌宣告 `pon` 並被裁決接受
-- **THEN** 宣告者的副露區 MUST 顯示新的 `pon` 組合，且被碰的那張牌 MUST 從觸發者捨牌池移除
+- **GIVEN** the latest shared discard is `west-wind`
+- **WHEN** east's legal `pon` is accepted
+- **THEN** east's meld area MUST contain the `west-wind` pon and the shared discard pool MUST NOT retain that claimed tile
 
-##### Example: 西風碰牌不再同時留在兩處
-
-- **GIVEN** `east` 對 `north` 打出的 `west-wind` 成功宣告 `pon`
-- **WHEN** 牌桌渲染裁決後快照
-- **THEN** `east` 的副露區 MUST 顯示包含 `west-wind` 的碰組，且 `north` 的中央捨牌池 MUST NOT 再保留同一張被碰走的 `west-wind`
 
 <!-- @trace
-source: taiwan-mahjong-table-layout-and-discards
-updated: 2026-07-14
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
 code:
-  - AGENTS.md
-  - src/views/game/types.ts
-  - src/core/rules/roundFlow.ts
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
   - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
   - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
 tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
   - tests/ui/game-session.store.test.ts
-  - tests/core/round-flow-claims.test.ts
   - tests/ui/game-table-view.test.ts
-  - tests/ui/game-table-layout.test.ts
-  - tests/ui/human-self-turn-actions.test.ts
   - tests/ui/interactive-turn-loop.test.ts
-  - tests/ui/human-claim-window.test.ts
-  - tests/ui/repro-next-round-state.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
   - tests/ui/round-result-sync.test.ts
   - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
 -->
 
 ---
 ### Requirement: 和牌摘要必須顯示正確台型與總台數
 
-牌桌 UI SHALL 在和牌結果摘要中顯示來自 scoring core 的 `scoringItems` 與 `totalTai`，而不是只顯示和牌座位與結束狀態。
+The table UI SHALL render `totalTai` from scoring core in the compact win result row and SHALL render structured `scoringItems` inside the unified round-settlement dialog instead of inline within the scaled table stage.
 
-#### Scenario: 榮和結果摘要顯示台數
+#### Scenario: Winning result opens scoring details
 
-- **WHEN** 玩家以 `discard-win` 完成合法和牌，且 scoring core 已產生台型與總台數
-- **THEN** 結果摘要 MUST 顯示對應的台型明細與 `totalTai`
+- **WHEN** a legal `discard-win` or self-draw result includes structured scoring items and `totalTai`
+- **THEN** the result row MUST show `totalTai` and the UI MUST automatically open the unified dialog containing scoring items and chip allocation
 
-##### Example: 榮和後顯示實際台數
+##### Example: Discard win details need no secondary trigger
 
-- **GIVEN** `east` 對 `north` 的捨牌完成和牌，且 scoring core 產生至少一個台型與對應 `totalTai`
-- **WHEN** 牌桌渲染本局結果摘要
-- **THEN** 玩家 MUST 看得到非空的台型明細與總台數，而不是 `無`
+- **GIVEN** east wins on north's discard and scoring core provides non-empty scoring items
+- **WHEN** the terminal result renders
+- **THEN** scoring items and total tai MUST already be visible in `本局結算` without `查看台型`
+
 
 <!-- @trace
-source: taiwan-mahjong-scoring-rules-and-tests
-updated: 2026-07-14
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
 code:
-  - src/core/config/index.ts
-  - src/core/scoring/settlement.ts
-  - package.json
-  - src/core/config/types.ts
-  - src/core/scoring/types.ts
   - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
   - src/core/scoring/validation.ts
-  - src/views/game/components/GameTableView.vue
-  - src/core/rules/roundFlow.ts
-  - src/env.d.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
   - src/views/game/GameView.vue
-  - AGENTS.md
-  - playwright.config.ts
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
   - src/core/scoring/patterns.ts
 tests:
-  - tests/core/scoring-settlement.test.ts
-  - e2e/game-table.smoke.spec.ts
-  - tests/core/scoring-patterns.test.ts
-  - tests/core/human-self-turn-actions.test.ts
   - tests/core/rule-config-core.test.ts
-  - tests/ui/table-layout-verification-flow.test.ts
-  - tests/core/round-flow-claims.test.ts
-  - tests/core/scoring-win-validation.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
   - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
 -->
 
 ---
@@ -2021,4 +2092,495 @@ code:
 tests:
   - tests/ui/game-session.store.test.ts
   - tests/ui/match-setup-modal.test.ts
+-->
+
+---
+### Requirement: Shared discard pool preserves latest-action highlighting
+
+The table UI SHALL treat the final tile in the authoritative shared discard sequence as the only latest discard. During a human claim window, that tile SHALL receive the existing legal-action highlight semantics and all earlier tiles MUST remain unhighlighted.
+
+#### Scenario: Latest discard carries legal claim highlights
+
+- **WHEN** the human has legal `chi`, `pon`, `kan-exposed`, or `win` candidates for the triggering discard
+- **THEN** only the final shared discard tile MUST render the corresponding existing white, red, or yellow highlight combination
+
+#### Scenario: Pon-only latest discard uses a red background
+
+- **GIVEN** the human claim window offers `pon` but does not offer `win`
+- **WHEN** the shared discard pool renders the triggering final tile
+- **THEN** that tile MUST use a red background instead of the generic yellow latest-discard background, and every earlier discard MUST remain neutral
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Human meld remains visible after a claim
+
+The desktop table SHALL keep a newly accepted human meld and the remaining concealed hand completely visible inside the human player panel. Fixed-height desktop track allocation MUST NOT clip or overlap the meld row.
+
+#### Scenario: Accepted pon does not clip the new meld
+
+- **WHEN** the human accepts a legal `pon` at a 2048 by 962 desktop viewport
+- **THEN** the complete pon meld and concealed hand MUST remain inside the human panel and viewport without page scrolling
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Compact authoritative table status
+
+The table UI SHALL render one compact status row containing local round, dealer, prevailing wind, phase, remaining wall, and victory condition. It MUST NOT render current operation, last claim, outcome, total discard count, or match stakes in that status area.
+
+#### Scenario: Gameplay status uses the confirmed field set
+
+- **WHEN** the table view renders an active or completed round
+- **THEN** exactly the confirmed status concepts MUST remain above the table and the rejected concepts MUST be absent
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Settlement readability across desktop and narrow screens
+
+The game view SHALL keep the table stage at scale 1 when a desktop viewport has sufficient width and height. At those desktop viewports, the table SHALL stretch through the remaining stage height so its bottom edge aligns with the available stage content bottom instead of leaving an unused block below the human player panel. Wide-but-short and narrow viewports SHALL use compact vertical layout and proportional whole-stage fallback scaling when required to keep critical human-hand and action content visible. A teleported settlement dialog MUST NOT contribute to stage measurement. The page MUST remain free of page-level scrolling.
+
+#### Scenario: Desktop settlement remains readable
+
+- **WHEN** a completed win is rendered at a 2048 by 962 desktop viewport
+- **THEN** the stage MUST remain unscaled, use the available game width without excessive side margins, and keep the page free of scrollbars
+
+#### Scenario: Desktop table consumes lower whitespace
+
+- **WHEN** an active round is rendered at a 2048 by 962 desktop viewport
+- **THEN** the table bottom MUST align with the available stage content bottom while the stage remains at scale 1 and the page remains free of scrollbars
+
+#### Scenario: Narrow viewport retains safe scaling
+
+- **WHEN** the natural stage does not fit a narrow viewport
+- **THEN** the game view MUST apply one proportional scale to the stage while keeping the settlement dialog outside that transform
+
+#### Scenario: Wide but short viewport keeps the human hand visible
+
+- **WHEN** an active round is rendered at a 1489 by 658 viewport
+- **THEN** the complete human concealed-hand region and action row MUST remain inside the viewport, the page MUST remain free of page-level scrolling, and the layout MUST NOT rely on a width-only forced scale of 1
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Match completion renders final settlement
+
+The table shell SHALL render a full-screen final settlement from authoritative ended match state. It SHALL show the match winner and final chips for all four seats, SHALL hide the round-level next-round action, and SHALL provide `重新開始` to return to existing match setup.
+
+#### Scenario: Bankruptcy completion replaces next round
+
+- **WHEN** bankruptcy settlement changes match status to `ended`
+- **THEN** the UI MUST show final settlement, MUST NOT show `下一局`, and MUST allow `重新開始`
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Human concealed tiles use available readable space
+
+The table shell SHALL render human concealed-tile controls with a computed font size of at least 16 pixels and an enlarged hit area while keeping the complete hand inside a 1489 by 658 viewport.
+
+#### Scenario: Enlarged hand remains visible
+
+- **WHEN** a human hand is rendered at 1489 by 658
+- **THEN** every concealed-tile control MUST remain inside the viewport and its computed font size MUST be at least 16 pixels
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Development hot updates preserve the game session store contract
+
+The game-session Pinia setup store SHALL accept Vite hot module updates so that an already-created store instance receives newly defined actions without losing the current session state.
+
+#### Scenario: Restart action is added during an active development session
+
+- **GIVEN** the game page already owns a live `game-session` store instance
+- **WHEN** Vite hot-replaces the store module with a definition containing `resetMatch`
+- **THEN** the existing instance MUST expose `resetMatch` and the hot-updated `GameView` MUST NOT throw a missing-action runtime error
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Every completed round renders authoritative chip allocation
+
+The table shell SHALL automatically render one `本局結算` dialog 1,500 milliseconds after every completed win or draw. Before the delay elapses, the terminal table state SHALL remain visible without the settlement overlay. The dialog SHALL show each seat's signed round delta and post-settlement chips from the session store. A self-draw SHALL show `{winner} 自摸`; a discard win SHALL show `{winner} 和牌｜{discarder} 放槍`; a draw SHALL show only its authoritative draw reason and MUST NOT show a win/loss outcome line. At a 1489 by 658 desktop viewport, the complete dialog content SHALL be visible at once without internal or page-level scrolling. The dialog MUST NOT calculate payment amounts in the component and MUST NOT expose a separate `查看台型` action.
+
+#### Scenario: Settlement waits before covering the terminal table
+
+- **WHEN** a win or draw result becomes terminal
+- **THEN** the settlement dialog MUST remain absent for the first 1,500 milliseconds and MUST become visible after that delay
+
+#### Scenario: Zero-tai discard win still transfers the base stake
+
+- **GIVEN** a discard win has `totalTai = 0`, base stake 30, winner south, and discarder west
+- **WHEN** the store settles the round
+- **THEN** the dialog MUST show `南家 和牌｜西家 放槍`, south `+30`, west `-30`, east and north `±0`, together with all four post-settlement balances
+
+#### Scenario: Self-draw identifies the winner without a discarder
+
+- **GIVEN** a self-draw result whose winner is north and whose discarder is absent
+- **WHEN** the settlement dialog becomes visible
+- **THEN** the dialog MUST show `北家 自摸` and MUST NOT show `放槍`
+
+#### Scenario: Draw shows balances without tai details
+
+- **WHEN** a draw completes without chip transfer
+- **THEN** the dialog MUST show the draw reason, MUST NOT show a win/loss outcome line, MUST NOT show total tai or scoring items, and MUST show all four seats with `±0` and unchanged balances
+
+#### Scenario: Short desktop shows the complete dialog without scrolling
+
+- **GIVEN** a completed win with outcome text, tai details, four chip settlement rows, and a next or restart action
+- **WHEN** the settlement dialog is rendered in a 1489 by 658 desktop viewport
+- **THEN** every dialog section and action MUST be inside the viewport, the dialog content MUST NOT have vertical overflow, and the page MUST NOT have a scrollbar
+
+#### Scenario: Settlement action follows match status
+
+- **WHEN** the completed round leaves the match in progress
+- **THEN** the dialog MUST offer `下一局`
+- **WHEN** the completed round ends the match
+- **THEN** the dialog MUST offer `重新開始` and MUST NOT offer `下一局`
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
 -->

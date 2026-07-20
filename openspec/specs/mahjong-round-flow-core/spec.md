@@ -585,46 +585,9 @@ tests:
 -->
 
 ---
-### Requirement: Draw outcome stays unresolved for undecided post-draw rules
-
-當上一局是流局，且 baseline 尚未定案流局後是否連莊或查聽時，round flow core 不得靜默推導下一局。
-
-#### Scenario: Draw does not silently create the next round
-
-- **WHEN** 呼叫端以流局終局狀態要求建立下一局
-- **THEN** round flow core 必須回報此路徑仍待定，而不得自行建立下一局
-
-##### Example: draw keeps dealer progression unresolved
-
-- **GIVEN** 一個 `draw` outcome，且其 unresolved 仍包含 `dealer-continuation`
-- **WHEN** 呼叫端要求建立下一局
-- **THEN** round flow core MUST 明確表示此路徑目前不可決定
-
-<!-- @trace
-source: taiwan-mahjong-draw-outcome-and-dealer-flow
-updated: 2026-07-14
-code:
-  - AGENTS.md
-  - src/core/types/table.ts
-  - src/stores/gameSession.ts
-  - src/core/rules/types.ts
-  - src/views/game/components/GameTableView.vue
-  - src/views/game/GameView.vue
-  - src/core/rules/roundFlow.ts
-tests:
-  - tests/ui/game-session.store.test.ts
-  - tests/ui/interactive-turn-loop.test.ts
-  - tests/ui/next-round-flow.test.ts
-  - tests/ui/human-claim-window.test.ts
-  - tests/ui/human-self-turn-actions.test.ts
-  - tests/core/dealer-progression.test.ts
-  - tests/core/human-self-turn-actions.test.ts
--->
-
----
 ### Requirement: Next-round dealer progression after draw
 
-round flow core SHALL provide a stable next-round initialization rule for draw outcomes so that the table can continue as a multi-round session instead of behaving like a perpetual first-hand east opening.
+The round flow core SHALL provide a stable next-round initialization rule for draw outcomes. A draw SHALL keep the same dealer so the table can continue as a multi-round session without contradicting the outcome metadata.
 
 #### Scenario: Draw keeps the same dealer
 
@@ -633,38 +596,77 @@ round flow core SHALL provide a stable next-round initialization rule for draw o
 
 ##### Example: east remains dealer after draw
 
-- **GIVEN** a completed round with `outcome = draw` and `dealerSeat = east`
+- **GIVEN** a reachable completed round with `outcome = draw` and `dealerSeat = east`
 - **WHEN** the caller requests the next round
 - **THEN** the new round `dealerSeat` MUST remain `east`
+- **THEN** the new round `currentSeat` MUST be `east` and its phase MUST be `discard`
+
+#### Scenario: Draw dealer metadata has one oracle
+
+- **WHEN** the baseline rule config and exhaustive draw outcome describe dealer continuation
+- **THEN** the rule config MUST contain `postDraw.dealerContinuation = { status: "configured", value: true }`
+- **THEN** the draw outcome MUST NOT advertise dealer continuation as unresolved
+
+#### Scenario: Ready-hand policies do not block next-round creation
+
+- **WHEN** a draw outcome retains unresolved ready-hand checking or payment
+- **THEN** the caller MUST still be able to create the next round with the same dealer
+- **THEN** round flow core MUST NOT synthesize ready-hand settlement or penalties
 
 
 <!-- @trace
-source: taiwan-mahjong-dealer-rotation-and-turn-pace
-updated: 2026-07-16
+source: post-mvp-harness-engineering-hardening
+updated: 2026-07-20
 code:
+  - src/core/rules/roundFlow.ts
+  - .npmrc
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
   - AGENTS.md
-  - src/main.ts
-  - src/views/game/types.ts
-  - src/views/game/GameView.vue
-  - src/views/game/selectors.ts
-  - vite.config.ts
-  - src/views/game/constants.ts
-  - uno.config.ts
-  - test-results/.last-run.json
-  - src/views/game/e2eBridge.ts
-  - src/ui/constants/tiles.ts
-  - package.json
-  - src/views/game/components/GameTableView.vue
+  - src/core/testing/roundScenario.ts
   - src/stores/gameSession.ts
-  - src/ui/constants/display.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - package.json
+  - src/views/game/e2eBridge.ts
+  - src/views/game/components/GameTableView.vue
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - scripts/check-node-version.mjs
+  - src/core/scoring/settlement.ts
+  - src/views/game/selectors.ts
+  - src/core/index.ts
+  - src/core/scoring/types.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/scoring/patterns.ts
+  - src/core/scoring/catalog.ts
+  - src/core/types/result.ts
+  - scripts/node-version-policy.mjs
+  - src/core/types/table.ts
+  - scripts/node-version-policy.d.mts
+  - src/core/scoring/validation.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/views/game/GameView.vue
 tests:
-  - e2e/game-table.smoke.spec.ts
-  - tests/ui/game-table-layout.test.ts
-  - tests/ui/round-result-sync.test.ts
+  - tests/core/rule-config-core.test.ts
+  - tests/smoke/node-version-policy.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
   - tests/ui/game-table-view.test.ts
-  - tests/ui/game-session.store.test.ts
-  - tests/ui/human-claim-window.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+  - tests/core/round-scenario-harness.test.ts
   - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/game-session.store.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/docs/agents-workflow-policy.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/next-round-flow.test.ts
 -->
 
 ---
@@ -710,4 +712,135 @@ tests:
   - tests/ui/game-session.store.test.ts
   - tests/ui/human-claim-window.test.ts
   - tests/ui/interactive-turn-loop.test.ts
+-->
+
+---
+### Requirement: Round flow tracks cumulative dealer continuation
+
+Round flow core SHALL store a non-negative dealer-continuation count in authoritative table state. The count SHALL start at zero, increment by one whenever the same dealer continues into the next round after a dealer win or draw, and reset to zero whenever dealer changes.
+
+#### Scenario: Dealer win increments continuation
+
+- **WHEN** a dealer wins with continuation count 0 and the next round is created with the same dealer
+- **THEN** the next round MUST have continuation count 1
+
+#### Scenario: Repeated dealer win accumulates continuation
+
+- **WHEN** a dealer wins with continuation count 1 and continues into the next round
+- **THEN** the next round MUST have continuation count 2
+
+#### Scenario: Dealer change resets continuation
+
+- **WHEN** a non-dealer win causes dealer rotation
+- **THEN** the next round MUST have continuation count 0
+
+#### Scenario: Draw continuation increments count
+
+- **WHEN** a draw creates the next round with the same dealer
+- **THEN** the next round MUST increment the continuation count by one
+
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
+-->
+
+---
+### Requirement: Round flow preserves chronological discard sequence
+
+Round flow core SHALL preserve an authoritative sequence of currently visible, unclaimed discards in actual discard order in addition to the seat-owned discard state required by claim resolution.
+
+#### Scenario: Discards append in actual turn order
+
+- **GIVEN** east has discarded `1-character` and south then discards `5-dot`
+- **WHEN** round flow applies both legal discard transitions
+- **THEN** the chronological discard sequence MUST equal [`1-character`, `5-dot`]
+
+#### Scenario: Accepted claim removes the triggering discard
+
+- **GIVEN** the final chronological discard is `west-wind` and a legal `pon` claims that tile
+- **WHEN** round flow resolves the accepted claim
+- **THEN** `west-wind` MUST be removed from both the triggering seat's discard state and the final chronological sequence entry
+
+<!-- @trace
+source: post-mvp-settlement-layout-readability
+updated: 2026-07-20
+code:
+  - src/views/game/e2eBridge.ts
+  - .superpowers/brainstorm/51439-1784519701/state/events
+  - src/core/types/result.ts
+  - src/core/scoring/catalog.ts
+  - .superpowers/brainstorm/51439-1784519701/state/server-stopped
+  - src/core/scoring/validation.ts
+  - src/core/scoring/settlement.ts
+  - src/core/scoring/types.ts
+  - src/core/types/table.ts
+  - src/views/game/GameView.vue
+  - src/views/game/selectors.ts
+  - .superpowers/brainstorm/51439-1784519701/content/settlement-layout-options.html
+  - .superpowers/brainstorm/51439-1784519701/state/server.pid
+  - src/core/rules/roundFlow.ts
+  - src/stores/gameSession.ts
+  - src/views/game/types.ts
+  - src/core/config/index.ts
+  - src/views/game/components/GameTableView.vue
+  - src/core/scoring/patterns.ts
+tests:
+  - tests/core/rule-config-core.test.ts
+  - tests/core/dealer-progression.test.ts
+  - tests/core/scoring-settlement.test.ts
+  - tests/core/domain-model.test.ts
+  - tests/ui/game-session-hmr.test.ts
+  - tests/ui/game-session.store.test.ts
+  - tests/ui/game-table-view.test.ts
+  - tests/ui/interactive-turn-loop.test.ts
+  - tests/ui/mainline-playable-flow.test.ts
+  - tests/ui/round-result-sync.test.ts
+  - tests/ui/next-round-flow.test.ts
+  - e2e/game-table.smoke.spec.ts
+  - tests/core/round-flow-outcome.test.ts
+  - tests/core/round-flow-claims.test.ts
+  - tests/ui/game-table-layout.test.ts
+  - tests/ui/table-layout-verification-flow.test.ts
+  - tests/ui/human-claim-window.test.ts
+  - tests/ui/human-self-turn-actions.test.ts
 -->

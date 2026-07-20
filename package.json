@@ -3,14 +3,25 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
+    "predev": "node scripts/check-node-version.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/check-node-version.mjs",
     "build": "vite build",
+    "prepreview": "node scripts/check-node-version.mjs",
     "preview": "vite preview",
+    "pretest": "node scripts/check-node-version.mjs",
     "test": "vitest run",
+    "pretest:watch": "node scripts/check-node-version.mjs",
     "test:watch": "vitest",
+    "pretypecheck": "node scripts/check-node-version.mjs",
     "typecheck": "tsc --noEmit",
+    "pretest:e2e": "node scripts/check-node-version.mjs",
     "test:e2e": "playwright test",
+    "pretest:e2e:headed": "node scripts/check-node-version.mjs",
     "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {
