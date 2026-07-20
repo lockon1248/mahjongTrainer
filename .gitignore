@@ -4,3 +4,4 @@ coverage
 dist
 .spectra/
 openspec/.vector-search.db*
+tmp/
