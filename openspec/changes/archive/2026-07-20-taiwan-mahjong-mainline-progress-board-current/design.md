@@ -107,20 +107,31 @@ repo workflow 要求兩件事同時成立：
    - `taiwan-mahjong-ai-decision-quality`
 10. 明槓補牌 bugfix
    - `taiwan-mahjong-exposed-kan-replacement-draw-fix`
-
-### 目前進行中
-
-11. 暗槓資訊保密
+11. 固定視窗舞台
+   - `taiwan-mahjong-fixed-viewport-stage`
+12. 暗槓資訊保密
    - `taiwan-mahjong-concealed-kong-visibility`
-12. 開局籌碼與勝負條件設定
+13. 開局籌碼與勝負條件設定
    - `taiwan-mahjong-match-stakes-and-victory-setup`
    - `taiwan-mahjong-match-setup-minimum-chips-guard`
    - `taiwan-mahjong-match-setup-validation-feedback`
+14. 固定舞台視覺尺度調整
+   - `taiwan-mahjong-game-stage-scale-tuning`
+15. 固定舞台橫向寬度放大
+   - `taiwan-mahjong-stage-width-expansion`
+16. 固定舞台高度緊縮
+   - `taiwan-mahjong-stage-height-compaction`
+17. 固定舞台桌機比例平衡
+   - `taiwan-mahjong-stage-desktop-balance`
+18. 固定舞台面積再平衡
+   - `taiwan-mahjong-stage-area-rebalance`
 
 ### 目前進行中
 
-- 目前 active child change：無
-- next planned child change：待下一份主線需求定義
+- 目前 active child change：`taiwan-mahjong-stage-area-rebalance`
+- next planned child change：待本次桌機舞台比例修正完成後再定義
+
+目前正修正桌機下遊戲區面積分配：在不改 header 與上方資訊列的前提下，進一步減少左右留白、放大中央牌桌存在感，並壓縮底部玩家區的空洞感。
 
 ## Completion Conditions
 
@@ -144,10 +155,22 @@ repo workflow 要求兩件事同時成立：
    - AI 自動推進具備穩定 phase continuity、約兩秒節奏與較佳出牌 / 宣告 heuristic，且三份 child changes 已正式 archive
 10. 明槓補牌 bugfix
    - `kan-exposed` 已完成槓後補牌、花牌連補與對應 core regression，並正式 archive
-11. 暗槓資訊保密
+11. 固定視窗舞台
+   - 對局畫面已可在桌機／平板維持單一固定視窗舞台，並有 browser 驗證保護無主頁捲軸回歸
+12. 暗槓資訊保密
    - 非擁有者看不到 AI 暗槓牌值，且 AI 也不會從 runtime context 讀到其他座位的暗槓牌值
-12. 開局籌碼與勝負條件設定
+13. 開局籌碼與勝負條件設定
    - 開局前可設定初始籌碼與勝利條件，並支援破產結束或四風圈結算的整場 closure，且初始籌碼最低值已收斂為 `100`，不合法值會在 setup modal 內直接提示原因
+14. 固定舞台視覺尺度調整
+   - 在保留全站 header 與現有資訊列樣式的前提下，遊戲主舞台需進一步放大，減少縮放後多餘留白，讓牌桌與玩家區佔據更高比例的可用視窗空間
+15. 固定舞台橫向寬度放大
+   - 在保留全站 header 與上方資訊列內容／樣式不變的前提下，固定舞台需進一步擴大 `game-stage-scaler` 與牌桌三欄的橫向佔比，減少寬螢幕下過量左右留白
+16. 固定舞台高度緊縮
+   - 在保留全站 header 與上方資訊列內容／樣式不變的前提下，固定舞台需進一步壓縮牌桌本體原始高度，提升實際縮放倍率，讓牌桌不再因內容過高而縮在中央
+17. 固定舞台桌機比例平衡
+   - 在大桌機 viewport 下，固定舞台需維持放大後但不過度攤平的桌面比例，避免 `scale = 1` 時牌桌變成不自然的滿寬布局
+18. 固定舞台面積再平衡
+   - 在保留全站 header 與上方資訊列內容／樣式不變的前提下，固定舞台需進一步提升遊戲區對桌機可用寬度的利用率，減少左右留白，讓中央牌桌與底部玩家區回到更正常的桌面密度
 
 ## Update Rules
 

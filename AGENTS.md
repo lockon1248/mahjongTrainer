@@ -276,6 +276,23 @@ Required behavior:
    successor board 接手為止
 4. 不得再出現「主線 board 任務全勾完，但因為它是 current board 所以不封存」
    的例外狀態
+## 15C. MVP Mainline Finalization Rule
+
+本 repo 必須明確區分「MVP 主線」與「MVP 完成後的增量 / 維護主線」。
+
+Required behavior:
+
+1. 若第一次產品 MVP 主線已完成並正式封存，assistant 不得再把後續 change
+   包裝成同一條 `current mainline` 的延續
+2. MVP 主線封存後，除非使用者明確建立新的 post-MVP / incremental /
+   versioned mainline，否則 repo 可以暫時不存在 active current mainline board
+3. MVP 主線完成後若仍需追蹤後續進度，新的 board 名稱與內容必須明確標示其
+   身分為 post-MVP、incremental、maintenance 或新的版本主線，不得繼續沿用
+   MVP `current` 語意
+4. assistant 不得為了滿足「永遠有 active board」而把已完成的 MVP 主線 board
+   人為留在 active 狀態
+5. 若 assistant 發現 active current board 實際上只是已完成 MVP 主線的殘留，
+   必須先修正規則與 workflow 身分，再封存該 board
 ## 16. UI Truthfulness Rule
 
 本 repo 的 UI 不能出現「假 UI」。

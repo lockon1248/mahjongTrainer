@@ -209,7 +209,7 @@ const formatScoringItem = (item: ScoringItem): string => {
 
 const getPlayerPanelClasses = (player: GameTablePlayerViewModel) => {
   return [
-    'player-panel-shell',
+    'player-panel-shell grid gap-[0.6rem] rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-[0.9rem] text-[#f8f2e7] shadow-[0_1rem_1.8rem_rgba(20,50,41,0.18)]',
     {
       'player-panel--active border border-[rgba(255,228,163,0.58)] shadow-[0_0_0_4px_rgba(255,205,101,0.42),0_1.25rem_2.2rem_rgba(20,50,41,0.26)] bg-[linear-gradient(180deg,rgba(52,113,91,0.99),rgba(26,67,55,0.99))]': isPlayerActive(player),
       'player-panel--recent shadow-[0_0_0_2px_rgba(255,255,255,0.26),0_1rem_2rem_rgba(20,50,41,0.18)]': isPlayerRecent(player)
@@ -230,7 +230,7 @@ const getPlayerStatusBadgeClasses = (player: GameTablePlayerViewModel) => {
 
 const getDiscardPoolClasses = (player: GameTablePlayerViewModel) => {
   return [
-    'min-h-[8.5rem] rounded-4 p-[0.85rem] text-[#f8f2e7] transition-colors duration-200',
+    'min-h-[5.25rem] rounded-4 p-[0.6rem] text-[#f8f2e7] transition-colors duration-200',
     {
       'bg-[rgba(246,239,226,0.1)]': !isPlayerRecent(player),
       'border border-[rgba(255,255,255,0.26)] bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(246,239,226,0.12))] shadow-[0_0_0_1px_rgba(255,255,255,0.12)]': isPlayerRecent(player)
@@ -277,8 +277,8 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 </script>
 
 <template>
-  <section class="grid gap-6" data-testid="game-table-view">
-    <header class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]" data-testid="table-summary">
+  <section class="game-table-layout grid gap-6" data-testid="game-table-view">
+    <header class="table-summary-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]" data-testid="table-summary">
       <div class="table-chip" data-testid="summary-local-round">
         <span class="mb-1 block text-[0.72rem] uppercase tracking-[0.08em] text-[#7d6a49]">局次</span>
         <strong>{{ localRoundLabel }}</strong>
@@ -319,7 +319,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 
     <section
       v-if="snapshot.matchSummary != null"
-      class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
+      class="match-summary-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
       data-testid="match-summary"
     >
       <div class="table-chip" data-testid="match-summary-mode">
@@ -334,7 +334,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 
     <section
       v-if="snapshot.resultSummary != null"
-      class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
+      class="round-result-grid grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))]"
       data-testid="round-result-summary"
     >
       <div class="table-chip" data-testid="result-type">
@@ -373,39 +373,42 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
       </div>
     </section>
 
-    <div class="mahjong-table" data-testid="mahjong-table">
+    <div class="mahjong-table mahjong-table--wide mahjong-table--compact mahjong-table--rebalanced" data-testid="mahjong-table">
       <article
         v-for="player in snapshot.players"
         :key="player.seat"
         data-testid="player-seat"
         :class="[
           `player-panel--${player.relativePosition}`,
+          {
+            'player-panel--bottom-rebalanced': player.relativePosition === 'bottom'
+          },
           getPlayerPanelClasses(player)
         ]"
         :data-seat="player.seat"
         :data-relative-position="player.relativePosition"
       >
-        <div class="flex items-start justify-between gap-4">
-          <div class="grid gap-[0.45rem]">
-            <div class="flex flex-wrap items-center gap-2">
-              <h2 class="m-0">{{ formatSeat(player.seat) }}</h2>
+        <div class="flex items-start justify-between gap-2.5">
+          <div class="grid gap-[0.25rem]">
+            <div class="flex flex-wrap items-center gap-[0.45rem]">
+              <h2 class="m-0 text-[1.15rem] leading-none">{{ formatSeat(player.seat) }}</h2>
               <span
                 v-if="isDealer(player)"
-                class="inline-flex items-center rounded-full border border-[rgba(241,212,138,0.48)] bg-[rgba(241,212,138,0.18)] px-[0.58rem] py-[0.18rem] text-[0.72rem] font-700 tracking-[0.08em] text-[#ffe6a7]"
+                class="inline-flex items-center rounded-full border border-[rgba(241,212,138,0.48)] bg-[rgba(241,212,138,0.18)] px-[0.45rem] py-[0.14rem] text-[0.66rem] font-700 tracking-[0.06em] text-[#ffe6a7]"
                 :data-testid="`player-dealer-${player.seat}`"
               >
                 莊家
               </span>
               <span
                 v-if="snapshot.matchSummary != null"
-                class="player-score inline-flex items-center rounded-full border border-[rgba(248,242,231,0.2)] bg-[rgba(248,242,231,0.12)] px-[0.58rem] py-[0.18rem] text-[0.72rem] font-700 tracking-[0.04em] text-[#f8f2e7]"
+                class="player-score inline-flex items-center rounded-full border border-[rgba(248,242,231,0.2)] bg-[rgba(248,242,231,0.12)] px-[0.45rem] py-[0.14rem] text-[0.66rem] font-700 tracking-[0.03em] text-[#f8f2e7]"
                 :data-testid="`player-score-${player.seat}`"
               >
                 籌碼 {{ player.score }}
               </span>
               <span
                 v-if="getPlayerActiveFlagLabel(player) != null"
-                class="inline-flex items-center rounded-[0.65rem] border border-[rgba(255,240,205,0.75)] bg-[linear-gradient(180deg,#f0713b,#c54d1e)] px-[0.72rem] py-[0.28rem] text-[0.76rem] font-800 tracking-[0.08em] text-[#fff7ea] shadow-[0_0.4rem_1rem_rgba(92,31,5,0.28)]"
+                class="inline-flex items-center rounded-[0.6rem] border border-[rgba(255,240,205,0.75)] bg-[linear-gradient(180deg,#f0713b,#c54d1e)] px-[0.55rem] py-[0.2rem] text-[0.68rem] font-800 tracking-[0.06em] text-[#fff7ea] shadow-[0_0.35rem_0.8rem_rgba(92,31,5,0.24)]"
                 :data-testid="`player-active-${player.seat}`"
               >
                 {{ getPlayerActiveFlagLabel(player) }}
@@ -419,7 +422,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
               </span>
               <div
                 v-if="player.seat === humanSeat && (snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1 || isHumanTurn && selfTurnCandidates.length > 0 || snapshot.outcome !== 'in-progress')"
-                class="flex flex-wrap items-center gap-2"
+                class="flex flex-wrap items-center gap-[0.45rem]"
                 :data-testid="`player-action-row-${player.seat}`"
               >
                 <template v-if="snapshot.phase === 'claim-window' && visibleClaimCandidates.length > 1">
@@ -459,27 +462,27 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
             </div>
           </div>
         </div>
-        <dl class="player-stat-grid">
+        <dl :class="['player-stat-grid player-stat-grid--balanced', { 'player-stat-grid--bottom-rebalanced': player.relativePosition === 'bottom' }]">
           <div class="m-0">
-            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">手牌</dt>
-            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.concealedCount }}</dd>
+            <dt class="text-[0.64rem] uppercase tracking-[0.04em] text-[rgba(248,242,231,0.72)]">手牌</dt>
+            <dd class="mb-0 mt-[0.08rem] text-[0.98rem] leading-none">{{ player.concealedCount }}</dd>
           </div>
           <div class="m-0">
-            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">花牌</dt>
-            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.flowerCount }}</dd>
+            <dt class="text-[0.64rem] uppercase tracking-[0.04em] text-[rgba(248,242,231,0.72)]">花牌</dt>
+            <dd class="mb-0 mt-[0.08rem] text-[0.98rem] leading-none">{{ player.flowerCount }}</dd>
           </div>
           <div class="m-0">
-            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">副露</dt>
-            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.meldCount }}</dd>
+            <dt class="text-[0.64rem] uppercase tracking-[0.04em] text-[rgba(248,242,231,0.72)]">副露</dt>
+            <dd class="mb-0 mt-[0.08rem] text-[0.98rem] leading-none">{{ player.meldCount }}</dd>
           </div>
           <div class="m-0">
-            <dt class="text-[0.72rem] uppercase tracking-[0.06em] text-[rgba(248,242,231,0.72)]">捨牌</dt>
-            <dd class="mb-0 mt-[0.2rem] text-[1.1rem]">{{ player.discardCount }}</dd>
+            <dt class="text-[0.64rem] uppercase tracking-[0.04em] text-[rgba(248,242,231,0.72)]">捨牌</dt>
+            <dd class="mb-0 mt-[0.08rem] text-[0.98rem] leading-none">{{ player.discardCount }}</dd>
           </div>
         </dl>
         <div
           v-if="player.melds.length > 0"
-          class="player-meld-list--compact mt-4 flex flex-wrap items-start gap-[0.75rem]"
+          class="player-meld-list--compact mt-2.5 flex flex-wrap items-start gap-[0.45rem]"
           :data-testid="`player-melds-${player.seat}`"
         >
           <div
@@ -502,7 +505,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </div>
         <div
           v-if="(player.revealedWinningTiles?.length ?? 0) > 0"
-          class="mt-4 grid gap-[0.6rem]"
+          class="mt-2.5 grid gap-[0.45rem]"
           :data-testid="`player-winning-tiles-${player.seat}`"
         >
           <div class="player-meld-card border border-[rgba(255,227,151,0.28)] bg-[rgba(255,229,160,0.08)]">
@@ -520,13 +523,18 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </div>
         <div
           v-if="player.seat === humanSeat"
-          class="mt-4 flex flex-wrap gap-2"
+          :class="[
+            'mt-2.5 flex flex-wrap gap-[0.35rem]',
+            {
+              'human-concealed-tiles--bottom-rebalanced mt-[1rem]': player.relativePosition === 'bottom'
+            }
+          ]"
           data-testid="human-concealed-tiles"
         >
           <button
             v-for="(tile, tileIndex) in player.concealedTiles"
             :key="`${player.seat}-${tile.suit}-${tile.rank}-${tileIndex}`"
-            class="cursor-pointer rounded-[0.8rem] border border-[rgba(248,242,231,0.18)] bg-[rgba(248,242,231,0.1)] px-[0.65rem] py-[0.45rem] text-inherit disabled:cursor-default disabled:opacity-56"
+            class="cursor-pointer rounded-[0.72rem] border border-[rgba(248,242,231,0.18)] bg-[rgba(248,242,231,0.1)] px-[0.5rem] py-[0.28rem] text-[0.82rem] text-inherit disabled:cursor-default disabled:opacity-56"
             data-testid="human-discard-tile"
             type="button"
             :disabled="!isHumanTurn"
@@ -537,7 +545,7 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </div>
       </article>
 
-      <section class="table-center grid grid-cols-2 content-start gap-[0.9rem] rounded-[1.4rem] border border-[rgba(59,88,68,0.16)] bg-[radial-gradient(circle_at_center,rgba(244,227,183,0.08),transparent_65%),linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" data-testid="center-discard-pools">
+      <section class="table-center table-center--compact table-center--rebalanced grid grid-cols-2 content-start gap-[0.55rem] rounded-[1.15rem] border border-[rgba(59,88,68,0.16)] bg-[radial-gradient(circle_at_center,rgba(244,227,183,0.08),transparent_65%),linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" data-testid="center-discard-pools">
         <div
           v-for="player in discardPools"
           :key="player.seat"
@@ -547,13 +555,13 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
           ]"
           :data-testid="`discard-pool-${player.seat}`"
         >
-          <div class="mb-[0.7rem] flex items-baseline justify-between gap-3">
+          <div class="mb-[0.35rem] flex items-baseline justify-between gap-2">
             <strong>{{ formatSeat(player.seat) }}</strong>
-            <span class="text-[0.8rem] text-[rgba(248,242,231,0.72)]">{{ player.discardCount }} 張</span>
+            <span class="text-[0.72rem] text-[rgba(248,242,231,0.72)]">{{ player.discardCount }} 張</span>
           </div>
           <div
             v-if="player.discards.length > 0"
-            class="flex flex-wrap gap-[0.45rem]"
+            class="flex flex-wrap gap-[0.3rem]"
           >
             <span
               v-for="(tile, tileIndex) in player.discards"
@@ -574,15 +582,58 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 </template>
 
 <style scoped>
+.game-table-layout {
+  min-width: 0;
+  min-height: 0;
+  align-content: start;
+}
+
+.table-summary-grid,
+.match-summary-grid,
+.round-result-grid {
+  min-width: 0;
+  align-content: start;
+}
+
+.table-chip {
+  min-width: 0;
+}
+
+.table-chip strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .mahjong-table {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.85fr) minmax(16rem, 1.3fr) minmax(12rem, 0.85fr);
+  grid-template-columns: minmax(15rem, 1fr) minmax(19rem, 1.55fr) minmax(15rem, 1fr);
   grid-template-areas:
     ". top ."
     "left center right"
     "bottom bottom bottom";
   align-items: stretch;
-  gap: 1rem;
+  gap: 0.7rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mahjong-table--wide {
+  grid-template-columns: minmax(15rem, 1fr) minmax(19rem, 1.55fr) minmax(15rem, 1fr);
+}
+
+.mahjong-table--compact {
+  gap: 0.7rem;
+}
+
+.mahjong-table--rebalanced {
+  grid-template-columns: minmax(15rem, 0.96fr) minmax(24rem, 1.9fr) minmax(15rem, 0.96fr);
+  grid-template-rows: auto minmax(10.75rem, auto) auto;
+}
+
+.player-panel-shell {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .player-panel--top {
@@ -597,16 +648,28 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
   grid-area: bottom;
 }
 
+.player-panel--bottom-rebalanced {
+  padding: 0.72rem 0.82rem;
+  gap: 0.48rem;
+}
+
 .player-panel--left {
   grid-area: left;
 }
 
 .table-center {
   grid-area: center;
+  min-width: 0;
+}
+
+.table-center--rebalanced {
+  min-height: 12rem;
 }
 
 .player-meld-list--compact {
   align-content: flex-start;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .player-meld-chip {
@@ -616,6 +679,31 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
   align-items: center;
   flex-wrap: wrap;
   gap: 0.55rem;
+  min-width: 0;
+}
+
+.player-meld-card {
+  min-width: 0;
+}
+
+.player-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 1rem;
+  min-width: 0;
+}
+
+.player-stat-grid--balanced {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.player-stat-grid--bottom-rebalanced {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem 0.7rem;
+}
+
+.human-concealed-tiles--bottom-rebalanced {
+  margin-top: 1rem;
 }
 
 @media (max-width: 1080px) {

@@ -250,4 +250,69 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')
     expect(wrapper.get('[data-seat="south"]').classes()).not.toContain('player-panel--active')
   })
+
+  it('keeps result summary and expanded player sections inside the stage-friendly table layout', () => {
+    const wrapper = mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...snapshot,
+          phase: 'ended',
+          outcome: 'win',
+          resultSummary: {
+            type: 'win',
+            ended: true,
+            winnerSeat: 'east',
+            discarderSeat: 'south',
+            totalTai: 5,
+            drawReason: null,
+            scoringItems: [
+              {
+                name: '平胡',
+                tai: 2
+              },
+              {
+                name: '門清',
+                tai: 3
+              }
+            ]
+          },
+          players: snapshot.players.map(player => {
+            if (player.seat !== 'east') {
+              return player
+            }
+
+            return {
+              ...player,
+              meldCount: 2,
+              melds: [
+                {
+                  type: 'pon',
+                  labels: ['西風', '西風', '西風']
+                },
+                {
+                  type: 'pon',
+                  labels: ['八筒', '八筒', '八筒']
+                }
+              ]
+            }
+          })
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    expect(wrapper.get('[data-testid="game-table-view"]').classes()).toContain('game-table-layout')
+    expect(wrapper.get('[data-testid="mahjong-table"]').classes()).toContain('mahjong-table--wide')
+    expect(wrapper.get('[data-testid="mahjong-table"]').classes()).toContain('mahjong-table--compact')
+    expect(wrapper.get('[data-testid="mahjong-table"]').classes()).toContain('mahjong-table--rebalanced')
+    expect(wrapper.get('[data-testid="center-discard-pools"]').classes()).toContain('table-center--compact')
+    expect(wrapper.get('[data-testid="center-discard-pools"]').classes()).toContain('table-center--rebalanced')
+    expect(wrapper.get('[data-seat="east"]').get('dl').classes()).toContain('player-stat-grid--balanced')
+    expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--bottom-rebalanced')
+    expect(wrapper.get('[data-testid="round-result-summary"]').classes()).toContain('round-result-grid')
+    expect(wrapper.get('[data-testid="player-action-row-east"]').text()).toContain('下一局')
+    expect(wrapper.get('[data-testid="player-melds-east"]').classes()).toContain('player-meld-list--compact')
+  })
 })

@@ -25,8 +25,10 @@
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
-  padding: 1.25rem;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0.75rem;
 }
 
 .app-header {
@@ -36,7 +38,7 @@
   gap: 1rem;
   border: 1px solid rgba(58, 42, 18, 0.12);
   border-radius: 1.25rem;
-  padding: 0.9rem 1.1rem;
+  padding: 0.72rem 0.95rem;
   background: rgba(255, 251, 244, 0.72);
   backdrop-filter: blur(14px);
 }
@@ -64,6 +66,7 @@
 }
 
 .app-main {
-  padding: 1.5rem 0 0;
+  padding: 0.8rem 0 0;
+  min-height: 0;
 }
 </style>

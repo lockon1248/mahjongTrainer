@@ -10,4 +10,4 @@
 
 ## 3. 主線板維護
 
-- [ ] 3.1 在下一份 successor board 建立前，持續以本 board 作為 current mainline board；`taiwan-mahjong-concealed-kong-visibility`、`taiwan-mahjong-match-stakes-and-victory-setup`、`taiwan-mahjong-match-setup-minimum-chips-guard`、`taiwan-mahjong-match-setup-validation-feedback` 已正式 archive 並回填 completed，當下一份 child change 定義或 successor board 建立時，再同輪更新本 board。
+- [x] 3.1 在 MVP 主線已完成且 repo workflow 已補上 MVP 封存規則後，停止把本 board 當成永續 current mainline board；`taiwan-mahjong-concealed-kong-visibility`、`taiwan-mahjong-match-stakes-and-victory-setup`、`taiwan-mahjong-match-setup-minimum-chips-guard`、`taiwan-mahjong-match-setup-validation-feedback` 已正式 archive 並回填 completed，故本 board 可作為已完成的 MVP 主線進度板正式封存。
