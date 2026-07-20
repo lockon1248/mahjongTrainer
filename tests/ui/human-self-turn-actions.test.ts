@@ -34,6 +34,7 @@ const baseSnapshot: GameTableSnapshotViewModel = {
   prevailingWind: 'east',
   wallCount: 40,
   totalDiscards: 6,
+  discardSequence: [],
   lastClaimResolution: null,
   players: [
     {

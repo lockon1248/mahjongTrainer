@@ -44,6 +44,7 @@ export type GameTableSnapshotViewModel = {
   prevailingWind: Seat
   wallCount: number
   totalDiscards: number
+  discardSequence: Tile[]
   lastClaimResolution: ClaimResolution | null
   matchSummary?: GameTableMatchSummaryViewModel | null
   players: GameTablePlayerViewModel[]

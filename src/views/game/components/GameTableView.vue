@@ -14,7 +14,6 @@ import {
 import { formatTileLabel } from '@/ui/constants/tiles'
 import type { GameTablePlayerViewModel, GameTableSnapshotViewModel } from '@/views/game/types'
 
-const SEAT_ORDER: readonly Seat[] = ['east', 'south', 'west', 'north']
 const SETTLEMENT_DIALOG_DELAY_MS = 1500
 
 const props = defineProps<{
@@ -58,16 +57,6 @@ const hasWinClaim = computed(() => {
     && props.claimCandidates.some(candidate => candidate.actionType === 'win')
 })
 
-const discardPools = computed<GameTablePlayerViewModel[]>(() => {
-  const order = ['top', 'left', 'right', 'bottom'] as const
-
-  return order.flatMap((position) => {
-    const player = props.snapshot.players.find(candidate => candidate.relativePosition === position)
-
-    return player == null ? [] : [player]
-  })
-})
-
 const localRoundLabel = computed(() => {
   return `${formatWind(props.snapshot.prevailingWind)}${getSeatRoundLabel(props.snapshot.dealerSeat)}局`
 })
@@ -82,6 +71,19 @@ const matchModeLabel = computed(() => {
 })
 
 const isMatchEnded = computed(() => props.snapshot.matchSummary?.status === 'ended')
+const settlementWinOutcome = computed(() => {
+  const result = props.snapshot.resultSummary
+
+  if (result?.type !== 'win' || result.winnerSeat == null)
+    return null
+
+  const winner = formatSeat(result.winnerSeat)
+
+  if (result.discarderSeat == null)
+    return `${winner} 自摸`
+
+  return `${winner} 和牌｜${formatSeat(result.discarderSeat)} 放槍`
+})
 const isSettlementDialogReady = shallowRef(false)
 
 let settlementDialogTimer: ReturnType<typeof setTimeout> | null = null
@@ -247,48 +249,15 @@ const getPlayerStatusBadgeClasses = (player: GameTablePlayerViewModel) => {
   ]
 }
 
-const getDiscardPoolClasses = (player: GameTablePlayerViewModel) => {
-  return [
-    'min-h-[5.25rem] rounded-4 p-[0.6rem] text-[#f8f2e7] transition-colors duration-200',
-    {
-      'bg-[rgba(246,239,226,0.1)]': !isPlayerRecent(player),
-      'border border-[rgba(255,255,255,0.26)] bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(246,239,226,0.12))] shadow-[0_0_0_1px_rgba(255,255,255,0.12)]': isPlayerRecent(player)
-    }
-  ]
-}
-
-const getLatestDiscardSeat = (): Seat | null => {
-  if (props.snapshot.outcome !== 'in-progress')
-    return null
-
-  if (props.snapshot.phase === 'claim-window')
-    return props.snapshot.currentSeat
-
-  const currentSeatIndex = SEAT_ORDER.indexOf(props.snapshot.currentSeat)
-
-  if (currentSeatIndex === -1)
-    return null
-
-  return SEAT_ORDER[(currentSeatIndex + SEAT_ORDER.length - 1) % SEAT_ORDER.length] ?? null
-}
-
-const isLatestDiscardTile = (player: GameTablePlayerViewModel, tileIndex: number): boolean => {
-  const latestDiscardSeat = getLatestDiscardSeat()
-
-  if (latestDiscardSeat == null || player.seat !== latestDiscardSeat)
-    return false
-
-  return tileIndex === player.discards.length - 1
-}
-
-const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: number) => {
-  const isLatestTile = isLatestDiscardTile(player, tileIndex)
+const getDiscardTileClasses = (tileIndex: number) => {
+  const isLatestTile = tileIndex === props.snapshot.discardSequence.length - 1
 
   return [
     'tile-pill border-[rgba(248,242,231,0.16)] bg-[rgba(248,242,231,0.12)]',
     {
       'discard-tile--latest border-[rgba(255,232,164,0.98)] bg-[linear-gradient(180deg,rgba(255,220,118,0.48),rgba(242,163,63,0.44))] text-[#fffbea] shadow-[0_0_0_2px_rgba(255,223,133,0.28),0_0.55rem_1rem_rgba(77,42,10,0.24)]': isLatestTile,
       'discard-tile--pon border-[rgba(255,120,120,0.98)] shadow-[0_0_0_2px_rgba(255,110,110,0.26),0_0.45rem_0.9rem_rgba(107,24,24,0.2)]': isLatestTile && hasPonClaim.value,
+      'discard-tile--pon-only': isLatestTile && hasPonClaim.value && !hasWinClaim.value,
       'discard-tile--win bg-[linear-gradient(180deg,rgba(255,235,120,0.52),rgba(232,188,45,0.46))] text-[#fffbea] shadow-[0_0_0_2px_rgba(255,224,102,0.26),0_0.45rem_0.9rem_rgba(92,70,16,0.2)]': isLatestTile && hasWinClaim.value
     }
   ]
@@ -360,6 +329,13 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
           <header class="scoring-dialog-header">
             <h2 id="round-settlement-title">本局結算</h2>
           </header>
+          <div
+            v-if="settlementWinOutcome != null"
+            class="scoring-dialog-outcome"
+            data-testid="settlement-win-outcome"
+          >
+            {{ settlementWinOutcome }}
+          </div>
           <div v-if="snapshot.resultSummary.type === 'win'" class="scoring-dialog-total">
             <span>總台數</span>
             <strong>{{ snapshot.resultSummary.totalTai ?? 0 }}</strong>
@@ -579,36 +555,16 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
         </div>
       </article>
 
-      <section class="table-center table-center--compact table-center--rebalanced grid grid-cols-2 content-start gap-[0.55rem] rounded-[1.15rem] border border-[rgba(59,88,68,0.16)] bg-[radial-gradient(circle_at_center,rgba(244,227,183,0.08),transparent_65%),linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" data-testid="center-discard-pools">
-        <div
-          v-for="player in discardPools"
-          :key="player.seat"
-          :class="[
-            `discard-pool--${player.relativePosition}`,
-            getDiscardPoolClasses(player)
-          ]"
-          :data-testid="`discard-pool-${player.seat}`"
-        >
-          <div class="mb-[0.35rem] flex items-baseline justify-between gap-2">
-            <strong>{{ formatSeat(player.seat) }}</strong>
-            <span class="text-[0.72rem] text-[rgba(248,242,231,0.72)]">{{ player.discardCount }} 張</span>
-          </div>
-          <div
-            v-if="player.discards.length > 0"
-            class="flex flex-wrap gap-[0.3rem]"
+      <section class="table-center table-center--compact table-center--rebalanced rounded-[1.15rem] border border-[rgba(59,88,68,0.16)] bg-[radial-gradient(circle_at_center,rgba(244,227,183,0.08),transparent_65%),linear-gradient(180deg,rgba(35,80,65,0.98),rgba(21,51,43,0.98))] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" data-testid="center-discard-pools">
+        <div class="shared-discard-grid" data-testid="shared-discard-pool">
+          <span
+            v-for="(tile, tileIndex) in snapshot.discardSequence"
+            :key="`shared-discard-${tile.suit}-${tile.rank}-${tileIndex}`"
+            :class="getDiscardTileClasses(tileIndex)"
+            data-testid="shared-discard-tile"
           >
-            <span
-              v-for="(tile, tileIndex) in player.discards"
-              :key="`${player.seat}-discard-${tile.suit}-${tile.rank}-${tileIndex}`"
-              :class="getDiscardTileClasses(player, tileIndex)"
-              :data-testid="`discard-tile-${player.seat}-${tileIndex}`"
-            >
-              {{ formatTileLabel(tile) }}
-            </span>
-          </div>
-          <p v-else class="m-0 text-[rgba(248,242,231,0.72)]">
-            暫無捨牌
-          </p>
+            {{ formatTileLabel(tile) }}
+          </span>
         </div>
       </section>
     </div>
@@ -655,11 +611,9 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 }
 
 .scoring-dialog-panel {
-  width: min(34rem, 100%);
-  max-height: min(36rem, calc(100dvh - 2rem));
-  overflow: auto;
+  width: min(46rem, 100%);
   border-radius: 1.25rem;
-  padding: 1.25rem;
+  padding: 1rem;
   background: #f8f2e7;
   color: #17382e;
   box-shadow: 0 1.5rem 4rem rgba(10, 28, 23, 0.35);
@@ -688,23 +642,46 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 }
 
 .scoring-dialog-total {
-  margin-top: 1rem;
+  margin-top: 0.65rem;
   border-radius: 0.8rem;
-  padding: 0.8rem 1rem;
+  padding: 0.65rem 0.8rem;
   background: rgba(35, 80, 65, 0.1);
+}
+
+.scoring-dialog-outcome {
+  margin-top: 0.65rem;
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  background: #235041;
+  color: #fff7ea;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .scoring-dialog-items {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-  margin-top: 0.8rem;
+  margin-top: 0.65rem;
+}
+
+.scoring-dialog-items h3 {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .scoring-dialog-items p {
   margin: 0;
   border-radius: 0.7rem;
-  padding: 0.65rem 0.8rem;
+  padding: 0.5rem 0.65rem;
   background: rgba(35, 80, 65, 0.08);
+}
+
+@media (max-width: 720px) {
+  .scoring-dialog-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .mahjong-table {
@@ -766,7 +743,58 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
 }
 
 .table-center--rebalanced {
-  min-height: 12rem;
+  height: 12rem;
+  overflow: hidden;
+}
+
+.shared-discard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 0.3rem;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shared-discard-grid .tile-pill {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  white-space: nowrap;
+}
+
+.shared-discard-grid .discard-tile--pon-only {
+  background: linear-gradient(180deg, rgba(255, 120, 120, 0.72), rgba(174, 45, 45, 0.68));
+  color: #fff7f7;
+}
+
+@media (min-width: 1200px) and (min-height: 760px) {
+  .game-table-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mahjong-table {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .mahjong-table--rebalanced {
+    grid-template-rows: minmax(0, 1fr) minmax(12rem, 1.2fr) minmax(0, 1.15fr);
+  }
+
+  .mahjong-table--rebalanced:has([data-testid^="player-winning-tiles-"]),
+  .mahjong-table--rebalanced:has(.player-panel--bottom .player-meld-list--compact) {
+    grid-template-rows: minmax(0, 0.9fr) minmax(12rem, 1.15fr) minmax(0, 1.3fr);
+  }
+
+  .table-center--rebalanced {
+    height: 100%;
+    min-height: 12rem;
+  }
 }
 
 .player-meld-list--compact {
@@ -831,8 +859,8 @@ const getDiscardTileClasses = (player: GameTablePlayerViewModel, tileIndex: numb
       "bottom";
   }
 
-  .table-center {
-    grid-template-columns: minmax(0, 1fr);
+  .shared-discard-grid {
+    gap: 0.2rem;
   }
 }
 </style>

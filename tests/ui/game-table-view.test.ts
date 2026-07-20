@@ -84,6 +84,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 40,
       totalDiscards: 0,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [
@@ -166,6 +167,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 32,
       totalDiscards: 6,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [
@@ -254,6 +256,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 32,
       totalDiscards: 6,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [
@@ -342,6 +345,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 40,
       totalDiscards: 0,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [
@@ -423,6 +427,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 40,
       totalDiscards: 0,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       matchSummary: {
@@ -514,6 +519,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 40,
       totalDiscards: 0,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [
@@ -597,6 +603,7 @@ describe('game table view', () => {
       prevailingWind: 'east',
       wallCount: 40,
       totalDiscards: 0,
+      discardSequence: [],
       lastClaimResolution: null,
       resultSummary: null,
       players: [

@@ -62,6 +62,7 @@ const createClaimWindowRound = (
     phase: 'claim-window',
     table: {
       ...round.table,
+      discardSequence: [triggeringTile],
       discards: {
         ...round.table.discards,
         [triggeringSeat]: [triggeringTile]
@@ -133,12 +134,13 @@ describe('table layout verification flow', () => {
     expect(wrapper.get('[data-testid="player-status-east"]').text()).toContain('輪到你')
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('碰')
     expect(wrapper.get('[data-testid="player-melds-east"]').text()).toContain('西風')
-    expect(wrapper.get('[data-testid="discard-pool-north"]').text()).not.toContain('西風')
+    expect(wrapper.get('[data-testid="shared-discard-pool"]').text()).not.toContain('西風')
     expect(wrapper.findAll('[data-testid="human-discard-tile"]')).toHaveLength(14)
     expect(wrapper.get('[data-testid="human-concealed-tiles"]').text()).not.toContain('西風')
 
     expect(store.round?.players.east.melds).toHaveLength(1)
     expect(store.round?.players.east.concealedTiles.filter(tile => tile.suit === 'winds' && tile.rank === 'west')).toHaveLength(0)
     expect(store.round?.table.discards.north.filter(tile => tile.suit === 'winds' && tile.rank === 'west')).toHaveLength(0)
+    expect(store.round?.table.discardSequence).toHaveLength(0)
   })
 })

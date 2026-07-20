@@ -39,6 +39,7 @@ const snapshot: GameTableSnapshotViewModel = {
   prevailingWind: 'east',
   wallCount: 48,
   totalDiscards: 8,
+  discardSequence: [],
   lastClaimResolution: null,
   resultSummary: null,
   players: [
@@ -123,24 +124,31 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-seat="north"]').attributes('data-relative-position')).toBe('left')
   })
 
-  it('renders all four discard pools in the center table area with seat ownership preserved', () => {
+  it('renders one unlabeled chronological discard pool without seat-owned sections', () => {
+    const discardSequence = [chars(1)[0]!, dots(5)[0]!, chars(2)[0]!, dragon('red')]
     const wrapper = mount(GameTableView, {
       props: {
-        snapshot,
+        snapshot: {
+          ...snapshot,
+          discardSequence
+        },
         humanSeat: 'east',
         claimCandidates: [],
         selfTurnCandidates: []
       }
     })
 
-    expect(wrapper.find('[data-testid="center-discard-pools"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="discard-pool-east"]').text()).toContain('一萬')
-    expect(wrapper.get('[data-testid="discard-pool-east"]').text()).toContain('二萬')
-    expect(wrapper.get('[data-testid="discard-pool-south"]').text()).toContain('五筒')
-    expect(wrapper.get('[data-testid="discard-pool-west"]').text()).toContain('暫無捨牌')
-    expect(wrapper.get('[data-testid="discard-pool-north"]').text()).toContain('紅中')
-    expect(wrapper.get('[data-testid="discard-pool-north"]').text()).toContain('東風')
-    expect(wrapper.get('[data-testid="discard-pool-north"]').text()).toContain('梅')
+    expect(wrapper.findAll('[data-testid="shared-discard-pool"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="discard-pool-east"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="discard-pool-south"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="discard-pool-west"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="discard-pool-north"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="shared-discard-tile"]').map(tile => tile.text())).toEqual([
+      '一萬',
+      '五筒',
+      '二萬',
+      '紅中'
+    ])
   })
 
   it('renders exposed melds beside the owning player instead of leaving them mixed into hand or discard pools', () => {
@@ -198,20 +206,23 @@ describe('game table layout', () => {
     expect(wrapper.get('[data-testid="player-meld-east-1"]').classes()).toContain('player-meld-chip')
   })
 
-  it('highlights only the current latest discard tile in the center pools', () => {
+  it('highlights only the final chronological discard tile', () => {
     const wrapper = mount(GameTableView, {
       props: {
-        snapshot,
+        snapshot: {
+          ...snapshot,
+          discardSequence: [chars(1)[0]!, dots(5)[0]!, dragon('red')]
+        },
         humanSeat: 'east',
         claimCandidates: [],
         selfTurnCandidates: []
       }
     })
 
-    expect(wrapper.get('[data-testid="discard-tile-east-1"]').classes()).not.toContain('discard-tile--latest')
-    expect(wrapper.get('[data-testid="discard-tile-east-0"]').classes()).not.toContain('discard-tile--latest')
-    expect(wrapper.get('[data-testid="discard-tile-south-0"]').classes()).not.toContain('discard-tile--latest')
-    expect(wrapper.get('[data-testid="discard-tile-north-2"]').classes()).toContain('discard-tile--latest')
+    const discardTiles = wrapper.findAll('[data-testid="shared-discard-tile"]')
+    expect(discardTiles[0]!.classes()).not.toContain('discard-tile--latest')
+    expect(discardTiles[1]!.classes()).not.toContain('discard-tile--latest')
+    expect(discardTiles[2]!.classes()).toContain('discard-tile--latest')
   })
 
   it('keeps the active emphasis on the player panel instead of moving it into the discard pool', () => {
@@ -225,7 +236,7 @@ describe('game table layout', () => {
     })
 
     expect(wrapper.get('[data-seat="east"]').classes()).toContain('player-panel--active')
-    expect(wrapper.get('[data-testid="discard-pool-east"]').classes()).not.toContain('shadow-[0_0_0_2px_rgba(255,214,122,0.22),0_0.9rem_1.4rem_rgba(56,23,8,0.18)]')
+    expect(wrapper.get('[data-testid="shared-discard-pool"]').classes()).not.toContain('shadow-[0_0_0_2px_rgba(255,214,122,0.22),0_0.9rem_1.4rem_rgba(56,23,8,0.18)]')
   })
 
   it('shows a strong on-table flag for the active human seat', () => {

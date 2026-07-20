@@ -1,9 +1,13 @@
 import {
   createBaselineRound,
+  createBaselineWall,
   createPendingActionWindow,
   createBaselineRuleConfig,
   createWinRoundResult,
+  discardTile,
+  drawForCurrentSeat,
   mergeRuleConfig,
+  resolveClaimWindow,
   type BaselineRoundState,
   type MahjongRuleConfig,
   type Seat,
@@ -23,6 +27,7 @@ type GameE2EBridge = {
   seedBonusFlowerProfileWinScenario: () => void
   seedDealerRotationNextRoundScenario: () => void
   seedAiWinRevealScenario: () => void
+  seedExhaustedSharedDiscardScenario: () => void
 }
 
 const chars = (...ranks: Array<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>): Tile[] => {
@@ -76,6 +81,7 @@ const createClaimWindowRound = (
     phase: 'claim-window',
     table: {
       ...round.table,
+      discardSequence: [triggeringTile],
       discards: {
         ...round.table.discards,
         [triggeringSeat]: [triggeringTile]
@@ -209,6 +215,38 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
       store.round = round
       store.discard(triggeringTile)
       store.resolveClaims()
+      store.error = null
+    },
+    seedExhaustedSharedDiscardScenario() {
+      let round = createBaselineRound({ wall: createBaselineWall(() => 0.5) })
+
+      while (round.outcome.status === 'in-progress') {
+        if (round.phase === 'discard') {
+          round = discardTile(round, {
+            seat: round.currentSeat,
+            tile: round.players[round.currentSeat].concealedTiles[0]!
+          })
+
+          if (round.table.discardSequence.length === 72)
+            break
+
+          continue
+        }
+
+        if (round.phase === 'claim-window') {
+          round = resolveClaimWindow(round, [])
+          continue
+        }
+
+        if (round.phase === 'draw') {
+          round = drawForCurrentSeat(round)
+          continue
+        }
+
+        throw new Error(`unexpected long-round phase: ${round.phase}`)
+      }
+
+      store.round = round
       store.error = null
     },
     seedClassicFlowerProfileWinScenario() {

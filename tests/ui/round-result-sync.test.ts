@@ -92,6 +92,7 @@ const inProgressSnapshot: GameTableSnapshotViewModel = {
   prevailingWind: 'east',
   wallCount: 40,
   totalDiscards: 8,
+  discardSequence: [],
   lastClaimResolution: null,
   resultSummary: null,
   players: [...basePlayers]
@@ -310,8 +311,41 @@ describe('round result sync', () => {
     expect(wrapper.get('[data-testid="result-discarder"]').text()).toContain('南家')
     expect(wrapper.get('[data-testid="result-total-tai"]').text()).toContain('1')
     await advanceSettlementDelay()
-    expect(document.body.querySelector('[data-testid="round-settlement-dialog"]')?.textContent).toContain('莊家 1 台')
+    const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
+    expect(settlement?.querySelector('[data-testid="settlement-win-outcome"]')?.textContent).toBe('東家 和牌｜南家 放槍')
+    expect(settlement?.textContent).toContain('莊家 1 台')
     expect(wrapper.find('[data-testid="result-scoring-trigger"]').exists()).toBe(false)
+  })
+
+  it('identifies a self-draw winner without showing a discarder', async () => {
+    vi.useFakeTimers()
+    mount(GameTableView, {
+      props: {
+        snapshot: {
+          ...inProgressSnapshot,
+          phase: 'ended',
+          outcome: 'win',
+          resultSummary: {
+            type: 'win',
+            ended: true,
+            winnerSeat: 'north',
+            discarderSeat: null,
+            totalTai: 2,
+            drawReason: null,
+            scoringItems: [scoringItem('self-draw', '自摸', 2, '自摸完成和牌')],
+            chipSettlements: [...baseChipSettlements]
+          }
+        },
+        humanSeat: 'east',
+        claimCandidates: [],
+        selfTurnCandidates: []
+      }
+    })
+
+    await advanceSettlementDelay()
+    const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
+    expect(settlement?.querySelector('[data-testid="settlement-win-outcome"]')?.textContent).toBe('北家 自摸')
+    expect(settlement?.querySelector('[data-testid="settlement-win-outcome"]')?.textContent).not.toContain('放槍')
   })
 
   it('renders the draw reason for a draw result', async () => {
@@ -348,6 +382,7 @@ describe('round result sync', () => {
     await advanceSettlementDelay()
     const settlement = document.body.querySelector('[data-testid="round-settlement-dialog"]')
     expect(settlement?.textContent).toContain('牌牆耗盡')
+    expect(settlement?.querySelector('[data-testid="settlement-win-outcome"]')).toBeNull()
     expect(settlement?.textContent).not.toContain('總台數')
     expect(settlement?.querySelector('[data-testid="result-scoring-items"]')).toBeNull()
     expect(settlement?.textContent).toContain('本局 ±0')

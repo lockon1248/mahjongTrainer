@@ -9,6 +9,7 @@ export type TableState = {
   prevailingWind: Seat
   wall: Tile[]
   discards: DiscardPoolBySeat
+  discardSequence: Tile[]
 }
 
 export const createInitialTableState = (input?: {
@@ -21,7 +22,8 @@ export const createInitialTableState = (input?: {
     dealerContinuationCount: input?.dealerContinuationCount ?? 0,
     prevailingWind: input?.prevailingWind ?? 'east',
     wall: [],
-    discards: createEmptyDiscards()
+    discards: createEmptyDiscards(),
+    discardSequence: []
   }
 }
 

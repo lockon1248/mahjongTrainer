@@ -138,6 +138,26 @@ test.describe('牌桌 smoke e2e', () => {
     expect(metrics.bottomHeight / metrics.tableHeight).toBeLessThan(0.34)
   }
 
+  const expectDesktopTableConsumesStageHeight = async (page: Page) => {
+    const metrics = await page.evaluate(() => {
+      const frameRect = document.querySelector('[data-testid="game-stage-frame"]')?.getBoundingClientRect()
+      const tableRect = document.querySelector('[data-testid="mahjong-table"]')?.getBoundingClientRect()
+      const scaler = document.querySelector('[data-testid="game-stage-scaler"]')
+      const scaleMatch = scaler == null ? null : getComputedStyle(scaler).transform.match(/matrix\(([^,]+)/)
+
+      return {
+        bottomGap: frameRect == null || tableRect == null ? null : frameRect.bottom - tableRect.bottom,
+        scale: scaleMatch == null ? null : Number(scaleMatch[1])
+      }
+    })
+
+    expect(metrics.scale).toBe(1)
+    expect(metrics.bottomGap).not.toBeNull()
+
+    if (metrics.bottomGap != null)
+      expect(Math.abs(metrics.bottomGap)).toBeLessThanOrEqual(1)
+  }
+
   const waitForBridge = async (page: Page) => {
     await page.waitForFunction(() => {
       const bridge = (window as Window & {
@@ -151,6 +171,7 @@ test.describe('牌桌 smoke e2e', () => {
           seedBonusFlowerProfileWinScenario: () => void
           seedDealerRotationNextRoundScenario: () => void
           seedAiWinRevealScenario: () => void
+          seedExhaustedSharedDiscardScenario: () => void
         }
       }).__MAHJONG_E2E__
 
@@ -163,6 +184,7 @@ test.describe('牌桌 smoke e2e', () => {
         && typeof bridge?.seedBonusFlowerProfileWinScenario === 'function'
         && typeof bridge?.seedDealerRotationNextRoundScenario === 'function'
         && typeof bridge?.seedAiWinRevealScenario === 'function'
+        && typeof bridge?.seedExhaustedSharedDiscardScenario === 'function'
     })
   }
 
@@ -182,6 +204,7 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('game-table-view')).not.toContainText('聽牌')
     await expectCompactedStageScale(page)
     await expectBalancedDesktopStage(page)
+    await expectDesktopTableConsumesStageHeight(page)
     await expectViewportLocked(page)
   })
 
@@ -234,9 +257,8 @@ test.describe('牌桌 smoke e2e', () => {
 
     await page.getByTestId('human-discard-tile').first().click()
 
-    await expect(page.getByTestId('discard-tile-east-0')).toBeVisible()
-    await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
-    await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
+    await expect(page.getByTestId('shared-discard-tile')).toHaveCount(1)
+    await expect(page.getByTestId('shared-discard-tile').first()).toHaveClass(/discard-tile--latest/)
   })
 
   test('AI 不會在真人出牌後瞬間跳步，而是保留可讀的延遲節奏', async ({ page }) => {
@@ -246,11 +268,10 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
     await page.getByTestId('human-discard-tile').first().click()
 
-    await expect(page.getByTestId('discard-pool-east')).toContainText('1 張')
-    await expect(page.getByTestId('discard-pool-south')).toContainText('0 張')
+    await expect(page.getByTestId('shared-discard-tile')).toHaveCount(1)
 
     await page.waitForTimeout(600)
-    await expect(page.getByTestId('discard-pool-south')).toContainText('0 張')
+    await expect(page.getByTestId('shared-discard-tile')).toHaveCount(1)
   })
 
   test('真人出牌後 AI 會持續接續推進，不會停在下家卡死', async ({ page }) => {
@@ -261,7 +282,7 @@ test.describe('牌桌 smoke e2e', () => {
     await page.getByTestId('human-discard-tile').first().click()
 
     await expect.poll(async () => {
-      const discardCount = await page.locator('[data-testid^="discard-tile-"]').count()
+      const discardCount = await page.getByTestId('shared-discard-tile').count()
       const humanClaimCount = await page.getByTestId('human-claim-action').count()
 
       return discardCount > 1 || humanClaimCount > 1
@@ -271,6 +292,7 @@ test.describe('牌桌 smoke e2e', () => {
   })
 
   test('人類宣告碰牌後，副露、暗手與中央捨牌池會同步更新', async ({ page }) => {
+    await page.setViewportSize({ width: 2048, height: 962 })
     await page.goto('/game?e2e=1')
     await waitForBridge(page)
     await completeMatchSetup(page)
@@ -284,14 +306,105 @@ test.describe('牌桌 smoke e2e', () => {
 
     await expect(page.getByTestId('player-melds-east')).toContainText('碰')
     await expect(page.getByTestId('player-melds-east')).toContainText('西風')
-    await expect(page.getByTestId('discard-pool-north')).not.toContainText('西風')
+    await expect(page.getByTestId('shared-discard-pool')).not.toContainText('西風')
     await expect(page.getByTestId('human-discard-tile')).toHaveCount(14)
-    await expectExpandedStageArea(page)
+
+    const visibility = await page.evaluate(() => {
+      const panelRect = document.querySelector('[data-seat="east"]')?.getBoundingClientRect()
+      const meldListRect = document.querySelector('[data-testid="player-melds-east"]')?.getBoundingClientRect()
+      const meldRect = document.querySelector('[data-testid="player-meld-east-0"]')?.getBoundingClientRect()
+      const handRect = document.querySelector('[data-testid="human-concealed-tiles"]')?.getBoundingClientRect()
+
+      return {
+        panelBottom: panelRect?.bottom ?? null,
+        meldListBottom: meldListRect?.bottom ?? null,
+        meldBottom: meldRect?.bottom ?? null,
+        handTop: handRect?.top ?? null,
+        handBottom: handRect?.bottom ?? null,
+        viewportBottom: window.innerHeight
+      }
+    })
+
+    expect(visibility.meldBottom).not.toBeNull()
+    expect(visibility.meldListBottom).not.toBeNull()
+    expect(visibility.handTop).not.toBeNull()
+    expect(visibility.handBottom).not.toBeNull()
+    expect(visibility.panelBottom).not.toBeNull()
+
+    if (visibility.meldBottom != null && visibility.meldListBottom != null && visibility.handTop != null && visibility.handBottom != null && visibility.panelBottom != null) {
+      expect(visibility.meldBottom).toBeLessThanOrEqual(visibility.meldListBottom)
+      expect(visibility.meldBottom).toBeLessThanOrEqual(visibility.handTop)
+      expect(visibility.handBottom).toBeLessThanOrEqual(visibility.panelBottom)
+      expect(visibility.panelBottom).toBeLessThanOrEqual(visibility.viewportBottom)
+    }
+
+    await expectViewportLocked(page)
+  })
+
+  test('只有碰牌可用時最新棄牌使用紅色底色', async ({ page }) => {
+    await page.setViewportSize({ width: 2048, height: 962 })
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+    await completeMatchSetup(page)
+
+    await page.evaluate(() => {
+      ;(window as Window & { __MAHJONG_E2E__: { seedPonClaimScenario: () => void } }).__MAHJONG_E2E__.seedPonClaimScenario()
+    })
+
+    const latestDiscard = page.getByTestId('shared-discard-tile').last()
+    await expect(latestDiscard).toHaveClass(/discard-tile--pon/)
+
+    const backgroundImage = await latestDiscard.evaluate(element => getComputedStyle(element).backgroundImage)
+
+    expect(backgroundImage).toContain('rgba(255, 120, 120')
+  })
+
+  test('共同棄牌池累積至 72 張時維持開局縮放與固定高度', async ({ page }) => {
+    await page.setViewportSize({ width: 2048, height: 962 })
+    await page.goto('/game?e2e=1')
+    await waitForBridge(page)
+    await completeMatchSetup(page)
+
+    const openingMetrics = await page.evaluate(() => {
+      const scaler = document.querySelector('[data-testid="game-stage-scaler"]')
+      const pool = document.querySelector('[data-testid="shared-discard-pool"]')
+      const scaleMatch = scaler == null ? null : getComputedStyle(scaler).transform.match(/matrix\(([^,]+)/)
+
+      return {
+        scale: scaleMatch == null ? null : Number(scaleMatch[1]),
+        poolHeight: pool?.getBoundingClientRect().height ?? 0
+      }
+    })
+
+    await page.evaluate(() => {
+      ;(window as Window & {
+        __MAHJONG_E2E__: { seedExhaustedSharedDiscardScenario: () => void }
+      }).__MAHJONG_E2E__.seedExhaustedSharedDiscardScenario()
+    })
+
+    await expect(page.getByTestId('shared-discard-tile')).toHaveCount(72)
+    await expect(page.getByTestId('shared-discard-tile').last()).toHaveClass(/discard-tile--latest/)
+
+    const lateMetrics = await page.evaluate(() => {
+      const scaler = document.querySelector('[data-testid="game-stage-scaler"]')
+      const pool = document.querySelector('[data-testid="shared-discard-pool"]')
+      const scaleMatch = scaler == null ? null : getComputedStyle(scaler).transform.match(/matrix\(([^,]+)/)
+
+      return {
+        scale: scaleMatch == null ? null : Number(scaleMatch[1]),
+        poolHeight: pool?.getBoundingClientRect().height ?? 0,
+        poolScrollHeight: pool?.scrollHeight ?? 0
+      }
+    })
+
+    expect(lateMetrics.scale).toBe(openingMetrics.scale)
+    expect(lateMetrics.poolHeight).toBe(openingMetrics.poolHeight)
+    expect(lateMetrics.poolScrollHeight).toBeLessThanOrEqual(lateMetrics.poolHeight + 1)
     await expectViewportLocked(page)
   })
 
   test('人類榮和後，結果摘要會顯示台型明細與總台數', async ({ page }) => {
-    await page.setViewportSize({ width: 2048, height: 962 })
+    await page.setViewportSize({ width: 1489, height: 658 })
     await page.goto('/game?e2e=1')
     await waitForBridge(page)
     await completeMatchSetup(page)
@@ -308,12 +421,29 @@ test.describe('牌桌 smoke e2e', () => {
     await expect(page.getByTestId('round-settlement-dialog')).toHaveCount(0)
     await expect(page.getByTestId('human-concealed-tiles')).toBeVisible()
     await expect(page.getByTestId('round-settlement-dialog')).toBeVisible()
+    const dialogMetrics = await page.getByTestId('round-settlement-dialog').locator('.scoring-dialog-panel').evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        innerHeight: window.innerHeight,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        overflowY: style.overflowY
+      }
+    })
+    expect(dialogMetrics.top).toBeGreaterThanOrEqual(0)
+    expect(dialogMetrics.bottom).toBeLessThanOrEqual(dialogMetrics.innerHeight)
+    expect(dialogMetrics.scrollHeight).toBeLessThanOrEqual(dialogMetrics.clientHeight)
+    expect(['auto', 'scroll']).not.toContain(dialogMetrics.overflowY)
+    await expect(page.getByTestId('settlement-win-outcome')).toHaveText('東家 和牌｜南家 放槍')
     await expect(page.getByTestId('result-scoring-items')).toContainText('莊家 1 台')
     await expect(page.getByTestId('result-scoring-items')).toContainText('門清 1 台')
     await expectFullyInsideViewport(page, 'human-concealed-tiles')
     await expectFullyInsideViewport(page, 'player-action-row-east')
     await expect(page.getByTestId('result-scoring-trigger')).toHaveCount(0)
-    await expectCompactedStageScale(page)
     await expectViewportLocked(page)
   })
 

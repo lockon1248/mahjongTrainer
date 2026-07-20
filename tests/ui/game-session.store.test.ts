@@ -68,6 +68,7 @@ const createClaimWindowRound = (
     phase: 'claim-window',
     table: {
       ...round.table,
+      discardSequence: [triggeringTile],
       discards: {
         ...round.table.discards,
         [triggeringSeat]: [triggeringTile]
@@ -231,6 +232,7 @@ describe('game session store', () => {
     expect(store.round?.phase).toBe('claim-window')
     expect(store.round?.players.east.concealedTiles).toHaveLength(16)
     expect(store.round?.table.discards.east).toEqual([discardedTile])
+    expect(store.round?.table.discardSequence).toEqual([discardedTile])
     expect(store.round?.pendingActionWindow?.triggeringTile).toEqual(discardedTile)
   })
 

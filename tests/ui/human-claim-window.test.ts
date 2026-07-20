@@ -51,6 +51,10 @@ const baseSnapshot: GameTableSnapshotViewModel = {
   prevailingWind: 'east',
   wallCount: 40,
   totalDiscards: 6,
+  discardSequence: [
+    { suit: 'dots', rank: 1 },
+    { suit: 'characters', rank: 3 }
+  ],
   lastClaimResolution: null,
   players: [
     {
@@ -212,9 +216,10 @@ describe('human claim window', () => {
       }
     })
 
-    expect(wrapper.get('[data-testid="discard-tile-north-1"]').classes()).toContain('discard-tile--pon')
-    expect(wrapper.get('[data-testid="discard-tile-north-1"]').classes()).toContain('discard-tile--win')
-    expect(wrapper.get('[data-testid="discard-tile-north-0"]').classes()).not.toContain('discard-tile--pon')
-    expect(wrapper.get('[data-testid="discard-tile-north-0"]').classes()).not.toContain('discard-tile--win')
+    const discardTiles = wrapper.findAll('[data-testid="shared-discard-tile"]')
+    expect(discardTiles[1]!.classes()).toContain('discard-tile--pon')
+    expect(discardTiles[1]!.classes()).toContain('discard-tile--win')
+    expect(discardTiles[0]!.classes()).not.toContain('discard-tile--pon')
+    expect(discardTiles[0]!.classes()).not.toContain('discard-tile--win')
   })
 })

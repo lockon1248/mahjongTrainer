@@ -64,3 +64,31 @@
 - [x] 11.2 在 `GameTableView.vue` 實作可清理的 UI-only 1.5 秒 readiness timer，使終局牌桌先保持可見、到時才掛載同一 teleported dialog，且不得延遲或重算 store settlement；以 11.1 targeted Vitest exit 0 驗證。
 - [x] 11.3 更新 Chromium 真實 win／draw journey，驗證終局後彈窗不會立即遮住牌桌、1.5 秒後自動出現，並執行完整 `e2e/game-table.smoke.spec.ts` 確認下一局與重新開始流程未回歸。
 - [x] 11.4 執行完整 Vitest、typecheck、build、`git diff --check`、Spectra analyze 與 strict validation，全部 exit 0 才可宣告完成；本 task 不授權 archive 或修改未完成的 Harness change。
+
+## 12. 單一中央棄牌池與長局穩定尺寸
+
+- [x] 12.1 以 core RED 驗證 **Round flow preserves chronological discard sequence**：跨座位出牌依實際順序追加，合法 `chi`／`pon`／`kan-exposed` 裁決同步移除最後觸發牌；執行對應 round-flow tests 必須先因 `TableState` 沒有權威時間序列而失敗。
+- [x] 12.2 在 round-flow table state 實作 `discardSequence` 的初始化、出牌追加與 claim removal，使 12.1 GREEN，並更新所有受影響的 reachable fixtures，確保 seat-owned discards 與 chronological sequence 成對一致。
+- [x] 12.3 以 selector/component RED 驗證 **中央桌面完整顯示四家捨牌池**、**副露區與捨牌池必須反映裁決後牌局狀態** 與 **Shared discard pool preserves latest-action highlighting**：只渲染一個無座位標記的時間序棄牌池、被宣告牌消失，且僅最後一張承接既有白／紅／黃色合法行為高亮。
+- [x] 12.4 依 design decision `Render one fixed-height chronological central discard pool` 更新 selector view-model 與 `GameTableView.vue`，移除四個 seat pool／張數標題並實作可容納 72 張牌的固定高度共同棄牌網格，使 12.3 GREEN；component MUST NOT 從 seat pools 猜測時間順序，且中央池不得產生內部 scrollbar。
+- [x] 12.5 建立可達的 near-exhaustive browser scenario，讓共同棄牌池達到規則上限 72 張，並以 Chromium 比較同一固定桌機 viewport 的 opening／late-round scale 完全相同，同時驗證最新牌高亮、牌面完整位於中央池且頁面無捲動。
+- [x] 12.6 執行完整 core、store、component、Vitest、Chromium E2E、typecheck、build、`git diff --check`、Spectra analyze 與 strict validation，全部 exit 0 才可宣告完成；本 task 不授權 archive 或修改未完成的 Harness change。
+
+## 13. 桌機牌桌填滿下方空間
+
+- [x] 13.1 以 `2048x962` Chromium RED 驗證 **Desktop table consumes lower whitespace**：active round 的 `mahjong-table` 底緣必須與 `game-stage-content` 可用底緣對齊、stage scale 維持 1 且頁面無 scrollbar；先因現況 content-sized table 將剩餘高度集中在真人牌區下方而失敗。
+- [x] 13.2 依 design decision `Stretch the desktop table to consume remaining stage height` 調整 `GameView.vue` 與 `GameTableView.vue` 的 definite-height chain 和 grid track stretching，使桌機牌桌填滿剩餘高度且 opening／72-discard geometry 不因牌數改變；不得改成垂直置中，並保持 `1489x658` 真人手牌／操作列完整可見與窄螢幕比例 fallback。
+- [x] 13.3 執行完整 Vitest、Chromium E2E、typecheck、build、`git diff --check`、Spectra analyze 與 strict validation，全部 exit 0 才可宣告完成；本 task不授權 archive 或修改未完成的 Harness change。
+
+## 14. 碰牌語意與副露可見性回歸
+
+- [x] 14.1 以 `2048x962` production pon Chromium RED 驗證 **Pon-only latest discard uses a red background** 與 **Human meld remains visible after a claim**：點擊碰牌前，只有最後棄牌 computed background 呈紅色；點擊後，完整 pon meld 與真人暗手 bounding boxes 都位於真人 panel 及 viewport 內，頁面無 scrollbar。測試必須先分別因黃色 latest background 與副露裁切而失敗。
+- [x] 14.2 依 design decision `Preserve claimed meld visibility and semantic pon color` 調整 `GameTableView.vue` 的 pon-only semantic class precedence 與桌機 meld-aware predefined row tracks，使 14.1 GREEN；不得變更 win highlight priority、claim core、discardSequence 或以移除副露／暗手內容規避裁切。
+- [x] 14.3 執行完整 Vitest、Chromium E2E、typecheck、build、`git diff --check`、Spectra analyze 與 strict validation，全部 exit 0 才可宣告完成；本 task不授權 archive 或修改未完成的 Harness change。
+
+## 15. 結算勝負辨識與無捲軸版面
+
+- [x] 15.1 以 component RED 驗證 **Every completed round renders authoritative chip allocation** 與 **Present the round outcome without an internal dialog scrollbar**：自摸精確顯示 `{winner} 自摸`，放槍精確顯示 `{winner} 和牌｜{discarder} 放槍`，流局只保留權威原因且沒有勝負列；執行 `nvm use 22 && npm test -- tests/ui/round-result-sync.test.ts` 必須先因缺少結果關係文案而失敗。
+- [x] 15.2 以 `1489x658` Chromium RED 驗證 **Short desktop shows the complete dialog without scrolling**：`本局結算` 的標題、勝負、臺型、四家籌碼與 `下一局`／`重新開始` 全部位於 viewport，dialog `scrollHeight <= clientHeight`、computed `overflow-y` 不是 `auto`／`scroll`，且頁面無 scrollbar；現況測試必須先因內部縱向捲軸而失敗。
+- [x] 15.3 在 `GameTableView.vue` 只使用既有 `resultSummary.type`、`winnerSeat` 與 `discarderSeat` 格式化已確認文案，並以可用 viewport 寬高與緊湊 section spacing 完整呈現內容，使 15.1 與 15.2 GREEN；不得重算勝負、籌碼或計分，不得以 `overflow: hidden` 裁切資訊。
+- [x] 15.4 執行完整 Vitest、Chromium E2E、typecheck、build、`git diff --check`、Spectra analyze 與 strict validation，全部 exit 0 才可宣告完成；本 task 不授權 archive 或修改未完成的 Harness change。

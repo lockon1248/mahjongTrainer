@@ -255,7 +255,7 @@ describe('interactive turn loop', () => {
     await wrapper.get('[data-testid="match-setup-submit"]').trigger('click')
     await wrapper.get('[data-testid="human-discard-tile"]').trigger('click')
 
-    expect(wrapper.findAll('[data-testid^="discard-tile-"]').length).toBeGreaterThanOrEqual(1)
+    expect(wrapper.findAll('[data-testid="shared-discard-tile"]').length).toBeGreaterThanOrEqual(1)
 
     await vi.advanceTimersByTimeAsync(AI_TURN_DELAY_MS * 4)
     await nextTick()

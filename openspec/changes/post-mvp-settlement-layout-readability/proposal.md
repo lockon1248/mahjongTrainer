@@ -17,6 +17,11 @@
 - 讓 `game-session` Pinia setup store 接管 Vite HMR，使開發中新增的 `resetMatch` action 能更新既存分頁的 store instance，不再出現新元件呼叫舊 store 的 runtime error。
 - 將和牌與流局統一為自動開啟的「本局結算」彈窗：和牌顯示臺型，流局顯示原因，兩者都顯示四家本局增減與結算後籌碼；移除獨立臺型彈窗與「查看台型」。
 - 終局結果先在牌桌保留 1.5 秒，再自動顯示「本局結算」，避免彈窗立即遮住和牌手牌或流局狀態。
+- 將四家分離捨牌池合併為單一中央棄牌池：不顯示座位標記，依實際出牌時間由左至右、由上至下排列，最新棄牌位於最後一格並承接既有合法宣告高亮。
+- 由 round-flow 保存權威棄牌時間序列；宣告取走觸發牌時同步移除。中央棄牌池以固定高度網格容納牌牆耗盡前最多 72 張可見棄牌，不使用內部捲動，也不再因棄牌累積推高舞台縮放高度。
+- 桌機 viewport 高度充足時，牌桌各區塊向下延展並使用舞台剩餘高度，不再把中央棄牌池固定後釋出的空間全部留在真人牌區下方；長局與窄螢幕縮放契約維持不變。
+- 修正真人碰牌後副露列被固定桌機 row 裁切，並讓只有碰牌可用的最新棄牌以紅色底色呈現，而不是只加紅框後仍保留黃色底色。
+- 讓「本局結算」直接標示自摸或和牌／放槍雙方，並在 `1489x658` 桌面 viewport 內一次完整呈現，不產生彈窗內部捲軸。
 
 ## Capabilities
 
@@ -26,8 +31,8 @@
 
 ### Modified Capabilities
 
-- `mahjong-vue-table-shell`: 修改結算摘要、臺型明細互動與固定舞台在桌機／窄螢幕的縮放及可讀性要求。
-- `mahjong-round-flow-core`: 新增權威連莊次數的累加、傳遞與換莊歸零規則。
+- `mahjong-vue-table-shell`: 修改結算摘要、臺型明細互動、單一中央棄牌池，以及固定舞台在桌機／窄螢幕的縮放及可讀性要求。
+- `mahjong-round-flow-core`: 新增權威連莊次數的累加、傳遞與換莊歸零規則，並保存可供中央棄牌池渲染的全局棄牌時間序列。
 - `mahjong-scoring-core`: 新增依連莊次數動態計台的結構化 scoring item。
 - `mahjong-match-session`: 新增整場結束後重設至既有 match setup 的 session 行為。
 
@@ -49,5 +54,7 @@
   - Added: `tests/ui/game-session-hmr.test.ts`
   - Modified: `tests/ui/game-table-view.test.ts`
   - Modified: `tests/ui/round-result-sync.test.ts`
+  - Modified: `tests/core/round-flow-claims.test.ts`
+  - Modified: `tests/ui/game-table-layout.test.ts`
   - Modified: `e2e/game-table.smoke.spec.ts`
 - No dependency additions or scoring-formula changes beyond the confirmed cumulative dealer-continuation tai and existing match payment formula.

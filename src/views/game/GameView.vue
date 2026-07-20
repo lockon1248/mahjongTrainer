@@ -306,4 +306,22 @@ const handleMatchSetupSubmit = (payload: { initialChips: number; victoryMode: 'b
   background: rgba(150, 36, 36, 0.12);
   color: #7c1f1f;
 }
+
+@media (min-width: 1200px) and (min-height: 760px) {
+  .game-stage-scaler {
+    height: 100%;
+  }
+
+  .game-stage-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .game-stage-content :deep(.game-table-layout) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
 </style>

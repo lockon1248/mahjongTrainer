@@ -147,7 +147,8 @@ export const discardTile = (
     ...round,
     table: {
       ...round.table,
-      discards
+      discards,
+      discardSequence: [...round.table.discardSequence, discardedTile]
     },
     players: {
       ...round.players,
@@ -256,7 +257,8 @@ export const resolveClaimWindow = (
       discards: {
         ...round.table.discards,
         [triggeringSeat]: updatedDiscardPool
-      }
+      },
+      discardSequence: removeFinalTriggeringDiscard(round.table.discardSequence, triggeringTile)
     },
     players: {
       ...round.players,
@@ -767,6 +769,15 @@ const removeLastMatchingTile = (sourceTiles: Tile[], targetTile: Tile): Tile[] =
   }
 
   throw new Error('claimed discard tile is not present in discard pool')
+}
+
+const removeFinalTriggeringDiscard = (discardSequence: Tile[], triggeringTile: Tile): Tile[] => {
+  const finalDiscard = discardSequence.at(-1)
+
+  if (finalDiscard == null || !isSameTile(finalDiscard, triggeringTile))
+    throw new Error('claim triggering tile is not the final chronological discard')
+
+  return discardSequence.slice(0, -1)
 }
 
 const areSameTiles = (left: Tile[], right: Tile[]): boolean => {

@@ -15,6 +15,7 @@ const winningSnapshot: GameTableSnapshotViewModel = {
   prevailingWind: 'east',
   wallCount: 0,
   totalDiscards: 30,
+  discardSequence: [],
   lastClaimResolution: null,
   resultSummary: {
     type: 'win',

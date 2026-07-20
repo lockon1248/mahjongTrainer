@@ -60,6 +60,14 @@ const createClaimWindowRound = (
     ...round,
     currentSeat: triggeringSeat,
     phase: 'claim-window',
+    table: {
+      ...round.table,
+      discardSequence: [triggeringTile],
+      discards: {
+        ...round.table.discards,
+        [triggeringSeat]: [triggeringTile]
+      }
+    },
     pendingActionWindow: {
       ...createPendingActionWindow(),
       triggeringSeat,
@@ -104,6 +112,7 @@ describe('mainline playable flow', () => {
 
     expect(store.round?.phase).toBe('claim-window')
     expect(store.round?.table.discards.east).toContainEqual(discardedTile)
+    expect(createGameTableSnapshot(store.round!, 'east').discardSequence).toEqual([discardedTile])
   })
 
   it('covers a terminal win path and syncs the result summary into the snapshot', () => {

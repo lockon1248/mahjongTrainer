@@ -3,6 +3,8 @@ import {
   createBaselineRuleConfig,
   createBaselineRound,
   createPendingActionWindow,
+  discardTile,
+  drawForCurrentSeat,
   mergeRuleConfig,
   resolveClaimWindow,
   type BaselineRoundState,
@@ -74,6 +76,7 @@ const createClaimWindowRound = (
     phase: 'claim-window',
     table: {
       ...round.table,
+      discardSequence: [triggeringTile],
       discards: {
         ...round.table.discards,
         [triggeringSeat]: [triggeringTile]
@@ -106,6 +109,39 @@ const createClaimWindowRound = (
 }
 
 describe('round flow claim resolution', () => {
+  it('preserves discards in actual turn order across seats', () => {
+    const round = createBaselineRound({ wall: buildWall() })
+    const eastDiscard = round.players.east.concealedTiles[0]!
+    const afterEastDiscard = discardTile(round, { seat: 'east', tile: eastDiscard })
+    const southDraw = drawForCurrentSeat(resolveClaimWindow(afterEastDiscard, []))
+    const southDiscard = southDraw.players.south.concealedTiles[0]!
+    const afterSouthDiscard = discardTile(southDraw, { seat: 'south', tile: southDiscard })
+
+    expect(afterSouthDiscard.table.discardSequence).toEqual([eastDiscard, southDiscard])
+  })
+
+  it('removes an accepted pon tile from both discard projections', () => {
+    const discardedTile = wind('west')
+    const pendingRound = createClaimWindowRound(discardedTile, 'north', {
+      east: [
+        wind('west'),
+        wind('west'),
+        ...chars(1, 2, 3, 4, 5, 6, 7, 8, 9),
+        ...dots(1, 2, 3, 4, 5, 6)
+      ]
+    })
+
+    const resolved = resolveClaimWindow(pendingRound, [{
+      seat: 'east',
+      actionType: 'pon',
+      tile: discardedTile,
+      consumedTiles: [wind('west'), wind('west')]
+    }])
+
+    expect(resolved.table.discards.north).toEqual([])
+    expect(resolved.table.discardSequence).toEqual([])
+  })
+
   it('prefers a win claim over lower priority claims', () => {
     const discardedTile = dragon('red')
     const pendingRound = createClaimWindowRound(discardedTile, 'south', {

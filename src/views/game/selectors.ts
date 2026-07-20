@@ -158,6 +158,7 @@ export const createGameTableSnapshot = (
     totalDiscards: Object.values(round.table.discards).reduce((total, seatDiscards) => {
       return total + seatDiscards.length
     }, 0),
+    discardSequence: [...round.table.discardSequence],
     players: Object.values(round.players).map((player) => {
       return {
         seat: player.seat,

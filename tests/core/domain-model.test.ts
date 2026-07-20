@@ -34,7 +34,8 @@ describe('core domain model', () => {
         south: [],
         west: [],
         north: []
-      }
+      },
+      discardSequence: []
     })
   })
 
