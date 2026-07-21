@@ -7,12 +7,16 @@ import GameTableView from '@/views/game/components/GameTableView.vue'
 import MatchSetupModal from '@/views/game/components/MatchSetupModal.vue'
 import { createGameTableSnapshot } from '@/views/game/selectors'
 import { useGameSessionStore } from '@/stores/gameSession'
-import { attachGameE2EBridge } from '@/views/game/e2eBridge'
 
 const gameSessionStore = useGameSessionStore()
 const { error, needsMatchSetup, round } = storeToRefs(gameSessionStore)
 
-attachGameE2EBridge(gameSessionStore)
+if (import.meta.env.DEV) {
+  void (async () => {
+    const { attachGameE2EBridge } = await import('@/views/game/e2eBridge')
+    attachGameE2EBridge(gameSessionStore)
+  })()
+}
 
 const stageFrameRef = useTemplateRef<HTMLElement>('stageFrame')
 const stageScalerRef = useTemplateRef<HTMLElement>('stageScaler')
