@@ -19,7 +19,7 @@ import type { useGameSessionStore } from '@/stores/gameSession'
 
 type GameSessionStore = ReturnType<typeof useGameSessionStore>
 
-type GameE2EBridge = {
+export type GameE2EBridge = {
   seedPonClaimScenario: () => void
   seedDiscardWinScenario: () => void
   seedZeroTaiDiscardWinScenario: () => void
@@ -126,14 +126,12 @@ export const attachGameE2EBridge = (store: GameSessionStore) => {
   if (typeof window === 'undefined')
     return
 
-  const bridgeWindow = window as Window & { __MAHJONG_E2E__?: GameE2EBridge }
-
   if (!isE2EMode()) {
-    delete bridgeWindow.__MAHJONG_E2E__
+    delete window.__MAHJONG_E2E__
     return
   }
 
-  bridgeWindow.__MAHJONG_E2E__ = {
+  window.__MAHJONG_E2E__ = {
     seedPonClaimScenario() {
       store.round = createClaimWindowRound(wind('west'), 'north', {
         east: [

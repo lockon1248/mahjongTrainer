@@ -8,12 +8,5 @@ declare module '*.vue' {
 }
 
 interface Window {
-  __MAHJONG_E2E__?: {
-    seedPonClaimScenario: () => void
-    seedDiscardWinScenario: () => void
-    seedBigThreeDragonsClaimScenario: () => void
-    seedDrawNextRoundScenario: () => void
-    seedClassicFlowerProfileWinScenario: () => void
-    seedBonusFlowerProfileWinScenario: () => void
-  }
+  __MAHJONG_E2E__?: import('@/views/game/e2eBridge').GameE2EBridge
 }

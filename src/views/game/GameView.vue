@@ -27,7 +27,7 @@ const snapshot = computed(() => {
   return createGameTableSnapshot(round.value, gameSessionStore.humanSeat, gameSessionStore.match)
 })
 
-let autoAdvanceTimer: ReturnType<typeof window.setTimeout> | null = null
+let autoAdvanceTimer: number | null = null
 
 const clearAutoAdvanceTimer = () => {
   if (autoAdvanceTimer != null) {

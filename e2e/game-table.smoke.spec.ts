@@ -160,20 +160,7 @@ test.describe('牌桌 smoke e2e', () => {
 
   const waitForBridge = async (page: Page) => {
     await page.waitForFunction(() => {
-      const bridge = (window as Window & {
-        __MAHJONG_E2E__?: {
-          seedPonClaimScenario: () => void
-          seedDiscardWinScenario: () => void
-          seedZeroTaiDiscardWinScenario: () => void
-          seedBigThreeDragonsClaimScenario: () => void
-          seedDrawNextRoundScenario: () => void
-          seedClassicFlowerProfileWinScenario: () => void
-          seedBonusFlowerProfileWinScenario: () => void
-          seedDealerRotationNextRoundScenario: () => void
-          seedAiWinRevealScenario: () => void
-          seedExhaustedSharedDiscardScenario: () => void
-        }
-      }).__MAHJONG_E2E__
+      const bridge = window.__MAHJONG_E2E__
 
       return typeof bridge?.seedPonClaimScenario === 'function'
         && typeof bridge?.seedDiscardWinScenario === 'function'
@@ -230,7 +217,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedDiscardWinScenario: () => void } }).__MAHJONG_E2E__.seedDiscardWinScenario()
+      window.__MAHJONG_E2E__!.seedDiscardWinScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -298,7 +285,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedPonClaimScenario: () => void } }).__MAHJONG_E2E__.seedPonClaimScenario()
+      window.__MAHJONG_E2E__!.seedPonClaimScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -348,7 +335,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedPonClaimScenario: () => void } }).__MAHJONG_E2E__.seedPonClaimScenario()
+      window.__MAHJONG_E2E__!.seedPonClaimScenario()
     })
 
     const latestDiscard = page.getByTestId('shared-discard-tile').last()
@@ -377,9 +364,7 @@ test.describe('牌桌 smoke e2e', () => {
     })
 
     await page.evaluate(() => {
-      ;(window as Window & {
-        __MAHJONG_E2E__: { seedExhaustedSharedDiscardScenario: () => void }
-      }).__MAHJONG_E2E__.seedExhaustedSharedDiscardScenario()
+      window.__MAHJONG_E2E__!.seedExhaustedSharedDiscardScenario()
     })
 
     await expect(page.getByTestId('shared-discard-tile')).toHaveCount(72)
@@ -410,7 +395,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedDiscardWinScenario: () => void } }).__MAHJONG_E2E__.seedDiscardWinScenario()
+      window.__MAHJONG_E2E__!.seedDiscardWinScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -453,7 +438,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page, 100)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedZeroTaiDiscardWinScenario: () => void } }).__MAHJONG_E2E__.seedZeroTaiDiscardWinScenario()
+      window.__MAHJONG_E2E__!.seedZeroTaiDiscardWinScenario()
     })
 
     await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
@@ -478,7 +463,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedBigThreeDragonsClaimScenario: () => void } }).__MAHJONG_E2E__.seedBigThreeDragonsClaimScenario()
+      window.__MAHJONG_E2E__!.seedBigThreeDragonsClaimScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -497,7 +482,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page, 100)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedBigThreeDragonsClaimScenario: () => void } }).__MAHJONG_E2E__.seedBigThreeDragonsClaimScenario()
+      window.__MAHJONG_E2E__!.seedBigThreeDragonsClaimScenario()
     })
 
     await page.getByTestId('human-claim-action').filter({ hasText: '和牌' }).click()
@@ -524,9 +509,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & {
-        __MAHJONG_E2E__: { seedClassicFlowerProfileWinScenario: () => void }
-      }).__MAHJONG_E2E__.seedClassicFlowerProfileWinScenario()
+      window.__MAHJONG_E2E__!.seedClassicFlowerProfileWinScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -543,9 +526,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & {
-        __MAHJONG_E2E__: { seedBonusFlowerProfileWinScenario: () => void }
-      }).__MAHJONG_E2E__.seedBonusFlowerProfileWinScenario()
+      window.__MAHJONG_E2E__!.seedBonusFlowerProfileWinScenario()
     })
 
     await expect(page.getByTestId('player-action-row-east')).toBeVisible()
@@ -565,7 +546,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & { __MAHJONG_E2E__: { seedDrawNextRoundScenario: () => void } }).__MAHJONG_E2E__.seedDrawNextRoundScenario()
+      window.__MAHJONG_E2E__!.seedDrawNextRoundScenario()
     })
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
@@ -596,9 +577,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & {
-        __MAHJONG_E2E__: { seedDealerRotationNextRoundScenario: () => void }
-      }).__MAHJONG_E2E__.seedDealerRotationNextRoundScenario()
+      window.__MAHJONG_E2E__!.seedDealerRotationNextRoundScenario()
     })
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
@@ -618,9 +597,7 @@ test.describe('牌桌 smoke e2e', () => {
     await completeMatchSetup(page)
 
     await page.evaluate(() => {
-      ;(window as Window & {
-        __MAHJONG_E2E__: { seedAiWinRevealScenario: () => void }
-      }).__MAHJONG_E2E__.seedAiWinRevealScenario()
+      window.__MAHJONG_E2E__!.seedAiWinRevealScenario()
     })
 
     await expect(page.getByTestId('round-result-summary')).toBeVisible()
